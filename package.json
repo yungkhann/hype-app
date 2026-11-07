@@ -1,25 +1,15 @@
 {
-  "name": "atlas",
+  "name": "cqa-studio",
   "private": true,
   "version": "0.1.0",
-  "description": "ATLAS — Data Intelligence Studio (Next.js + FastAPI, local-first)",
-  "packageManager": "pnpm@10.30.1",
+  "description": "CQA Studio — vanilla HTML/CSS/JS frontend for Freedom Broker conversation quality analytics",
   "scripts": {
-    "bootstrap": "bash scripts/setup.sh",
-    "dev": "bash scripts/dev.sh",
+    "dev": "bash scripts/dev-web.sh",
+    "dev:web": "bash scripts/dev-web.sh",
     "dev:api": "bash scripts/dev-api.sh",
-    "dev:web": "pnpm --filter web dev",
+    "bootstrap": "bash scripts/setup.sh",
     "gen:api": "bash scripts/gen-api-types.sh",
     "samples": "apps/api/.venv/bin/python scripts/generate_samples.py",
-    "test": "pnpm test:api && pnpm test:web",
-    "test:api": "cd apps/api && .venv/bin/python -m pytest -q",
-    "test:web": "pnpm --filter web test",
-    "typecheck": "pnpm --filter web typecheck",
-    "lint": "pnpm --filter web lint",
-    "e2e": "pnpm --filter web e2e",
-    "check": "pnpm typecheck && pnpm lint && pnpm test"
-  },
-  "devDependencies": {
-    "concurrently": "^9.2.1"
+    "test:api": "cd apps/api && .venv/bin/python -m pytest -q"
   }
 }

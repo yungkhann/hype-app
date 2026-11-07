@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CQA Studio — Freedom Broker</title>
+    <link rel="stylesheet" href="css/app.css?v=4" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="rail" aria-label="Primary">
+        <a class="brand" href="#/">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span>
+            <strong>CQA</strong>
+            <small>Freedom Broker</small>
+          </span>
+        </a>
+        <nav class="nav">
+          <p class="nav-label">Workspace</p>
+          <a class="nav-link" data-nav="list" href="#/">Conversations</a>
+          <a class="nav-link" data-nav="checklist" href="#/checklist">Checklist</a>
+          <a class="nav-link" data-nav="review" href="#/review">Review</a>
+        </nav>
+        <div class="rail-foot">
+          <label class="field-label" for="group-id">group_id</label>
+          <input id="group-id" class="input" type="text" value="dev" autocomplete="off" />
+          <button type="button" class="btn btn-ghost" id="btn-fetch">Load API</button>
+          <p class="hint">No login. Data stays in this browser until a backend is wired.</p>
+        </div>
+      </aside>
+      <main id="view" class="view"></main>
+    </div>
+    <script type="module" src="js/app.js?v=2"></script>
+  </body>
+</html>
