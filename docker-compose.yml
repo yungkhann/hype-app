@@ -22,8 +22,22 @@ services:
       ATLAS_CORS_ORIGINS: '["http://localhost:${ATLAS_WEB_PORT:-3000}","http://127.0.0.1:${ATLAS_WEB_PORT:-3000}","https://${PUBLIC_DOMAIN:-lumvy.io}","https://www.${PUBLIC_DOMAIN:-lumvy.io}"]'
       ATLAS_ALLOWED_HOSTS: '["127.0.0.1","localhost","api","api.${PUBLIC_DOMAIN:-lumvy.io}"]'
       ATLAS_MAX_UPLOAD_MB: ${ATLAS_MAX_UPLOAD_MB:-500}
+      # Ollama runs on the host PC (not in Docker). Both URLs reach it from inside this container.
+      OLLAMA_BASE_URL: http://localhost:11434
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./data/workspaces:/data/workspaces
+    restart: unless-stopped
+
+  # Port forward: localhost:11434 inside the api container -> Ollama on the host (host.docker.internal:11434).
+  # Shares the api container's network, so the api code can call http://localhost:11434 as on the host.
+  ollama-forward:
+    image: alpine/socat:1.8.0.3
+    command: TCP-LISTEN:11434,fork,reuseaddr TCP:host.docker.internal:11434
+    network_mode: "service:api"
+    depends_on:
+      - api
     restart: unless-stopped
 
   # Cloudflare Tunnel. Routes (lumvy.io -> http://web:80, api.lumvy.io -> http://api:8000)
