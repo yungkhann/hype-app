@@ -1,0 +1,40 @@
+# Run the whole app:   docker compose up --build -d
+# Local:   web http://127.0.0.1:3000    API http://127.0.0.1:8000/docs
+# Public:  set CLOUDFLARE_TUNNEL_TOKEN in .env, then  docker compose --profile public up --build -d
+#          The tunnel serves the app on your domain (e.g. https://lumvy.io) with no open router ports.
+# Local ports are published on 127.0.0.1 only; public traffic goes only through the tunnel.
+services:
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "127.0.0.1:${ATLAS_WEB_PORT:-3000}:80"
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "127.0.0.1:${ATLAS_API_PORT:-8000}:8000"
+    environment:
+      ATLAS_CORS_ORIGINS: '["http://localhost:${ATLAS_WEB_PORT:-3000}","http://127.0.0.1:${ATLAS_WEB_PORT:-3000}","https://${PUBLIC_DOMAIN:-lumvy.io}","https://www.${PUBLIC_DOMAIN:-lumvy.io}"]'
+      ATLAS_ALLOWED_HOSTS: '["127.0.0.1","localhost","api","api.${PUBLIC_DOMAIN:-lumvy.io}"]'
+      ATLAS_MAX_UPLOAD_MB: ${ATLAS_MAX_UPLOAD_MB:-500}
+    volumes:
+      - ./data/workspaces:/data/workspaces
+    restart: unless-stopped
+
+  # Cloudflare Tunnel. Routes (lumvy.io -> http://web:80, api.lumvy.io -> http://api:8000)
+  # are set in the Cloudflare dashboard on the tunnel's "Public Hostname" tab.
+  tunnel:
+    image: cloudflare/cloudflared:2025.10.0
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      - web
+      - api
+    restart: unless-stopped
+    profiles: ["public"]
