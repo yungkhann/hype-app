@@ -21,6 +21,9 @@ function setNav() {
   document.querySelectorAll("[data-nav]").forEach((el) => {
     el.classList.toggle("is-active", el.dataset.nav === key);
   });
+  const titles = { list: "Home", checklist: "Checklist", review: "Appeals" };
+  const crumb = byId("crumb");
+  if (crumb) crumb.textContent = titles[key] || "Studio";
 }
 
 function criterion(id) {
@@ -50,27 +53,34 @@ function viewList() {
     if (search && !`${c.id} ${c.operator} ${c.language}`.toLowerCase().includes(search)) return false;
     return true;
   });
+  const chip = (key, value, label, href) => {
+    const on = (key === "lang" && lang === value) || (key === "source" && source === value) || (!value && !lang && !source && key === "all");
+    return `<a class="tool ${on ? "is-on" : ""}" href="${href}"><span class="tool-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/></svg></span>${label}</a>`;
+  };
   return `
-    <section class="page">
-      <div class="page-head">
-        <div>
-          <h1>Conversations</h1>
-          <p>${state.conversations.length} records · 60 synthetic chats · 5 calls · RU / KZ / EN</p>
-        </div>
-        <button class="btn" data-action="reset">Reset demo data</button>
+    <section class="home">
+      <div class="home-hero">
+        <h1>What would you like to score?</h1>
+        <form class="hero-search" data-hero-search>
+          <input name="q" type="search" placeholder="Create a quality review from a transcript…" value="${esc(search)}" />
+          <button class="hero-go" type="submit" aria-label="Search"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        </form>
       </div>
-      <div class="toolbar">
-        <input class="input" style="max-width:220px" data-filter="q" placeholder="Search id…" value="${esc(search)}" />
-        <select class="input" style="max-width:140px" data-filter="lang">
-          <option value="">All languages</option>
-          ${["ru", "kz", "en"].map((l) => `<option value="${l}" ${lang === l ? "selected" : ""}>${l.toUpperCase()}</option>`).join("")}
-        </select>
-        <select class="input" style="max-width:140px" data-filter="source">
-          <option value="">All sources</option>
-          <option value="synthetic" ${source === "synthetic" ? "selected" : ""}>Chats</option>
-          <option value="call" ${source === "call" ? "selected" : ""}>Calls</option>
-        </select>
+      <div class="tool-row">
+        ${chip("all", "", "All", "#/")}
+        ${chip("lang", "ru", "Russian", "#/?lang=ru")}
+        ${chip("lang", "kz", "Kazakh", "#/?lang=kz")}
+        ${chip("lang", "en", "English", "#/?lang=en")}
+        ${chip("source", "call", "Calls", "#/?source=call")}
+        ${chip("source", "synthetic", "Chats", "#/?source=synthetic")}
+        <a class="tool" href="#/checklist"><span class="tool-ico"><svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12"/></svg></span>Checklist</a>
+        <a class="tool" href="#/review"><span class="tool-ico"><svg viewBox="0 0 24 24"><path d="M4 5h16v12H8l-4 3V5Z"/></svg></span>Appeals</a>
       </div>
+      <article class="promo">
+        <h2>Introducing operator scoring</h2>
+        <p>Configure a checklist, inspect a transcript, jump to the supporting utterance, then appeal and recalculate.</p>
+        <a class="btn btn-primary" href="#/c/conv-01">Try v1</a>
+      </article>
       <div class="table-wrap">
         <table>
           <thead><tr><th>ID</th><th>Lang</th><th>Source</th><th>Operator</th><th>Score</th><th>Flags</th></tr></thead>
@@ -102,25 +112,25 @@ function viewDetail(id) {
     <section class="page-wide">
       <div class="pane-head">
         <div>
-          <a href="#/">← All conversations</a>
+          <a href="#/">Home</a>
           <h2 style="margin-top:4px">${esc(conv.id)} · ${esc(conv.language.toUpperCase())} · ${esc(conv.source)}</h2>
         </div>
         <div class="score-hero">
           <div>
-            <div class="score-big">${esc(ev.total)} <span style="font-size:14px;color:var(--ink-3)">/ ${esc(ev.maxTotal)}</span></div>
+            <div class="score-big">${esc(ev.total)} <span>/ ${esc(ev.maxTotal)}</span></div>
             ${ev.originalTotal != null && ev.originalTotal !== ev.total ? `<div class="hint">Original ${esc(ev.originalTotal)} → final ${esc(ev.total)}</div>` : ""}
           </div>
           ${ev.severe.length ? `<span class="badge badge-crit">severe error</span>` : `<span class="badge badge-good">no severe flag</span>`}
         </div>
       </div>
       <div class="split">
-        <div class="pane" style="border-right:1px solid var(--line);background:var(--sunken)">
+        <div class="pane">
           <div class="pane-head"><h2>Transcript</h2><span class="badge badge-muted">${conv.messages.length} turns</span></div>
           ${conv.audioUrl ? `<div style="padding:12px 16px 0"><audio class="audio" controls src="${esc(conv.audioUrl)}"></audio></div>` : ""}
           <div class="transcript">
             ${conv.messages.map((m) => `
               <article class="msg" id="msg-${esc(m.id)}" data-msg="${esc(m.id)}">
-                <div class="msg-meta"><span class="role role-${esc(m.speaker)}">${esc(m.speaker)}</span><span>${esc(fmtTime(m.ts))}</span></div>
+                <div class="msg-meta"><span class="tape">${esc(fmtTime(m.ts))}</span><span class="role role-${esc(m.speaker)}">${esc(m.speaker)}</span></div>
                 <p class="msg-text">${esc(m.text)}</p>
               </article>`).join("")}
           </div>
@@ -180,18 +190,27 @@ function answerControl(c, current) {
 function viewChecklist() {
   const cs = state.checklist.criteria;
   return `
-    <section class="page">
+    <section class="library">
       <div class="page-head">
         <div>
-          <h1>Checklist</h1>
-          <p>${esc(state.checklist.note)}</p>
+          <h1 class="studio-title">Checklist</h1>
+          <p>${esc(state.checklist.note.replace(/\.$/, ""))}</p>
         </div>
         <div style="display:flex;gap:8px">
           <button class="btn" data-action="add-criterion">Add criterion</button>
-          <button class="btn btn-primary" data-action="apply-checklist">Save & re-evaluate</button>
+          <button class="btn btn-primary" data-action="apply-checklist">Save &amp; re-evaluate</button>
         </div>
       </div>
-      <p class="notice notice-warn">Definitions are configuration. Organizers can replace a criterion here without code changes.</p>
+      <div class="card-grid" style="margin-bottom:28px">
+        ${cs.map((c) => `
+          <article class="lib-card">
+            <div class="lib-ico"><svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12"/></svg></div>
+            <h3>${esc(c.title)}</h3>
+            <p>${esc(c.wording)}</p>
+            <span class="hint">${esc(c.section)} · weight ${esc(c.weight)}${c.naAllowed ? " · N/A" : ""}</span>
+          </article>`).join("")}
+      </div>
+      <p class="notice notice-warn">Definitions are configuration. Replace a criterion here without a code change.</p>
       <div class="editor" style="margin-top:16px">
         ${cs.map((c, i) => `
           <div class="crit-card" data-edit="${esc(c.id)}">
@@ -232,11 +251,11 @@ function viewChecklist() {
 function viewReview() {
   const items = state.appeals;
   if (!items.length) {
-    return `<section class="page"><div class="page-head"><div><h1>Review</h1><p>No appeals yet. Open a conversation and dispute a criterion.</p></div></div></section>`;
+    return `<section class="empty"><h1>Appeals</h1><p>No appeals yet. Open a conversation and dispute a criterion.</p><a class="btn btn-primary" href="#/">Go to Home</a></section>`;
   }
   return `
-    <section class="page">
-      <div class="page-head"><div><h1>Review</h1><p>${items.filter((a) => a.status === "open").length} open · ${items.length} total</p></div></div>
+    <section class="library">
+      <div class="page-head"><div><h1 class="studio-title">Appeals</h1><p>${items.filter((a) => a.status === "open").length} open · ${items.length} total</p></div></div>
       <div class="table-wrap">
         <table>
           <thead><tr><th>Case</th><th>Criterion</th><th>Original</th><th>Comment</th><th>Decision</th><th>Final</th></tr></thead>
@@ -280,16 +299,10 @@ function collectChecklist() {
 }
 
 function bind() {
-  document.querySelectorAll("[data-filter]").forEach((el) => {
-    el.addEventListener("change", applyFilters);
-    if (el.matches("input")) el.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") applyFilters();
-    });
-  });
-  document.querySelector("[data-action='reset']")?.addEventListener("click", () => {
-    state = resetState();
-    location.hash = "#/";
-    render();
+  document.querySelector("[data-hero-search]")?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const q = e.currentTarget.q.value.trim();
+    location.hash = q ? `/?q=${encodeURIComponent(q)}` : "/";
   });
   document.querySelector("[data-action='add-criterion']")?.addEventListener("click", () => {
     collectChecklist();
@@ -392,6 +405,17 @@ byId("btn-fetch").addEventListener("click", async () => {
   } catch (err) {
     alert(`Could not load API: ${err.message}`);
   }
+});
+
+document.querySelector("[data-action='reset']")?.addEventListener("click", () => {
+  state = resetState();
+  location.hash = "#/";
+  render();
+});
+document.querySelector(".top-search input")?.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  const q = e.currentTarget.value.trim();
+  location.hash = q ? `/?q=${encodeURIComponent(q)}` : "/";
 });
 
 window.addEventListener("hashchange", render);
