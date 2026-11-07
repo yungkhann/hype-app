@@ -78,6 +78,7 @@ class EvaluationRules(BaseModel):
     context_speakers: list[Speaker] = ["client", "bot", "system"]
     answer_formats: dict[str, str] = {
         "binary": "true (criterion met) or false",
+        "numeric": "one of the criterion's allowed_scores, before weighting (7 of 0, 4, 7, 10 means 7 of 10)",
         "scale": "a number on the criterion's scale: min ≤ value ≤ max, on the step grid",
         "options": "the id of one of the criterion's options",
     }
@@ -87,7 +88,9 @@ class EvaluationRules(BaseModel):
     not_applicable: str = ("Set is_na=true with na_reason only when the criterion allows N/A (na_allowed) and its "
                            "na_rule applies; value must then be null.")
     severe_error: str = ("Set severe_error=true with severe_error_reason only for criteria with "
-                         "severe_error_enabled.")
+                         "severe_error_enabled. A criterion with weight 0 is an unweighted critical-error "
+                         "indicator: answer it like any yes/no criterion; value true means a critical error was "
+                         "found, and it adds no points.")
 
 
 class EvaluationRequest(BaseModel):
@@ -184,8 +187,10 @@ def build_request(evaluation_id: str, conversation: ConversationRecord, checklis
             channel_raw=conversation.channel_raw, audio_url=conversation.audio_url,
             messages=[RequestMessage(id=m.id, index=m.index, speaker=m.speaker, timestamp=m.timestamp,
                                      offset_seconds=m.offset_seconds, text=m.text) for m in conversation.messages]),
+        # Disabled criteria stay in the stored version but are not asked for.
         checklist=RequestChecklist(checklist_id=checklist_id, version=version, name=checklist_name,
-                                   sections=config.sections, criteria=config.criteria, scoring=config.scoring),
+                                   sections=config.sections, criteria=config.active_criteria,
+                                   scoring=config.scoring),
     )
 
 

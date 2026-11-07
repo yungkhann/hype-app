@@ -8,7 +8,9 @@ The AI integration contract (what the evaluator receives and must return) lives 
 
 from __future__ import annotations
 
+import math
 import re
+from fractions import Fraction
 from typing import Literal
 
 from pydantic import (
@@ -181,9 +183,34 @@ class AudioInfo(BaseModel):
 # Checklists
 # ---------------------------------------------------------------------------------------------------
 
-AnswerType = Literal["binary", "scale", "options"]
+# binary: true / false. numeric: one of the manager's allowed scores (e.g. 0, 4, 7, 10).
+# scale (min/max/step grid) and options (labelled choices) are kept for existing checklists.
+AnswerType = Literal["binary", "numeric", "scale", "options"]
 RoundingMode = Literal["half_up", "half_even", "floor", "ceil", "none"]
 ChecklistOrigin = Literal["custom", "official", "dev_sample"]
+TEMPLATE_ID_PATTERN = r"^[a-z0-9][a-z0-9-]{0,63}$"
+MAX_ALLOWED_SCORES = 101
+MAX_SCORE_VALUE = 10_000
+
+
+def _check_allowed_scores(criterion_id: str, scores: list[int | float] | None) -> list[int | float]:
+    """Validated allowed scores in ascending order. Duplicates are compared as decimals (5 and 5.0 are one)."""
+    where = f"Criterion '{criterion_id}'"
+    if not scores or len(scores) < 2:
+        raise ValueError(f"{where}: a numeric criterion needs at least two allowed scores, e.g. 0, 5, 10.")
+    if len(scores) > MAX_ALLOWED_SCORES:
+        raise ValueError(f"{where}: at most {MAX_ALLOWED_SCORES} allowed scores.")
+    bad = [s for s in scores if not math.isfinite(s) or s < 0 or s > MAX_SCORE_VALUE]
+    if bad:
+        raise ValueError(f"{where}: allowed scores must be numbers from 0 to {MAX_SCORE_VALUE}, got "
+                         f"{', '.join(repr(b) for b in bad[:5])}.")
+    exact = [Fraction(str(s)) for s in scores]
+    duplicates = sorted({float(s) for s in exact if exact.count(s) > 1})
+    if duplicates:
+        raise ValueError(f"{where}: duplicated allowed score(s): {', '.join(f'{d:g}' for d in duplicates)}.")
+    if max(exact) == 0:
+        raise ValueError(f"{where}: the highest allowed score must be above 0.")
+    return [s for _, s in sorted(zip(exact, scores, strict=True))]
 
 
 class ScaleConfig(BaseModel):
@@ -222,24 +249,50 @@ class AnswerOption(BaseModel):
 
 
 class Criterion(BaseModel):
+    """One checklist criterion. Field names predate the manager-facing terms: ``name`` is the title,
+    ``description`` the wording for the evaluator, ``severe_error_enabled`` the critical-error setting."""
+
     model_config = ConfigDict(extra="forbid")
 
     id: str = Field(pattern=CRITERION_ID_PATTERN, description="Stable key; evaluations and appeals refer to it.")
-    name: str = Field(min_length=1, max_length=200)
-    description: str = Field(default="", max_length=4000, description="What the evaluator must check.")
+    name: str = Field(min_length=1, max_length=200, description="Title shown to people.")
+    description: str = Field(default="", max_length=4000, description="Wording: what the evaluator must check.")
     section_id: str | None = None
-    weight: float = Field(gt=0, le=1000)
+    weight: float = Field(ge=0, le=1000, description=(
+        "Percentage of the total. Enabled weighted criteria of a saved checklist must add up to 100. "
+        "0 only for an unweighted critical-error indicator."))
     answer_type: AnswerType = "binary"
+    allowed_scores: list[StrictInt | StrictFloat] | None = Field(default=None, description=(
+        "numeric only: the scores the evaluator may give, e.g. [0, 4, 7, 10]. Stored in ascending order. "
+        "The criterion earns value ÷ highest score of its weight."))
     scale: ScaleConfig | None = None
     options: list[AnswerOption] | None = None
-    na_allowed: bool = False
+    na_allowed: bool = Field(default=False, description="The evaluator may answer N/A (null).")
     na_rule: str = Field(default="", max_length=2000, description="When N/A applies.")
-    severe_error_enabled: bool = False
+    severe_error_enabled: bool = Field(default=False, description=(
+        "Critical-error indicator. With weight 0 the yes/no answer is the flag (true = critical error found). "
+        "With a weight the criterion is scored and the evaluator may also flag a critical error on it."))
     severe_error_rule: str = Field(default="", max_length=2000, description="What counts as a severe error.")
+    enabled: bool = Field(default=True, description="Disabled criteria are kept in the version but not evaluated "
+                                                    "or scored.")
+
+    @property
+    def is_indicator(self) -> bool:
+        """An unweighted critical-error indicator: answered and reported, never part of the score."""
+        return self.weight == 0
 
     @model_validator(mode="after")
     def _check_type(self) -> Criterion:
-        if self.answer_type == "scale":
+        if self.weight == 0 and not (self.severe_error_enabled and self.answer_type == "binary"):
+            raise ValueError(f"Criterion '{self.id}': weight 0 is only allowed for an unweighted critical-error "
+                             "indicator (a yes/no criterion with severe_error_enabled).")
+        if self.answer_type != "numeric":
+            self.allowed_scores = None
+        if self.answer_type == "numeric":
+            self.allowed_scores = _check_allowed_scores(self.id, self.allowed_scores)
+            self.scale = None
+            self.options = None
+        elif self.answer_type == "scale":
             if self.scale is None:
                 self.scale = ScaleConfig()
             self.options = None
@@ -312,6 +365,11 @@ class ChecklistConfig(BaseModel):
     def criterion(self, criterion_id: str) -> Criterion | None:
         return next((c for c in self.criteria if c.id == criterion_id), None)
 
+    @property
+    def active_criteria(self) -> list[Criterion]:
+        """The criteria that are evaluated and scored (enabled ones), in checklist order."""
+        return [c for c in self.criteria if c.enabled]
+
 
 class Replacement(BaseModel):
     old_id: str
@@ -339,6 +397,8 @@ class Checklist(BaseModel):
     updated_at: str
     latest_version: int
     duplicated_from: str | None = None
+    template_id: str | None = Field(default=None, description="The starter template this checklist was created "
+                                                              "from, if any.")
     versions: list[ChecklistVersion]
 
     def version(self, number: int | None = None) -> ChecklistVersion:
@@ -358,11 +418,82 @@ class ChecklistSummary(BaseModel):
     latest_version: int
     versions: int
     criteria: int
+    enabled_criteria: int = 0
     sections: int
-    total_weight: float
+    total_weight: float = Field(description="Sum of the enabled criteria's weights in the latest version.")
+    weights_valid: bool = Field(default=True, description="The latest version's enabled weights total 100%.")
+    template_id: str | None = None
     created_at: str
     updated_at: str
     evaluations: int = 0
+
+
+class ChecklistVersionSummary(BaseModel):
+    version: int
+    created_at: str
+    note: str
+    config_hash: str
+    is_latest: bool
+    criteria: int
+    enabled_criteria: int
+    total_weight: float
+    weights_valid: bool
+    replacements: list[Replacement]
+    evaluations: int = Field(description="Evaluations that used this version.")
+
+
+class ChecklistVersionDetail(BaseModel):
+    """One version, resolved: what an evaluation with ``checklist_id`` + ``version`` will use."""
+
+    checklist_id: str
+    checklist_name: str
+    origin: ChecklistOrigin
+    version: int
+    is_latest: bool
+    created_at: str
+    note: str
+    config_hash: str
+    replacements: list[Replacement]
+    config: ChecklistConfig
+    active_criteria: list[str] = Field(description="Ids of the enabled criteria, in order.")
+
+
+class ValidationIssue(BaseModel):
+    code: str
+    message: str
+    criterion_id: str | None = None
+    location: str | None = None
+
+
+class ChecklistValidation(BaseModel):
+    valid: bool
+    total_weight: float | None = Field(description="Sum of the enabled weighted criteria (null if unreadable).")
+    expected_total: float = 100
+    criteria: int = 0
+    enabled_criteria: int = 0
+    indicators: list[str] = Field(default=[], description="Enabled unweighted critical-error indicators.")
+    issues: list[ValidationIssue] = []
+
+
+class ChecklistTemplateSummary(BaseModel):
+    id: str
+    name: str
+    description: str
+    origin: ChecklistOrigin
+    source: str = Field(description="The document the template comes from.")
+    criteria: int
+    total_weight: float
+
+
+class ChecklistTemplate(ChecklistTemplateSummary):
+    notes: list[str] = []
+    config: ChecklistConfig
+
+
+class ChecklistFromTemplate(BaseModel):
+    template_id: str = Field(pattern=TEMPLATE_ID_PATTERN, examples=["freedom-broker-official"])
+    name: str | None = Field(default=None, min_length=1, max_length=200, description="Default: the template's name.")
+    description: str | None = Field(default=None, max_length=4000)
 
 
 class ChecklistCreate(BaseModel):

@@ -95,11 +95,13 @@ Select it with `ATLAS_CQA_EVALUATOR=team-model`, or per run in the Evaluate dial
       {
         "id": "greeting", "name": "…", "description": "what to check, verbatim from the checklist",
         "section_id": "opening", "weight": 10,
-        "answer_type": "binary",             // binary | scale | options
+        "answer_type": "binary",             // binary | numeric | scale | options
+        "allowed_scores": null,              // e.g. [0, 4, 7, 10] for numeric
         "scale": null,                       // {min, max, step, labels} for scale
         "options": null,                     // [{id, label, points}] for options
         "na_allowed": true, "na_rule": "when N/A applies",
-        "severe_error_enabled": false, "severe_error_rule": ""
+        "severe_error_enabled": false, "severe_error_rule": "",
+        "enabled": true                      // the request only ever contains enabled criteria
       }
     ],
     "scoring": { … }                         // for information only
@@ -145,9 +147,12 @@ Answer formats (`value`):
 | `answer_type` | `value` |
 | --- | --- |
 | `binary` | `true` (met) or `false` (not met). JSON booleans only: `1`, `"yes"` or `"true"` are rejected. |
+| `numeric` | One of the criterion's `allowed_scores`, before weighting (`7` of `0, 4, 7, 10` means 7 of 10) |
 | `scale` | A number with `min ≤ value ≤ max`, on the `step` grid (e.g. `0, 0.5, … 5`) |
 | `options` | The `id` of one of the criterion's options |
 | any, when N/A | `null`, with `is_na: true` and a `na_reason` |
+
+A criterion with `weight: 0` is an **unweighted critical-error indicator** (for example `critical` in the official template). Answer it like any yes/no criterion: `true` means a critical error was found. It adds no points; the engine reports it as a severe error next to the total.
 
 Evidence:
 

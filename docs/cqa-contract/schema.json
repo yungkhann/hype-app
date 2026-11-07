@@ -33,6 +33,7 @@
       },
       "Criterion": {
         "additionalProperties": false,
+        "description": "One checklist criterion. Field names predate the manager-facing terms: ``name`` is the title,\n``description`` the wording for the evaluator, ``severe_error_enabled`` the critical-error setting.",
         "properties": {
           "id": {
             "description": "Stable key; evaluations and appeals refer to it.",
@@ -41,6 +42,7 @@
             "type": "string"
           },
           "name": {
+            "description": "Title shown to people.",
             "maxLength": 200,
             "minLength": 1,
             "title": "Name",
@@ -48,7 +50,7 @@
           },
           "description": {
             "default": "",
-            "description": "What the evaluator must check.",
+            "description": "Wording: what the evaluator must check.",
             "maxLength": 4000,
             "title": "Description",
             "type": "string"
@@ -66,8 +68,9 @@
             "title": "Section Id"
           },
           "weight": {
-            "exclusiveMinimum": 0,
+            "description": "Percentage of the total. Enabled weighted criteria of a saved checklist must add up to 100. 0 only for an unweighted critical-error indicator.",
             "maximum": 1000,
+            "minimum": 0,
             "title": "Weight",
             "type": "number"
           },
@@ -75,11 +78,35 @@
             "default": "binary",
             "enum": [
               "binary",
+              "numeric",
               "scale",
               "options"
             ],
             "title": "Answer Type",
             "type": "string"
+          },
+          "allowed_scores": {
+            "anyOf": [
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    }
+                  ]
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "numeric only: the scores the evaluator may give, e.g. [0, 4, 7, 10]. Stored in ascending order. The criterion earns value ÷ highest score of its weight.",
+            "title": "Allowed Scores"
           },
           "scale": {
             "anyOf": [
@@ -109,6 +136,7 @@
           },
           "na_allowed": {
             "default": false,
+            "description": "The evaluator may answer N/A (null).",
             "title": "Na Allowed",
             "type": "boolean"
           },
@@ -121,6 +149,7 @@
           },
           "severe_error_enabled": {
             "default": false,
+            "description": "Critical-error indicator. With weight 0 the yes/no answer is the flag (true = critical error found). With a weight the criterion is scored and the evaluator may also flag a critical error on it.",
             "title": "Severe Error Enabled",
             "type": "boolean"
           },
@@ -130,6 +159,12 @@
             "maxLength": 2000,
             "title": "Severe Error Rule",
             "type": "string"
+          },
+          "enabled": {
+            "default": true,
+            "description": "Disabled criteria are kept in the version but not evaluated or scored.",
+            "title": "Enabled",
+            "type": "boolean"
           }
         },
         "required": [
@@ -173,6 +208,7 @@
             },
             "default": {
               "binary": "true (criterion met) or false",
+              "numeric": "one of the criterion's allowed_scores, before weighting (7 of 0, 4, 7, 10 means 7 of 10)",
               "scale": "a number on the criterion's scale: min ≤ value ≤ max, on the step grid",
               "options": "the id of one of the criterion's options"
             },
@@ -190,7 +226,7 @@
             "type": "string"
           },
           "severe_error": {
-            "default": "Set severe_error=true with severe_error_reason only for criteria with severe_error_enabled.",
+            "default": "Set severe_error=true with severe_error_reason only for criteria with severe_error_enabled. A criterion with weight 0 is an unweighted critical-error indicator: answer it like any yes/no criterion; value true means a critical error was found, and it adds no points.",
             "title": "Severe Error",
             "type": "string"
           }

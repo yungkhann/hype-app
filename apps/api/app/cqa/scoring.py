@@ -5,15 +5,18 @@ into points. A score the evaluator claims (``model_raw_score``) is recorded but 
 
 Rules (all configurable per checklist version, see ``ScoringRules``):
 
-* **Normalize.** binary: yes = 1, no = 0. scale: (value − min) / (max − min); the value must be on the step
-  grid. options: option points / best option points.
+* **Only enabled criteria count.** Disabled criteria are skipped as if absent; a result for one is ignored.
+* **Normalize.** binary: yes = 1, no = 0. numeric: value / highest allowed score; the value must be one of the
+  allowed scores (dialogue = 7 of 0, 4, 7, 10 earns 0.7 of its weight). scale: (value − min) / (max − min);
+  the value must be on the step grid. options: option points / best option points.
 * **Weight and N/A.** Criteria answered N/A (and allowed to be N/A) drop out; their weight is redistributed
   proportionally over the applicable criteria: effective weight = weight / Σ applicable weights.
   Criterion points = normalized × effective weight × max_score; the total is their sum.
 * **Sections.** A section subtotal is Σ(normalized × weight) / Σ weight over its applicable criteria, on the
   same 0–max_score scale. A section's contribution to the total is the sum of its criterion points.
 * **Severe errors** are listed separately. With policy ``zero_total`` any severe error sets the total to 0;
-  with ``flag_only`` the total is unchanged and the flag is reported next to it.
+  with ``flag_only`` the total is unchanged and the flag is reported next to it. An unweighted critical-error
+  indicator (weight 0) must still be answered; it adds no points, and the answer ``true`` is its severe error.
 * **Rounding** applies to the total and section values, at the configured digits and mode, on exact rational
   arithmetic, so 84.45 rounds half-up to 84.5 rather than to float noise.
 * **Incomplete input** (a criterion without a result, an invalid answer, N/A where N/A is not allowed) gives
@@ -71,6 +74,16 @@ def answer_score(criterion: Criterion, value: object) -> tuple[Fraction, Fractio
             raise AnswerError("A yes/no criterion needs true or false.")
         raw = Fraction(1 if value else 0)
         return raw, Fraction(1), raw
+    if criterion.answer_type == "numeric":
+        allowed = [exact(s) for s in criterion.allowed_scores or []]
+        listed = ", ".join(f"{s:g}" for s in criterion.allowed_scores or [])
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise AnswerError(f"A numeric criterion needs one of its allowed scores ({listed}).")
+        v = exact(value)
+        if v not in allowed:
+            raise AnswerError(f"{value:g} is not an allowed score ({listed}).")
+        best = max(allowed)
+        return v, best, v / best
     if criterion.answer_type == "scale":
         scale = criterion.scale
         assert scale is not None
@@ -104,16 +117,20 @@ def apply_overrides(original: Iterable[CriterionResult], overrides: Iterable[Ove
 def compute_score(config: ChecklistConfig, results: Iterable[CriterionResult]) -> ScoreBreakdown:
     issues: list[str] = []
     by_id: dict[str, CriterionResult] = {}
+    active = config.active_criteria
+    active_ids = {c.id for c in active}
     for result in results:
         if config.criterion(result.criterion_id) is None:
             issues.append(f"Result for unknown criterion '{result.criterion_id}' ignored.")
+        elif result.criterion_id not in active_ids:
+            issues.append(f"Result for disabled criterion '{result.criterion_id}' ignored.")
         elif result.criterion_id in by_id:
             issues.append(f"Duplicate result for '{result.criterion_id}'; the first one is used.")
         else:
             by_id[result.criterion_id] = result
 
     rows: list[dict] = []
-    for criterion in config.criteria:
+    for criterion in active:
         result = by_id.get(criterion.id)
         status: CriterionStatus
         raw = raw_max = normalized = None
@@ -132,7 +149,12 @@ def compute_score(config: ChecklistConfig, results: Iterable[CriterionResult]) -
             except AnswerError as error:
                 status, issue = "invalid", str(error)
         severe = False
-        if result is not None and result.severe_error:
+        if criterion.is_indicator:
+            severe = status == "scored" and result is not None and result.value is True
+            if result is not None and result.severe_error and not severe:
+                issues.append(f"Severe-error flag on '{criterion.id}' ignored: for an unweighted critical-error "
+                              "indicator the answer is the flag (true = critical error).")
+        elif result is not None and result.severe_error:
             if not criterion.severe_error_enabled:
                 issues.append(f"Severe-error flag on '{criterion.id}' ignored: not enabled for this criterion.")
             elif status == "scored":

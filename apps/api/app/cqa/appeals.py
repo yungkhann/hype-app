@@ -53,7 +53,7 @@ class AppealService:
             if record.status != "completed" or record.final_score is None:
                 raise ConflictError("Only a completed evaluation can be appealed.", code="evaluation_not_completed")
             criterion = record.checklist.criterion(payload.criterion_id)
-            if criterion is None:
+            if criterion is None or not criterion.enabled:
                 raise ValidationFailed(f"Criterion '{payload.criterion_id}' is not part of this evaluation.",
                                        code="criterion_not_found")
             if any(a.evaluation_id == record.id and a.criterion_id == criterion.id and a.status == "pending"

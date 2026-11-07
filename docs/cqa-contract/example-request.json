@@ -119,12 +119,14 @@
         "section_id": "opening",
         "weight": 10.0,
         "answer_type": "binary",
+        "allowed_scores": null,
         "scale": null,
         "options": null,
         "na_allowed": true,
         "na_rule": "Sample rule: no operator joined the conversation.",
         "severe_error_enabled": false,
-        "severe_error_rule": ""
+        "severe_error_rule": "",
+        "enabled": true
       },
       {
         "id": "introduction",
@@ -133,12 +135,14 @@
         "section_id": "opening",
         "weight": 5.0,
         "answer_type": "binary",
+        "allowed_scores": null,
         "scale": null,
         "options": null,
         "na_allowed": true,
         "na_rule": "Sample rule: no operator joined the conversation.",
         "severe_error_enabled": false,
-        "severe_error_rule": ""
+        "severe_error_rule": "",
+        "enabled": true
       },
       {
         "id": "need_identified",
@@ -147,6 +151,7 @@
         "section_id": "resolution",
         "weight": 20.0,
         "answer_type": "scale",
+        "allowed_scores": null,
         "scale": {
           "min": 0.0,
           "max": 5.0,
@@ -160,7 +165,8 @@
         "na_allowed": false,
         "na_rule": "",
         "severe_error_enabled": false,
-        "severe_error_rule": ""
+        "severe_error_rule": "",
+        "enabled": true
       },
       {
         "id": "solution",
@@ -169,6 +175,7 @@
         "section_id": "resolution",
         "weight": 30.0,
         "answer_type": "options",
+        "allowed_scores": null,
         "scale": null,
         "options": [
           {
@@ -190,7 +197,8 @@
         "na_allowed": false,
         "na_rule": "",
         "severe_error_enabled": true,
-        "severe_error_rule": "Sample rule: wrong information that could cause the client a financial loss."
+        "severe_error_rule": "Sample rule: wrong information that could cause the client a financial loss.",
+        "enabled": true
       },
       {
         "id": "tone",
@@ -199,6 +207,7 @@
         "section_id": "resolution",
         "weight": 15.0,
         "answer_type": "scale",
+        "allowed_scores": null,
         "scale": {
           "min": 1.0,
           "max": 5.0,
@@ -209,7 +218,8 @@
         "na_allowed": false,
         "na_rule": "",
         "severe_error_enabled": false,
-        "severe_error_rule": ""
+        "severe_error_rule": "",
+        "enabled": true
       },
       {
         "id": "further_help",
@@ -218,12 +228,14 @@
         "section_id": "closing",
         "weight": 10.0,
         "answer_type": "binary",
+        "allowed_scores": null,
         "scale": null,
         "options": null,
         "na_allowed": true,
         "na_rule": "Sample rule: the client ended the conversation first.",
         "severe_error_enabled": false,
-        "severe_error_rule": ""
+        "severe_error_rule": "",
+        "enabled": true
       },
       {
         "id": "farewell",
@@ -232,12 +244,14 @@
         "section_id": "closing",
         "weight": 10.0,
         "answer_type": "binary",
+        "allowed_scores": null,
         "scale": null,
         "options": null,
         "na_allowed": true,
         "na_rule": "Sample rule: the client ended the conversation first.",
         "severe_error_enabled": false,
-        "severe_error_rule": ""
+        "severe_error_rule": "",
+        "enabled": true
       }
     ],
     "scoring": {
@@ -259,11 +273,12 @@
     ],
     "answer_formats": {
       "binary": "true (criterion met) or false",
+      "numeric": "one of the criterion's allowed_scores, before weighting (7 of 0, 4, 7, 10 means 7 of 10)",
       "scale": "a number on the criterion's scale: min ≤ value ≤ max, on the step grid",
       "options": "the id of one of the criterion's options"
     },
     "evidence": "Every non-N/A result needs at least one evidence reference (message_id, optional verbatim quote) or, when an expected action is missing, an inspected span (start/end message ids) showing which part of the conversation was checked.",
     "not_applicable": "Set is_na=true with na_reason only when the criterion allows N/A (na_allowed) and its na_rule applies; value must then be null.",
-    "severe_error": "Set severe_error=true with severe_error_reason only for criteria with severe_error_enabled."
+    "severe_error": "Set severe_error=true with severe_error_reason only for criteria with severe_error_enabled. A criterion with weight 0 is an unweighted critical-error indicator: answer it like any yes/no criterion; value true means a critical error was found, and it adds no points."
   }
 }

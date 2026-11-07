@@ -1,0 +1,37 @@
+{
+  "_notice": "Official Freedom Broker starter template. Criterion ids, names, weights and allowed values are copied from the CQA guide appendix (Формат JSON 1.0, стр. 3). Wording and N/A rules are left empty on purpose: they are in the separate checklist PDF, which is not in the repository. Do not invent them here.",
+  "id": "freedom-broker-official",
+  "name": "Freedom Broker official checklist",
+  "description": "Starter template: the eight official criteria with their weights and allowed values. Add each criterion's wording and N/A rule from the official checklist PDF.",
+  "origin": "official",
+  "source": "CQA Hackathon, приложение к студенческому гайду «Как сдать результаты», стр. 3 «Правила заполнения» (Формат JSON 1.0)",
+  "notes": [
+    "value: true = «Да», false = «Нет», null = N/A. A number is the score on the criterion's scale before weighting: dialogue = 7 means 7 of 10 at weight 15.",
+    "final_score: 0 to 100, rounded to two decimals. An N/A criterion is excluded and its weight is redistributed proportionally over the applicable criteria. N/A is not zero and not a processing error.",
+    "critical_flag equals the value of criterion 'critical'; true means a gross violation was found. It is reported separately and does not zero the total.",
+    "The appendix does not name a rounding mode; the template uses half-up.",
+    "The appendix defines no sections, so the template has none."
+  ],
+  "config": {
+    "sections": [],
+    "criteria": [
+      {"id": "contact", "name": "Установление контакта", "weight": 10, "answer_type": "binary", "na_allowed": false},
+      {"id": "discovery", "name": "Выявление потребности", "weight": 15, "answer_type": "binary", "na_allowed": true},
+      {"id": "identification", "name": "Идентификация", "weight": 20, "answer_type": "binary", "na_allowed": true},
+      {"id": "consultation", "name": "Корректность и полнота", "weight": 20, "answer_type": "numeric",
+       "allowed_scores": [0, 5, 10, 15, 20], "na_allowed": true},
+      {"id": "empathy", "name": "Эмпатия", "weight": 15, "answer_type": "binary", "na_allowed": false},
+      {"id": "dialogue", "name": "Ведение, скорость, грамотность", "weight": 15, "answer_type": "numeric",
+       "allowed_scores": [0, 4, 7, 10], "na_allowed": false},
+      {"id": "closure", "name": "Завершение", "weight": 5, "answer_type": "binary", "na_allowed": true},
+      {"id": "critical", "name": "Грубые ошибки", "weight": 0, "answer_type": "binary", "na_allowed": false,
+       "severe_error_enabled": true, "severe_error_rule": "true означает выявленное грубое нарушение."}
+    ],
+    "scoring": {
+      "max_score": 100,
+      "rounding": {"mode": "half_up", "digits": 2},
+      "severe_error_policy": "flag_only",
+      "na_policy": "redistribute"
+    }
+  }
+}

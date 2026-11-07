@@ -216,3 +216,52 @@ def test_same_input_gives_identical_output():
     cfg = binary3()
     results = [na("a"), answer("b", False), answer("c")]
     assert compute_score(cfg, results).model_dump() == compute_score(cfg, results).model_dump()
+
+
+# ---- numeric scores, disabled criteria, critical-error indicators -------------------------------------
+
+def official_config():
+    from app.cqa.checklists import _templates
+    return _templates()["freedom-broker-official"].config
+
+
+APPENDIX_EXAMPLE = [  # the worked example in the guide appendix, page 2: final_score 85.38, critical_flag false
+    answer("contact", True), na("discovery"), na("identification"), answer("consultation", 15),
+    answer("empathy", True), answer("dialogue", 7), answer("closure", True), answer("critical", False)]
+
+
+def test_official_template_reproduces_the_appendix_example():
+    score = compute_score(official_config(), APPENDIX_EXAMPLE)
+    assert score.status == "scored" and score.total == 85.38  # 55.5 of 65 applicable points
+    assert score.severe_errors == [] and score.applicable_weight == 65 and score.total_weight == 100
+    dialogue = next(c for c in score.criteria if c.criterion_id == "dialogue")
+    assert (dialogue.raw_score, dialogue.raw_max, dialogue.normalized) == (7, 10, 0.7)
+
+
+def test_critical_indicator_true_is_flagged_and_does_not_change_the_total():
+    results = [*APPENDIX_EXAMPLE[:-1], answer("critical", True)]
+    score = compute_score(official_config(), results)
+    assert score.total == 85.38 and score.severe_errors == ["critical"] and not score.severe_error_applied
+    critical = next(c for c in score.criteria if c.criterion_id == "critical")
+    assert critical.weight == 0 and critical.points == 0 and critical.severe_error
+
+
+def test_critical_indicator_must_still_be_answered():
+    assert compute_score(official_config(), APPENDIX_EXAMPLE[:-1]).status == "incomplete"
+
+
+def test_numeric_values_must_be_allowed_scores():
+    numeric = config(criterion("n", 100, answer_type="numeric", allowed_scores=[0, 4, 7, 10]))
+    assert compute_score(numeric, [answer("n", 4)]).total == 40
+    assert compute_score(numeric, [answer("n", 7.0)]).total == 70
+    for value in (5, 11, -4, True, "7"):
+        score = compute_score(numeric, [answer("n", value)])
+        assert score.status == "incomplete" and score.criteria[0].status == "invalid", value
+
+
+def test_disabled_criteria_are_ignored():
+    cfg = config(criterion("a", 100), criterion("off", 40, enabled=False))
+    score = compute_score(cfg, [answer("a"), answer("off", False)])
+    assert score.status == "scored" and score.total == 100 and [c.criterion_id for c in score.criteria] == ["a"]
+    assert any("disabled criterion 'off'" in issue for issue in score.issues)
+    assert compute_score(cfg, [answer("a")]).status == "scored"  # no result needed for a disabled criterion

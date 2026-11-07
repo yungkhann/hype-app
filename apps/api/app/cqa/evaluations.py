@@ -304,7 +304,7 @@ class EvaluationService:
                                original_score=original_scores.get(criterion.id),
                                final_score=final_scores.get(criterion.id), overridden=criterion.id in overridden,
                                appeals=[a.id for a in appeals if a.criterion_id == criterion.id])
-                 for criterion in record.checklist.criteria]
+                 for criterion in record.checklist.active_criteria]
         return EvaluationDetail(evaluation=record, criteria=views, final_results=final_results,
                                 stale=self.is_stale(record), appeals=appeals,
                                 audit=self.store.events(evaluation_id=record.id, limit=100))

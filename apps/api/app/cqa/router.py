@@ -14,6 +14,7 @@ from app.cqa.schemas import (
     CONVERSATION_ID_PATTERN,
     CRITERION_ID_PATTERN,
     GROUP_ID_PATTERN,
+    TEMPLATE_ID_PATTERN,
     Appeal,
     AppealCreate,
     AppealDecisionIn,
@@ -24,9 +25,15 @@ from app.cqa.schemas import (
     Checklist,
     ChecklistCreate,
     ChecklistDuplicate,
+    ChecklistFromTemplate,
     ChecklistImport,
     ChecklistSummary,
+    ChecklistTemplate,
+    ChecklistTemplateSummary,
     ChecklistUpdate,
+    ChecklistValidation,
+    ChecklistVersionDetail,
+    ChecklistVersionSummary,
     ConversationDetail,
     ConversationPage,
     ConversationRecord,
@@ -55,6 +62,7 @@ Cqa = Annotated[CqaService, Depends(get_cqa)]
 HexId = Annotated[str, Path(pattern=ID_PATTERN)]
 ConversationId = Annotated[str, Path(pattern=CONVERSATION_ID_PATTERN)]
 CriterionId = Annotated[str, Path(pattern=CRITERION_ID_PATTERN)]
+TemplateId = Annotated[str, Path(pattern=TEMPLATE_ID_PATTERN)]
 
 
 # ---- info & overview ------------------------------------------------------------------------------
@@ -173,9 +181,47 @@ def import_checklist(body: ChecklistImport, cqa: Cqa) -> Checklist:
     return cqa.checklists.import_(body)
 
 
+@router.post("/checklists/from-template", response_model=Checklist, status_code=status.HTTP_201_CREATED)
+def create_from_template(body: ChecklistFromTemplate, cqa: Cqa) -> Checklist:
+    """Create a new, independent checklist (v1) from a starter template. The template itself never changes."""
+    return cqa.checklists.create_from_template(body)
+
+
+@router.post("/checklists/validate", response_model=ChecklistValidation)
+def validate_checklist(
+    cqa: Cqa,
+    config: Annotated[Any, Body(description="A checklist configuration: {sections, criteria, scoring}.")],
+) -> ChecklistValidation:
+    """Check a configuration without saving it. Problems come back as data (200), not as a 422."""
+    return cqa.checklists.validate(config)
+
+
+@router.get("/checklist-templates", response_model=list[ChecklistTemplateSummary])
+def list_templates(cqa: Cqa) -> list[ChecklistTemplateSummary]:
+    return cqa.checklists.templates()
+
+
+@router.get("/checklist-templates/{template_id}", response_model=ChecklistTemplate)
+def get_template(template_id: TemplateId, cqa: Cqa) -> ChecklistTemplate:
+    """A read-only starter template with its full configuration and source notes."""
+    return cqa.checklists.template(template_id)
+
+
 @router.get("/checklists/{checklist_id}", response_model=Checklist)
 def get_checklist(checklist_id: HexId, cqa: Cqa) -> Checklist:
     return cqa.checklists.get(checklist_id)
+
+
+@router.get("/checklists/{checklist_id}/versions", response_model=list[ChecklistVersionSummary])
+def list_versions(checklist_id: HexId, cqa: Cqa) -> list[ChecklistVersionSummary]:
+    """Every saved version, newest first, with how many evaluations used each."""
+    return cqa.checklists.versions(checklist_id)
+
+
+@router.get("/checklists/{checklist_id}/versions/{version}", response_model=ChecklistVersionDetail)
+def get_version(checklist_id: HexId, version: Annotated[int, Path(ge=1)], cqa: Cqa) -> ChecklistVersionDetail:
+    """One version exactly as an evaluation with this checklist_version will use it."""
+    return cqa.checklists.version_detail(checklist_id, version)
 
 
 @router.put("/checklists/{checklist_id}", response_model=Checklist)

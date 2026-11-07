@@ -3,13 +3,25 @@
 Every saved change to criteria, sections or scoring rules becomes a new version; earlier versions are never
 modified, and each evaluation stores the exact version it used, so past results stay reproducible. Name,
 description, origin and archive flag are metadata and are edited in place.
+
+Every write that creates a version (create, import, duplicate, from template, edit, replace) must be
+*complete*: the weights of the enabled criteria add up to exactly 100 (unweighted critical-error indicators
+do not count). Versions saved before this rule existed are still read and used as they are.
+
+Starter templates (``templates/*.json``) are read-only reference documents. A checklist is created from one
+only on request, never at start-up, so restarts never duplicate it.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+from fractions import Fraction
+from functools import lru_cache
 from pathlib import Path
+from typing import Any
+
+from pydantic import ValidationError
 
 from app.core.errors import ConflictError, NotFoundError, ValidationFailed
 from app.cqa.schemas import (
@@ -17,22 +29,77 @@ from app.cqa.schemas import (
     ChecklistConfig,
     ChecklistCreate,
     ChecklistDuplicate,
+    ChecklistFromTemplate,
     ChecklistImport,
     ChecklistSummary,
+    ChecklistTemplate,
+    ChecklistTemplateSummary,
     ChecklistUpdate,
+    ChecklistValidation,
     ChecklistVersion,
+    ChecklistVersionDetail,
+    ChecklistVersionSummary,
     CriterionReplace,
     Replacement,
+    ValidationIssue,
 )
 from app.cqa.store import CqaStore, now_iso
 from app.storage.paths import check_id, new_id
 
 DEV_CHECKLIST_PATH = Path(__file__).resolve().parent / "fixtures" / "dev_checklist.json"
+TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
+EXPECTED_TOTAL = Fraction(100)
 
 
 def config_hash(config: ChecklistConfig) -> str:
     canonical = json.dumps(config.model_dump(mode="json"), sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def weight_total(config: ChecklistConfig) -> Fraction:
+    """Exact sum of the enabled criteria's weights (as typed: 33.3 + 33.3 + 33.4 is exactly 100)."""
+    return sum((Fraction(str(c.weight)) for c in config.active_criteria), Fraction(0))
+
+
+def completeness_issues(config: ChecklistConfig) -> list[ValidationIssue]:
+    """What keeps a structurally valid configuration from being saved as a version."""
+    total = weight_total(config)
+    if total == EXPECTED_TOTAL:
+        return []
+    return [ValidationIssue(
+        code="invalid_weights",
+        message=(f"The enabled criteria's weights add up to {float(total):g}%; they must add up to 100%. "
+                 "Unweighted critical-error indicators are not counted."))]
+
+
+@lru_cache(maxsize=1)
+def _templates() -> dict[str, ChecklistTemplate]:
+    templates: dict[str, ChecklistTemplate] = {}
+    for path in sorted(TEMPLATES_DIR.glob("*.json")):
+        document = json.loads(path.read_text(encoding="utf-8"))
+        config = ChecklistConfig.model_validate(document["config"])
+        template = ChecklistTemplate(
+            id=document["id"], name=document["name"], description=document.get("description", ""),
+            origin=document.get("origin", "custom"), source=document.get("source", ""),
+            notes=document.get("notes", []), criteria=len(config.criteria),
+            total_weight=float(weight_total(config)), config=config)
+        templates[template.id] = template
+    return templates
+
+
+def _issues_from(error: ValidationError, payload: Any) -> list[ValidationIssue]:
+    criteria = payload.get("criteria") if isinstance(payload, dict) else None
+    issues = []
+    for item in error.errors()[:50]:
+        loc = item.get("loc", ())
+        criterion_id = None
+        if len(loc) >= 2 and loc[0] == "criteria" and isinstance(loc[1], int) and isinstance(criteria, list) \
+                and loc[1] < len(criteria) and isinstance(criteria[loc[1]], dict):
+            criterion_id = criteria[loc[1]].get("id")
+        message = str(item.get("msg", "invalid")).removeprefix("Value error, ")
+        issues.append(ValidationIssue(code="invalid_config", message=message, criterion_id=criterion_id,
+                                      location=".".join(str(part) for part in loc) or None))
+    return issues
 
 
 class ChecklistService:
@@ -48,12 +115,40 @@ class ChecklistService:
         return checklist
 
     def version(self, checklist_id: str, number: int | None = None) -> tuple[Checklist, ChecklistVersion]:
+        """The checklist and one of its versions (default: the latest). Evaluations resolve versions here."""
         checklist = self.get(checklist_id)
         try:
             return checklist, checklist.version(number)
         except KeyError:
             raise NotFoundError(f"Checklist '{checklist.name}' has no version {number}.",
                                 code="checklist_version_not_found") from None
+
+    def version_detail(self, checklist_id: str, number: int | None = None) -> ChecklistVersionDetail:
+        checklist, version = self.version(checklist_id, number)
+        return ChecklistVersionDetail(
+            checklist_id=checklist.id, checklist_name=checklist.name, origin=checklist.origin,
+            version=version.version, is_latest=version.version == checklist.latest_version,
+            created_at=version.created_at, note=version.note, config_hash=version.config_hash,
+            replacements=version.replacements, config=version.config,
+            active_criteria=[c.id for c in version.config.active_criteria])
+
+    def versions(self, checklist_id: str) -> list[ChecklistVersionSummary]:
+        """Every version of a checklist, newest first."""
+        checklist = self.get(checklist_id)
+        used: dict[int, int] = {}
+        for evaluation in self.store.evaluations.values():
+            if evaluation.checklist_id == checklist.id:
+                used[evaluation.checklist_version] = used.get(evaluation.checklist_version, 0) + 1
+        items = []
+        for version in sorted(checklist.versions, key=lambda v: v.version, reverse=True):
+            config = version.config
+            items.append(ChecklistVersionSummary(
+                version=version.version, created_at=version.created_at, note=version.note,
+                config_hash=version.config_hash, is_latest=version.version == checklist.latest_version,
+                criteria=len(config.criteria), enabled_criteria=len(config.active_criteria),
+                total_weight=float(weight_total(config)), weights_valid=not completeness_issues(config),
+                replacements=version.replacements, evaluations=used.get(version.version, 0)))
+        return items
 
     def summaries(self, include_archived: bool = False) -> list[ChecklistSummary]:
         counts: dict[str, int] = {}
@@ -67,9 +162,11 @@ class ChecklistService:
             items.append(ChecklistSummary(
                 id=checklist.id, name=checklist.name, description=checklist.description, origin=checklist.origin,
                 archived=checklist.archived, latest_version=checklist.latest_version, versions=len(checklist.versions),
-                criteria=len(config.criteria), sections=len(config.sections),
-                total_weight=sum(c.weight for c in config.criteria), created_at=checklist.created_at,
-                updated_at=checklist.updated_at, evaluations=counts.get(checklist.id, 0)))
+                criteria=len(config.criteria), enabled_criteria=len(config.active_criteria),
+                sections=len(config.sections), total_weight=float(weight_total(config)),
+                weights_valid=not completeness_issues(config), template_id=checklist.template_id,
+                created_at=checklist.created_at, updated_at=checklist.updated_at,
+                evaluations=counts.get(checklist.id, 0)))
         return sorted(items, key=lambda s: s.updated_at, reverse=True)
 
     def export(self, checklist_id: str, number: int | None = None) -> dict:
@@ -78,12 +175,47 @@ class ChecklistService:
                 "origin": checklist.origin, "version": version.version,
                 "config": version.config.model_dump(mode="json")}
 
+    def validate(self, payload: Any) -> ChecklistValidation:
+        """Check a configuration without saving it: structure first, then the 100% weight rule."""
+        try:
+            config = ChecklistConfig.model_validate(payload)
+        except ValidationError as error:
+            return ChecklistValidation(valid=False, total_weight=None, issues=_issues_from(error, payload))
+        issues = completeness_issues(config)
+        return ChecklistValidation(
+            valid=not issues, total_weight=float(weight_total(config)), criteria=len(config.criteria),
+            enabled_criteria=len(config.active_criteria),
+            indicators=[c.id for c in config.active_criteria if c.is_indicator], issues=issues)
+
+    # ---- templates ------------------------------------------------------------------------------
+    def templates(self) -> list[ChecklistTemplateSummary]:
+        return [ChecklistTemplateSummary.model_validate(t.model_dump(exclude={"notes", "config"}))
+                for t in _templates().values()]
+
+    def template(self, template_id: str) -> ChecklistTemplate:
+        template = _templates().get(template_id)
+        if template is None:
+            raise NotFoundError(f"Checklist template '{template_id}' does not exist.", code="template_not_found")
+        return template.model_copy(deep=True)
+
     # ---- writes -------------------------------------------------------------------------------
+    @staticmethod
+    def _require_complete(config: ChecklistConfig, hint: str = "") -> None:
+        issues = completeness_issues(config)
+        if issues:
+            message = " ".join(i.message for i in issues) + (f" {hint}" if hint else "")
+            raise ValidationFailed(message, code="invalid_weights",
+                                   details={"total_weight": float(weight_total(config)),
+                                            "expected_total": float(EXPECTED_TOTAL),
+                                            "issues": [i.model_dump() for i in issues]})
+
     def _new(self, name: str, description: str, origin: str, config: ChecklistConfig, note: str,
-             duplicated_from: str | None = None) -> Checklist:
+             duplicated_from: str | None = None, template_id: str | None = None) -> Checklist:
+        self._require_complete(config)
         now = now_iso()
         checklist = Checklist(id=new_id(), name=name.strip(), description=description.strip(), origin=origin,
                               created_at=now, updated_at=now, latest_version=1, duplicated_from=duplicated_from,
+                              template_id=template_id,
                               versions=[ChecklistVersion(version=1, created_at=now, note=note.strip() or "Created",
                                                          config=config, config_hash=config_hash(config))])
         self.store.save_checklist(checklist)
@@ -93,6 +225,17 @@ class ChecklistService:
         checklist = self._new(payload.name, payload.description, payload.origin, payload.config, payload.note)
         self.store.log("checklist.created", f"Created checklist '{checklist.name}' (v1).", actor=actor,
                        checklist_id=checklist.id, details={"criteria": len(payload.config.criteria)})
+        return checklist
+
+    def create_from_template(self, payload: ChecklistFromTemplate, actor: str = "User") -> Checklist:
+        """A new, independent checklist (v1) with a copy of the template; the template itself never changes."""
+        template = self.template(payload.template_id)
+        description = template.description if payload.description is None else payload.description
+        checklist = self._new(payload.name or template.name, description, template.origin, template.config,
+                              f"Created from template '{template.name}'", template_id=template.id)
+        self.store.log("checklist.created", f"Created checklist '{checklist.name}' (v1) from template "
+                                            f"'{template.id}'.", actor=actor, checklist_id=checklist.id,
+                       details={"template_id": template.id, "criteria": len(template.config.criteria)})
         return checklist
 
     def import_(self, payload: ChecklistImport, actor: str = "User") -> Checklist:
@@ -127,6 +270,7 @@ class ChecklistService:
                         details={"latest_version": checklist.latest_version})
                 digest = config_hash(payload.config)
                 if digest != checklist.version().config_hash:
+                    self._require_complete(payload.config)
                     new_version = ChecklistVersion(version=checklist.latest_version + 1, created_at=now_iso(),
                                                    note=payload.note.strip() or "Edited", config=payload.config,
                                                    config_hash=digest)
@@ -171,6 +315,9 @@ class ChecklistService:
                                                              "criteria": [c.model_dump(mode="json") for c in criteria]})
             except ValueError as error:
                 raise ValidationFailed(str(error), code="invalid_checklist") from None
+            self._require_complete(new_config, hint=(
+                f"'{old.name}' had weight {old.weight:g} and the replacement has {new.weight:g}; give it the same "
+                "weight, or edit the checklist to rebalance." if new.weight != old.weight else ""))
             note = payload.note.strip() or f"Replaced '{old.name}' with '{new.name}'"
             version = ChecklistVersion(version=checklist.latest_version + 1, created_at=now_iso(), note=note,
                                        config=new_config, config_hash=config_hash(new_config),

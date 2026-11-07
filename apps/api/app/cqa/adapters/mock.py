@@ -33,7 +33,13 @@ def _bucket(*parts: str) -> int:
 
 
 def _definition(criterion: Criterion) -> str:
-    return json.dumps(criterion.model_dump(mode="json"), sort_keys=True, ensure_ascii=False)
+    # Fields added later are left out at their defaults, so existing criteria keep their placeholder answers.
+    dump = criterion.model_dump(mode="json")
+    if dump.get("enabled") is True:
+        dump.pop("enabled")
+    if dump.get("allowed_scores") is None:
+        dump.pop("allowed_scores", None)
+    return json.dumps(dump, sort_keys=True, ensure_ascii=False)
 
 
 def _quote(message: RequestMessage, limit: int = 90) -> str | None:
@@ -72,9 +78,16 @@ class MockEvaluator(EvaluatorAdapter):
                 continue
 
             negative: bool
-            if criterion.answer_type == "binary":
-                value: object = h % 4 != 0
+            if criterion.is_indicator:  # true = critical error found; keep it rare
+                value: object = h % 5 == 0
+                negative = value is True
+            elif criterion.answer_type == "binary":
+                value = h % 4 != 0
                 negative = value is False
+            elif criterion.answer_type == "numeric":
+                scores = criterion.allowed_scores or []
+                value = scores[-1 - (h % min(3, len(scores)))]
+                negative = value / scores[-1] < 0.5
             elif criterion.answer_type == "scale":
                 points = criterion.scale.points()  # type: ignore[union-attr]
                 value = points[-1 - (h % min(3, len(points)))]
@@ -94,7 +107,7 @@ class MockEvaluator(EvaluatorAdapter):
             if negative:
                 result["inspected_spans"] = [{"start_message_id": pool[0].id, "end_message_id": messages[-1].id,
                                               "note": f"{MOCK_TAG} range checked for the expected action"}]
-                if criterion.severe_error_enabled and h % 5 == 0:
+                if criterion.severe_error_enabled and not criterion.is_indicator and h % 5 == 0:
                     result["severe_error"] = True
                     result["severe_error_reason"] = f"{MOCK_TAG} Placeholder severe-error flag. Not an AI judgement."
             results.append(result)
