@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>CQA Studio</title>
-    <!-- ATLAS API base URL. Empty: http://<host>:8000/api/v1 on localhost, https://api.<domain>/api/v1 otherwise. -->
+    <!-- ATLAS API base URL. Empty: /api/v1 on this origin (nginx proxies it). Split-port local: http://127.0.0.1:8000/api/v1 -->
     <meta name="cqa-api" content="" />
     <link rel="stylesheet" href="css/app.css?v=tape50" />
   </head>
@@ -42,6 +42,6 @@
       </header>
       <main id="view" class="view"></main>
     </div>
-    <script type="module" src="js/app.js?v=tape49"></script>
+    <script type="module" src="js/app.js?v=tape51"></script>
   </body>
 </html>

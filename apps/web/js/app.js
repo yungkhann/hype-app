@@ -23,7 +23,7 @@ import {
   resultsReport,
   startEvaluation,
   updateChecklist,
-} from "./api.js?v=tape22";
+} from "./api.js?v=tape51";
 import { activeChat, chatTitle, messageText, openChat, pushTurn, removeChat, startChat } from "./chat.js?v=tape22";
 import {
   adoptChecklist,

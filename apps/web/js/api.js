@@ -6,17 +6,13 @@ import { hasKey, t } from "./i18n.js?v=tape37";
 export const GROUP_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 
 /**
- * Where the API lives: <meta name="cqa-api"> when set, else :8000 on localhost, else /api/v1 on this origin
- * (the web container's nginx proxies it to the api service, see docker/nginx-web.conf).
+ * Where the API lives: <meta name="cqa-api"> when set, else /api/v1 on this origin
+ * (docker/nginx-web.conf proxies that to the api service). Split-port local: set the meta tag.
  */
 export function apiBase() {
   const configured = document.querySelector('meta[name="cqa-api"]')?.content?.trim();
   if (configured) return configured.replace(/\/+$/, "");
-  const { hostname, origin } = location;
-  if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]") {
-    return `http://${hostname}:8000/api/v1`;
-  }
-  return `${origin}/api/v1`;
+  return `${location.origin}/api/v1`;
 }
 
 export class ApiError extends Error {
