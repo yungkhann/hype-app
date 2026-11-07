@@ -10,6 +10,9 @@ services:
       dockerfile: apps/web/Dockerfile
     ports:
       - "127.0.0.1:${ATLAS_WEB_PORT:-3000}:80"
+    extra_hosts:
+      # https://lumvy.io:8443 is proxied to Ollama on the host (docker/nginx-web.conf).
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
 
   api:
