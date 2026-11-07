@@ -1,3 +1,4 @@
+import { ensureChats, newThread } from "./chat.js?v=tape1";
 import { buildConversations, defaultChecklist } from "./data.js";
 import { applyAppeal, evaluateConversation } from "./scoring.js";
 import { uid } from "./util.js";
@@ -9,7 +10,8 @@ function fresh() {
   const conversations = buildConversations();
   const evaluations = {};
   for (const conv of conversations) evaluations[conv.id] = evaluateConversation(conv, checklist);
-  return { checklist, conversations, evaluations, appeals: [], apiUrl: "" };
+  const thread = newThread();
+  return { checklist, conversations, evaluations, appeals: [], chats: [thread], chatId: thread.id, apiUrl: "" };
 }
 
 export function loadState() {
@@ -18,7 +20,10 @@ export function loadState() {
     if (!raw) return fresh();
     const parsed = JSON.parse(raw);
     if (!parsed.checklist || !parsed.conversations?.length) return fresh();
-    return parsed;
+    const needsSave = !Array.isArray(parsed.chats) || !parsed.chats.length;
+    const next = ensureChats(parsed);
+    if (needsSave) saveState(next);
+    return next;
   } catch {
     return fresh();
   }

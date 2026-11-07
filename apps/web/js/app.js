@@ -1,7 +1,21 @@
+import { activeChat, openChat, pushTurn, removeChat, startChat } from "./chat.js?v=tape1";
 import { parseApiPayload } from "./data.js";
 import { evaluateConversation } from "./scoring.js";
-import { decideAppeal, loadState, reevaluateAll, resetState, saveState, submitAppeal } from "./store.js";
-import { Alert, Button, Card, Checkbox, Field, Input, Select, Textarea } from "./ui.js";
+import { decideAppeal, loadState, reevaluateAll, saveState, submitAppeal } from "./store.js?v=tape1";
+import { mountMessageScroller } from "./message-scroller.js?v=tape1";
+import {
+  Bubble,
+  Button,
+  ChatPrompt,
+  Checkbox,
+  Field,
+  Input,
+  Message,
+  MessageScroller,
+  MessageScrollerItem,
+  Select,
+  Textarea,
+} from "./ui.js?v=tape1";
 import { byId, esc, fmtTime, uid } from "./util.js";
 
 const icon = {
@@ -10,7 +24,7 @@ const icon = {
   phone: '<svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
   messages: '<svg viewBox="0 0 24 24"><path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z"/><path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"/></svg>',
   checks: '<svg viewBox="0 0 24 24"><path d="M13 5h8"/><path d="M13 12h8"/><path d="M13 19h8"/><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/></svg>',
-  chat: '<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+  file: '<svg viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>',
   arrow: '<svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>',
 };
 
@@ -24,6 +38,7 @@ function navKey() {
   const h = location.hash.slice(1) || "/";
   if (h.startsWith("/checklist")) return "checklist";
   if (h.startsWith("/review")) return "review";
+  if (h.startsWith("/chat")) return "chat";
   if (h.startsWith("/c/")) return "";
   return "list";
 }
@@ -48,12 +63,61 @@ function render() {
   setNav();
   const view = byId("view");
   const h = location.hash.slice(1) || "/";
+  const chatMatch = h.match(/^\/chat\/([^/]+)/);
+  if (chatMatch) openChat(state, chatMatch[1]);
   const detail = h.match(/^\/c\/([^/]+)/);
   if (h.startsWith("/checklist")) view.innerHTML = viewChecklist();
   else if (h.startsWith("/review")) view.innerHTML = viewReview();
+  else if (h.startsWith("/chat")) view.innerHTML = viewChat();
   else if (detail) view.innerHTML = viewDetail(detail[1]);
   else view.innerHTML = viewList();
   bind();
+}
+
+function viewChat() {
+  const thread = activeChat(state);
+  const history = [...state.chats].sort((a, b) => b.updatedAt - a.updatedAt);
+  const items = thread.messages
+    .map((m) => {
+      const user = m.role === "user";
+      const body = esc(m.text).replace(/\n/g, "<br>");
+      return MessageScrollerItem({
+        id: m.id,
+        scrollAnchor: user,
+        children: Message({
+          align: user ? "end" : "start",
+          children: Bubble({
+            align: user ? "end" : "start",
+            variant: user ? "default" : "secondary",
+            children: body,
+          }),
+        }),
+      });
+    })
+    .join("");
+  return `
+    <section class="chat-page">
+      <aside class="chat-history" aria-label="Chat history">
+        <button type="button" class="chat-new" data-action="new-chat">
+          <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+          New chat
+        </button>
+        <p class="chat-history-label">Chats</p>
+        <nav class="chat-history-list">
+          ${history.map((c) => `
+            <div class="chat-history-row ${c.id === thread.id ? "is-on" : ""}">
+              <a class="chat-history-item" href="#/chat/${esc(c.id)}" data-chat-id="${esc(c.id)}">${esc(c.title)}</a>
+              <button type="button" class="chat-history-del" data-action="delete-chat" data-chat-id="${esc(c.id)}" aria-label="Delete chat">
+                <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+              </button>
+            </div>`).join("")}
+        </nav>
+      </aside>
+      <div class="chat-shell">
+        ${MessageScroller(items)}
+        <form class="chat-prompt" data-chat-form>${ChatPrompt()}</form>
+      </div>
+    </section>`;
 }
 
 function viewList() {
@@ -82,13 +146,13 @@ function viewList() {
       </div>
       <div class="tool-row">
         ${chip("all", "", "All", "#/", icon.grid)}
-        ${chip("lang", "kz", "kz", "#/?lang=kz", icon.languages)}
-        ${chip("lang", "en", "en", "#/?lang=en", icon.languages)}
-        ${chip("lang", "ru", "ru", "#/?lang=ru", icon.languages)}
+        ${chip("lang", "kz", "Kazakh", "#/?lang=kz", '<span class="tool-mark">kz</span>')}
+        ${chip("lang", "ru", "Russian", "#/?lang=ru", '<span class="tool-mark">ru</span>')}
+        ${chip("lang", "en", "English", "#/?lang=en", '<span class="tool-mark">en</span>')}
         ${chip("source", "call", "Calls", "#/?source=call", icon.phone)}
         ${chip("source", "synthetic", "Chats", "#/?source=synthetic", icon.messages)}
         <a class="tool" href="#/checklist"><span class="tool-ico">${icon.checks}</span>Checklist</a>
-        <a class="tool" href="#/review"><span class="tool-ico">${icon.chat}</span>Appeals</a>
+        <a class="tool" href="#/review"><span class="tool-ico">${icon.file}</span>Appeals</a>
       </div>
       <article class="promo">
         <h2>Introducing operator scoring</h2>
@@ -142,11 +206,16 @@ function viewDetail(id) {
           <div class="pane-head"><h2>Transcript</h2><span class="badge badge-muted">${conv.messages.length} turns</span></div>
           ${conv.audioUrl ? `<div style="padding:12px 16px 0"><audio class="audio" controls src="${esc(conv.audioUrl)}"></audio></div>` : ""}
           <div class="transcript">
-            ${conv.messages.map((m) => `
-              <article class="msg" id="msg-${esc(m.id)}" data-msg="${esc(m.id)}">
-                <div class="msg-meta"><span class="tape">${esc(fmtTime(m.ts))}</span><span class="role role-${esc(m.speaker)}">${esc(m.speaker)}</span></div>
-                <p class="msg-text">${esc(m.text)}</p>
-              </article>`).join("")}
+            ${conv.messages.map((m) => {
+              const align = m.speaker === "operator" ? "end" : m.speaker === "client" ? "start" : "center";
+              const variant = m.speaker === "operator" ? "brand" : m.speaker === "client" ? "secondary" : "muted";
+              const bubbleAlign = align === "center" ? "start" : align;
+              return `
+              <article class="msg" id="msg-${esc(m.id)}" data-msg="${esc(m.id)}" data-align="${align}">
+                <div class="msg-meta"><span class="role role-${esc(m.speaker)}">${esc(m.speaker)}</span><span class="tape">${esc(fmtTime(m.ts))}</span></div>
+                ${Bubble({ align: bubbleAlign, variant, children: esc(m.text) })}
+              </article>`;
+            }).join("")}
           </div>
         </div>
         <div class="pane">
@@ -201,8 +270,60 @@ function answerControl(c, current) {
   return `<select class="input" name="answer">${extras}${Array.from({ length: max - min + 1 }, (_, i) => min + i).map((n) => `<option ${String(n) === String(current) ? "selected" : ""}>${n}</option>`).join("")}</select>`;
 }
 
+function checklistEditId() {
+  const h = location.hash.slice(1) || "/";
+  if (!h.startsWith("/checklist")) return "";
+  const q = h.includes("?") ? h.slice(h.indexOf("?") + 1) : "";
+  return new URLSearchParams(q).get("edit") || "";
+}
+
+function criterionSheet(c) {
+  return `
+    <div class="sheet-root">
+      <button type="button" class="sheet-dim" data-action="close-edit" aria-label="Close"></button>
+      <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" data-sheet>
+        <form data-edit="${esc(c.id)}" data-edit-form>
+          <div class="sheet-head">
+            <div>
+              <h2 id="sheet-title" class="sheet-title">${esc(c.title)}</h2>
+              <p class="hint">${esc(c.id)}</p>
+            </div>
+            ${Checkbox({ field: "enabled", checked: c.enabled, label: "enabled" })}
+          </div>
+          <div class="sheet-grid">
+            ${Field("ID", Input({ field: "id", value: c.id }))}
+            ${Field("Title", Input({ field: "title", value: c.title }))}
+            ${Field("Section", Input({ field: "section", value: c.section }))}
+            ${Field("Weight", Input({ field: "weight", value: c.weight, type: "number" }))}
+            ${Field("Type", Select({ field: "answerType", value: c.answerType, options: [
+              { value: "yes_no", label: "yes/no" },
+              { value: "scale", label: "scale" },
+            ] }))}
+            ${Field("N/A", Select({ field: "naAllowed", value: String(c.naAllowed), options: [
+              { value: "true", label: "allowed" },
+              { value: "false", label: "off" },
+            ] }))}
+            ${Field("Severe", Select({ field: "severe", value: String(c.severe), options: [
+              { value: "true", label: "yes" },
+              { value: "false", label: "no" },
+            ] }))}
+          </div>
+          ${Field("Wording", Textarea({ field: "wording", value: c.wording }))}
+          <div class="sheet-actions">
+            ${Button("Remove", { variant: "destructive", attrs: `data-action="remove-criterion" data-id="${esc(c.id)}"` })}
+            <div class="ui-btn-row">
+              ${Button("Cancel", { attrs: 'data-action="close-edit"' })}
+              ${Button("Save", { variant: "primary", type: "submit" })}
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>`;
+}
+
 function viewChecklist() {
   const cs = state.checklist.criteria;
+  const editing = cs.find((c) => c.id === checklistEditId());
   return `
     <section class="library library-wide">
       <div class="page-head">
@@ -215,46 +336,15 @@ function viewChecklist() {
           ${Button("Save & re-evaluate", { variant: "primary", attrs: 'data-action="apply-checklist"' })}
         </div>
       </div>
-      <div class="card-grid" style="margin-bottom:28px">
+      <div class="card-grid">
         ${cs.map((c) => `
-          <article class="lib-card">
-            <div class="lib-ico">${icon.checks}</div>
+          <button type="button" class="lib-card ${c.enabled ? "" : "is-off"} ${c.id === editing?.id ? "is-on" : ""}" data-open-edit="${esc(c.id)}">
             <h3>${esc(c.title)}</h3>
             <p>${esc(c.wording)}</p>
-            <span class="hint">${esc(c.section)} · weight ${esc(c.weight)}${c.naAllowed ? " · N/A" : ""}</span>
-          </article>`).join("")}
+            <span class="hint">${esc(c.section)} · weight ${esc(c.weight)}${c.naAllowed ? " · N/A" : ""}${c.severe ? " · severe" : ""}</span>
+          </button>`).join("")}
       </div>
-      ${Alert("Definitions are configuration. Replace a criterion here without a code change.")}
-      <div class="editor">
-        ${cs.map((c, i) => Card(`
-            <div class="ui-card-head">
-              <h3 class="ui-card-title">#${i + 1} ${esc(c.id)}</h3>
-              ${Checkbox({ field: "enabled", checked: c.enabled, label: "enabled" })}
-            </div>
-            <div class="editor-row">
-              ${Field("ID", Input({ field: "id", value: c.id }))}
-              ${Field("Title", Input({ field: "title", value: c.title }))}
-              ${Field("Section", Input({ field: "section", value: c.section }))}
-              ${Field("Weight", Input({ field: "weight", value: c.weight, type: "number" }))}
-              ${Field("Type", Select({ field: "answerType", value: c.answerType, options: [
-                { value: "yes_no", label: "yes/no" },
-                { value: "scale", label: "scale" },
-              ] }))}
-              ${Field("N/A", Select({ field: "naAllowed", value: String(c.naAllowed), options: [
-                { value: "true", label: "allowed" },
-                { value: "false", label: "off" },
-              ] }))}
-              ${Field("Severe", Select({ field: "severe", value: String(c.severe), options: [
-                { value: "true", label: "yes" },
-                { value: "false", label: "no" },
-              ] }))}
-              <div class="ui-field ui-field-action">
-                ${Button("Remove", { variant: "destructive", attrs: `data-action="remove-criterion" data-id="${esc(c.id)}"` })}
-              </div>
-            </div>
-            ${Field("Wording", Textarea({ field: "wording", value: c.wording }))}
-          `, `data-edit="${esc(c.id)}"`)).join("")}
-      </div>
+      ${editing ? criterionSheet(editing) : ""}
     </section>`;
 }
 
@@ -309,13 +399,27 @@ function collectChecklist() {
 }
 
 function bind() {
+  try {
+    mountMessageScroller(document.querySelector('[data-slot="message-scroller-provider"]'));
+  } catch (err) {
+    console.error(err);
+  }
+  document.querySelector("[data-chat-form]")?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const input = e.currentTarget.q;
+    const text = input.value.trim();
+    if (!text) return;
+    pushTurn(state, text);
+    persist();
+    render();
+    document.querySelector("[data-chat-form] input")?.focus();
+  });
   document.querySelector("[data-hero-search]")?.addEventListener("submit", (e) => {
     e.preventDefault();
     const q = e.currentTarget.q.value.trim();
     location.hash = q ? `/?q=${encodeURIComponent(q)}` : "/";
   });
   document.querySelector("[data-action='add-criterion']")?.addEventListener("click", () => {
-    collectChecklist();
     const id = uid("c");
     state.checklist.criteria.push({
       id,
@@ -331,24 +435,27 @@ function bind() {
       signals: { positive: [], negative: [] },
     });
     persist();
+    location.hash = `#/checklist?edit=${id}`;
     render();
   });
   document.querySelector("[data-action='apply-checklist']")?.addEventListener("click", () => {
-    collectChecklist();
     state.checklist.id = `cqa-${Date.now().toString(36)}`;
     reevaluateAll(state);
     persist();
     location.hash = "#/";
     render();
   });
-  document.querySelectorAll("[data-action='remove-criterion']").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      collectChecklist();
-      state.checklist.criteria = state.checklist.criteria.filter((c) => c.id !== btn.dataset.id);
-      persist();
-      render();
-    });
+  document.querySelector("[data-edit-form]")?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    collectChecklist();
+    persist();
+    location.hash = "#/checklist";
+    render();
   });
+  const titleField = document.querySelector("[data-edit] [data-field='title']");
+  titleField?.focus();
+  if (titleField) titleField.select();
+  document.body.style.overflow = document.querySelector(".sheet-root") ? "hidden" : "";
   document.querySelectorAll("[data-jump]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const node = document.getElementById(`msg-${btn.dataset.jump}`);
@@ -417,14 +524,59 @@ byId("btn-fetch").addEventListener("click", async () => {
   }
 });
 
-document.querySelector("[data-action='reset']")?.addEventListener("click", () => {
-  state = resetState();
-  location.hash = "#/";
-  render();
-});
 document.querySelector('[data-filter="q"]')?.addEventListener("keydown", (e) => {
   if (e.key !== "Enter") return;
   applyFilters();
+});
+
+document.addEventListener(
+  "click",
+  (e) => {
+    const neu = e.target.closest("[data-action='new-chat']");
+    if (neu) {
+      e.preventDefault();
+      const thread = startChat(state);
+      persist();
+      const next = `#/chat/${thread.id}`;
+      if (location.hash === next) render();
+      else location.hash = next;
+      return;
+    }
+    const delChat = e.target.closest("[data-action='delete-chat']");
+    if (delChat) {
+      e.preventDefault();
+      e.stopPropagation();
+      removeChat(state, delChat.dataset.chatId);
+      persist();
+      const next = `#/chat/${state.chatId}`;
+      if (location.hash === next) render();
+      else location.hash = next;
+      return;
+    }
+    const openEdit = e.target.closest("[data-open-edit]");
+    if (openEdit && !e.target.closest("[data-sheet]")) {
+      location.hash = `#/checklist?edit=${openEdit.getAttribute("data-open-edit")}`;
+      return;
+    }
+    if (e.target.closest("[data-action='close-edit']")) {
+      location.hash = "#/checklist";
+      return;
+    }
+    const removeCrit = e.target.closest("[data-action='remove-criterion']");
+    if (removeCrit) {
+      e.preventDefault();
+      state.checklist.criteria = state.checklist.criteria.filter((c) => c.id !== removeCrit.dataset.id);
+      persist();
+      location.hash = "#/checklist";
+      if (!location.hash.includes("edit=")) render();
+    }
+  },
+  true
+);
+
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape" || !checklistEditId()) return;
+  location.hash = "#/checklist";
 });
 
 window.addEventListener("hashchange", render);
