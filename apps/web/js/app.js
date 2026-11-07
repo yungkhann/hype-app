@@ -1,7 +1,18 @@
 import { parseApiPayload } from "./data.js";
 import { evaluateConversation } from "./scoring.js";
 import { decideAppeal, loadState, reevaluateAll, resetState, saveState, submitAppeal } from "./store.js";
+import { Alert, Button, Card, Checkbox, Field, Input, Select, Textarea } from "./ui.js";
 import { byId, esc, fmtTime, uid } from "./util.js";
+
+const icon = {
+  grid: '<svg viewBox="0 0 24 24"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>',
+  languages: '<svg viewBox="0 0 24 24"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>',
+  phone: '<svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
+  messages: '<svg viewBox="0 0 24 24"><path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z"/><path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"/></svg>',
+  checks: '<svg viewBox="0 0 24 24"><path d="M13 5h8"/><path d="M13 12h8"/><path d="M13 19h8"/><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/></svg>',
+  chat: '<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+  arrow: '<svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>',
+};
 
 let state = loadState();
 
@@ -13,6 +24,7 @@ function navKey() {
   const h = location.hash.slice(1) || "/";
   if (h.startsWith("/checklist")) return "checklist";
   if (h.startsWith("/review")) return "review";
+  if (h.startsWith("/c/")) return "";
   return "list";
 }
 
@@ -21,9 +33,11 @@ function setNav() {
   document.querySelectorAll("[data-nav]").forEach((el) => {
     el.classList.toggle("is-active", el.dataset.nav === key);
   });
-  const titles = { list: "Home", checklist: "Checklist", review: "Appeals" };
-  const crumb = byId("crumb");
-  if (crumb) crumb.textContent = titles[key] || "Studio";
+  const search = document.querySelector('[data-filter="q"]');
+  if (search && document.activeElement !== search) {
+    const q = new URLSearchParams(location.hash.split("?")[1] || "");
+    search.value = q.get("q") || "";
+  }
 }
 
 function criterion(id) {
@@ -53,9 +67,9 @@ function viewList() {
     if (search && !`${c.id} ${c.operator} ${c.language}`.toLowerCase().includes(search)) return false;
     return true;
   });
-  const chip = (key, value, label, href) => {
+  const chip = (key, value, label, href, ico) => {
     const on = (key === "lang" && lang === value) || (key === "source" && source === value) || (!value && !lang && !source && key === "all");
-    return `<a class="tool ${on ? "is-on" : ""}" href="${href}"><span class="tool-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/></svg></span>${label}</a>`;
+    return `<a class="tool ${on ? "is-on" : ""}" href="${href}"><span class="tool-ico">${ico}</span>${label}</a>`;
   };
   return `
     <section class="home">
@@ -63,18 +77,18 @@ function viewList() {
         <h1>What would you like to score?</h1>
         <form class="hero-search" data-hero-search>
           <input name="q" type="search" placeholder="Create a quality review from a transcript…" value="${esc(search)}" />
-          <button class="hero-go" type="submit" aria-label="Search"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+          <button class="hero-go" type="submit" aria-label="Search">${icon.arrow}</button>
         </form>
       </div>
       <div class="tool-row">
-        ${chip("all", "", "All", "#/")}
-        ${chip("lang", "ru", "Russian", "#/?lang=ru")}
-        ${chip("lang", "kz", "Kazakh", "#/?lang=kz")}
-        ${chip("lang", "en", "English", "#/?lang=en")}
-        ${chip("source", "call", "Calls", "#/?source=call")}
-        ${chip("source", "synthetic", "Chats", "#/?source=synthetic")}
-        <a class="tool" href="#/checklist"><span class="tool-ico"><svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12"/></svg></span>Checklist</a>
-        <a class="tool" href="#/review"><span class="tool-ico"><svg viewBox="0 0 24 24"><path d="M4 5h16v12H8l-4 3V5Z"/></svg></span>Appeals</a>
+        ${chip("all", "", "All", "#/", icon.grid)}
+        ${chip("lang", "kz", "kz", "#/?lang=kz", icon.languages)}
+        ${chip("lang", "en", "en", "#/?lang=en", icon.languages)}
+        ${chip("lang", "ru", "ru", "#/?lang=ru", icon.languages)}
+        ${chip("source", "call", "Calls", "#/?source=call", icon.phone)}
+        ${chip("source", "synthetic", "Chats", "#/?source=synthetic", icon.messages)}
+        <a class="tool" href="#/checklist"><span class="tool-ico">${icon.checks}</span>Checklist</a>
+        <a class="tool" href="#/review"><span class="tool-ico">${icon.chat}</span>Appeals</a>
       </div>
       <article class="promo">
         <h2>Introducing operator scoring</h2>
@@ -190,60 +204,56 @@ function answerControl(c, current) {
 function viewChecklist() {
   const cs = state.checklist.criteria;
   return `
-    <section class="library">
+    <section class="library library-wide">
       <div class="page-head">
         <div>
           <h1 class="studio-title">Checklist</h1>
           <p>${esc(state.checklist.note.replace(/\.$/, ""))}</p>
         </div>
-        <div style="display:flex;gap:8px">
-          <button class="btn" data-action="add-criterion">Add criterion</button>
-          <button class="btn btn-primary" data-action="apply-checklist">Save &amp; re-evaluate</button>
+        <div class="ui-btn-row">
+          ${Button("Add criterion", { attrs: 'data-action="add-criterion"' })}
+          ${Button("Save & re-evaluate", { variant: "primary", attrs: 'data-action="apply-checklist"' })}
         </div>
       </div>
       <div class="card-grid" style="margin-bottom:28px">
         ${cs.map((c) => `
           <article class="lib-card">
-            <div class="lib-ico"><svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12"/></svg></div>
+            <div class="lib-ico">${icon.checks}</div>
             <h3>${esc(c.title)}</h3>
             <p>${esc(c.wording)}</p>
             <span class="hint">${esc(c.section)} · weight ${esc(c.weight)}${c.naAllowed ? " · N/A" : ""}</span>
           </article>`).join("")}
       </div>
-      <p class="notice notice-warn">Definitions are configuration. Replace a criterion here without a code change.</p>
-      <div class="editor" style="margin-top:16px">
-        ${cs.map((c, i) => `
-          <div class="crit-card" data-edit="${esc(c.id)}">
-            <div class="crit-top"><h3>#${i + 1} ${esc(c.id)}</h3>
-              <label><input type="checkbox" data-field="enabled" ${c.enabled ? "checked" : ""} /> enabled</label>
+      ${Alert("Definitions are configuration. Replace a criterion here without a code change.")}
+      <div class="editor">
+        ${cs.map((c, i) => Card(`
+            <div class="ui-card-head">
+              <h3 class="ui-card-title">#${i + 1} ${esc(c.id)}</h3>
+              ${Checkbox({ field: "enabled", checked: c.enabled, label: "enabled" })}
             </div>
             <div class="editor-row">
-              <label><span class="field-label">ID</span><input class="input" data-field="id" value="${esc(c.id)}" /></label>
-              <label><span class="field-label">Title</span><input class="input" data-field="title" value="${esc(c.title)}" /></label>
-              <label><span class="field-label">Section</span><input class="input" data-field="section" value="${esc(c.section)}" /></label>
-              <label><span class="field-label">Weight</span><input class="input" type="number" data-field="weight" value="${esc(c.weight)}" /></label>
-              <label><span class="field-label">Type</span>
-                <select class="input" data-field="answerType">
-                  <option value="yes_no" ${c.answerType === "yes_no" ? "selected" : ""}>yes/no</option>
-                  <option value="scale" ${c.answerType === "scale" ? "selected" : ""}>scale</option>
-                </select>
-              </label>
-              <label><span class="field-label">N/A</span>
-                <select class="input" data-field="naAllowed">
-                  <option value="true" ${c.naAllowed ? "selected" : ""}>allowed</option>
-                  <option value="false" ${!c.naAllowed ? "selected" : ""}>off</option>
-                </select>
-              </label>
-              <label><span class="field-label">Severe</span>
-                <select class="input" data-field="severe">
-                  <option value="true" ${c.severe ? "selected" : ""}>yes</option>
-                  <option value="false" ${!c.severe ? "selected" : ""}>no</option>
-                </select>
-              </label>
-              <button class="btn btn-danger" data-action="remove-criterion" data-id="${esc(c.id)}">Remove</button>
+              ${Field("ID", Input({ field: "id", value: c.id }))}
+              ${Field("Title", Input({ field: "title", value: c.title }))}
+              ${Field("Section", Input({ field: "section", value: c.section }))}
+              ${Field("Weight", Input({ field: "weight", value: c.weight, type: "number" }))}
+              ${Field("Type", Select({ field: "answerType", value: c.answerType, options: [
+                { value: "yes_no", label: "yes/no" },
+                { value: "scale", label: "scale" },
+              ] }))}
+              ${Field("N/A", Select({ field: "naAllowed", value: String(c.naAllowed), options: [
+                { value: "true", label: "allowed" },
+                { value: "false", label: "off" },
+              ] }))}
+              ${Field("Severe", Select({ field: "severe", value: String(c.severe), options: [
+                { value: "true", label: "yes" },
+                { value: "false", label: "no" },
+              ] }))}
+              <div class="ui-field ui-field-action">
+                ${Button("Remove", { variant: "destructive", attrs: `data-action="remove-criterion" data-id="${esc(c.id)}"` })}
+              </div>
             </div>
-            <label style="display:block;margin-top:8px"><span class="field-label">Wording</span><textarea class="input" data-field="wording">${esc(c.wording)}</textarea></label>
-          </div>`).join("")}
+            ${Field("Wording", Textarea({ field: "wording", value: c.wording }))}
+          `, `data-edit="${esc(c.id)}"`)).join("")}
       </div>
     </section>`;
 }
@@ -412,10 +422,9 @@ document.querySelector("[data-action='reset']")?.addEventListener("click", () =>
   location.hash = "#/";
   render();
 });
-document.querySelector(".top-search input")?.addEventListener("keydown", (e) => {
+document.querySelector('[data-filter="q"]')?.addEventListener("keydown", (e) => {
   if (e.key !== "Enter") return;
-  const q = e.currentTarget.value.trim();
-  location.hash = q ? `/?q=${encodeURIComponent(q)}` : "/";
+  applyFilters();
 });
 
 window.addEventListener("hashchange", render);

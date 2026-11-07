@@ -4,60 +4,47 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>CQA Studio</title>
-    <link rel="stylesheet" href="css/app.css?v=sat2" />
+    <link rel="stylesheet" href="css/app.css?v=scroll1" />
   </head>
   <body>
     <div class="app">
-      <aside class="rail" aria-label="Primary">
-        <a class="brand" href="#/">
-          <span class="logo" aria-hidden="true">II</span>
-          <span class="brand-name">CQA Studio</span>
-        </a>
-        <nav class="nav">
-          <a class="nav-link" data-nav="list" href="#/">
-            <svg viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1Z"/></svg>
-            Home
+      <header class="island" aria-label="Primary">
+        <nav class="island-side">
+          <a class="island-btn" data-nav="list" href="#/">
+            <svg viewBox="0 0 24 24"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+            <span class="island-name">Home</span>
           </a>
-          <a class="nav-link" data-nav="checklist" href="#/checklist">
-            <svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>
-            Checklist
+          <a class="island-btn" data-nav="checklist" href="#/checklist">
+            <svg viewBox="0 0 24 24"><path d="M13 5h8"/><path d="M13 12h8"/><path d="M13 19h8"/><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/></svg>
+            <span class="island-name">Checklist</span>
           </a>
-          <a class="nav-link" data-nav="review" href="#/review">
-            <svg viewBox="0 0 24 24"><path d="M4 5h16v12H8l-4 3V5Z"/></svg>
-            Appeals
-          </a>
-          <p class="nav-label">Pinned</p>
-          <a class="nav-link" href="#/c/conv-01">
-            <svg viewBox="0 0 24 24"><path d="M8 5h8a2 2 0 0 1 2 2v12l-6-3-6 3V7a2 2 0 0 1 2-2Z"/></svg>
-            Demo conversation
+          <a class="island-btn" data-nav="review" href="#/review">
+            <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span class="island-name">Appeals</span>
           </a>
         </nav>
-        <div class="rail-foot">
-          <div class="invite">
-            <strong>Freedom Broker</strong>
-            <p>Conversation quality analytics. 65 lines, three languages.</p>
-          </div>
-          <label class="field-label" for="group-id">group_id</label>
-          <input id="group-id" class="input" type="text" value="dev" autocomplete="off" />
-          <button type="button" class="btn" id="btn-fetch">Load API</button>
+        <label class="island-search">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input data-filter="q" type="search" placeholder="Search" />
+        </label>
+        <div class="island-side">
+          <a class="island-btn" href="#/c/conv-01">
+            <svg viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            <span class="island-name">Demo</span>
+          </a>
+          <button type="button" class="island-btn" data-action="reset">
+            <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            <span class="island-name">Reset</span>
+          </button>
+          <button type="button" class="island-btn" id="btn-fetch">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+            <span class="island-name">Load</span>
+          </button>
         </div>
-      </aside>
-      <div class="workspace">
-        <header class="topbar">
-          <span class="crumb" id="crumb">Home</span>
-          <label class="top-search">
-            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
-            <input data-filter="q" type="search" placeholder="Search everything…" />
-            <kbd>⌘K</kbd>
-          </label>
-          <div class="topbar-right">
-            <button type="button" class="btn" data-action="reset">Reset</button>
-            <a class="btn btn-primary" href="#/checklist">Create</a>
-          </div>
-        </header>
-        <main id="view" class="view"></main>
-      </div>
+      </header>
+      <input id="group-id" type="hidden" value="dev" />
+      <main id="view" class="view"></main>
     </div>
-    <script type="module" src="js/app.js?v=el4"></script>
+    <script type="module" src="js/app.js?v=shadcn1"></script>
   </body>
 </html>
