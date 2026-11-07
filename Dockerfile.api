@@ -1,0 +1,40 @@
+# syntax=docker/dockerfile:1
+# Production image for the ATLAS CQA API (FastAPI + uvicorn, one worker). Build from the repository root:
+#   docker build -f Dockerfile.api -t hype-app-api .
+# Persistent data lives in /data (mount it); nothing private is baked into the image.
+
+ARG PYTHON_VERSION=3.14
+
+# ---- dependencies: a self-contained virtualenv with exactly the tested versions -----------------------------
+FROM python:${PYTHON_VERSION}-slim AS deps
+ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
+RUN python -m venv /opt/venv
+COPY apps/api/requirements.txt apps/api/requirements.lock /tmp/
+RUN /opt/venv/bin/pip install -r /tmp/requirements.txt -c /tmp/requirements.lock
+
+# ---- runtime ------------------------------------------------------------------------------------------------
+FROM python:${PYTHON_VERSION}-slim AS runtime
+ARG RELEASE_SHA=dev
+ENV PATH=/opt/venv/bin:$PATH \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    ATLAS_DATA_DIR=/data \
+    RELEASE_SHA=${RELEASE_SHA}
+RUN groupadd --system --gid 10001 atlas \
+ && useradd --system --uid 10001 --gid atlas --create-home --home-dir /home/atlas --shell /usr/sbin/nologin atlas \
+ && mkdir -p /data && chown atlas:atlas /data
+COPY --from=deps /opt/venv /opt/venv
+# app/core/config.py finds the repository root four directories above itself, so keep the repository layout.
+WORKDIR /opt/atlas/apps/api
+COPY apps/api/app ./app
+# Synthetic practice datasets (committed, no private data) used by the data-studio sample loader.
+COPY data/samples /opt/atlas/data/samples
+# The Compose file travels with the release: the Windows deploy script extracts it from the image it deploys.
+COPY compose.prod.yml /opt/atlas/deploy/compose.prod.yml
+USER atlas
+EXPOSE 8000
+HEALTHCHECK --interval=10s --timeout=5s --start-period=60s --retries=3 \
+  CMD ["python", "-c", "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=4).status == 200 else 1)"]
+# One worker on purpose: CQA keeps its JSON store in memory and writes through under a process-local lock.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", \
+     "--proxy-headers", "--forwarded-allow-ips", "*", "--timeout-graceful-shutdown", "20", "--no-server-header"]

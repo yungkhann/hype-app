@@ -17,12 +17,15 @@ from app.cqa.adapters.base import EvaluatorAdapter, EvaluatorError, register_ada
 from app.cqa.contract import EvaluationRequest
 
 MAX_RESPONSE_BYTES = 8 * 1024 * 1024
+# Inside a Docker Desktop container, the machine running Docker (where the model service runs) is reached by this
+# name. It is the same physical machine, so it counts as local for the guard below.
+DOCKER_HOST_NAMES = frozenset({"host.docker.internal"})
 
 
 def is_loopback(host: str | None) -> bool:
     if not host:
         return False
-    if host.lower() == "localhost":
+    if host.lower() == "localhost" or host.lower() in DOCKER_HOST_NAMES:
         return True
     try:
         return ipaddress.ip_address(host.strip("[]")).is_loopback

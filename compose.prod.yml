@@ -1,0 +1,86 @@
+# Production stack for ATLAS CQA: exactly two services.
+#
+#   web  static frontend + /api/v1 proxy (Node). Published on 127.0.0.1:${WEB_PORT} only: Cloudflare Tunnel's
+#        origin. Nothing is reachable from the LAN or the internet except through the tunnel.
+#   api  FastAPI (uvicorn, one worker). Not published on the host; only `web` reaches it, on this network.
+#
+# The AI model (Ollama + the teammate's evaluation service) runs on the Windows host, OUTSIDE Docker. The API calls
+# it at ATLAS_CQA_EVALUATOR_URL, e.g. http://host.docker.internal:<port>/evaluate. With the model offline the stack
+# stays healthy; new evaluations fail with a readable error and existing results stay viewable.
+#
+# The Windows deploy script runs this file with `-p hype-cqa --project-directory C:\hype-cqa
+# --env-file C:\hype-cqa\hype.env` and sets WEB_IMAGE / API_IMAGE / RELEASE_SHA to one release (same commit).
+name: hype-cqa
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  api:
+    image: ${API_IMAGE:?API_IMAGE is required (set by the deploy script)}
+    restart: unless-stopped
+    init: true
+    environment:
+      ATLAS_DATA_DIR: /data
+      # Host headers the API answers to (DNS-rebinding guard). The web server forwards the browser's Host, so the
+      # public hostname from the tunnel must be listed: set PUBLIC_HOSTNAME in hype.env.
+      ATLAS_ALLOWED_HOSTS: '["127.0.0.1","localhost","api","${PUBLIC_HOSTNAME:-localhost}"]'
+      ATLAS_CQA_EVALUATOR: ${ATLAS_CQA_EVALUATOR:-mock}
+      ATLAS_CQA_EVALUATOR_URL: ${ATLAS_CQA_EVALUATOR_URL:-}
+      ATLAS_CQA_EVALUATOR_TIMEOUT_S: ${ATLAS_CQA_EVALUATOR_TIMEOUT_S:-180}
+      ATLAS_CQA_EVALUATION_WORKERS: ${ATLAS_CQA_EVALUATION_WORKERS:-2}
+      ATLAS_CQA_SOURCE_URL: ${ATLAS_CQA_SOURCE_URL:-}
+      ATLAS_CQA_FIXTURES_ENABLED: ${ATLAS_CQA_FIXTURES_ENABLED:-true}
+      RELEASE_SHA: ${RELEASE_SHA:-unknown}
+    # Optional extra ATLAS_* settings without a new release (values above take precedence).
+    env_file:
+      - path: ./api.env
+        required: false
+    volumes:
+      # Persistent CQA data (conversations, checklists, evaluations, appeals, audit) and data-studio workspaces.
+      - type: bind
+        source: ${HYPE_DATA_DIR:-./data}
+        target: /data
+        bind:
+          create_host_path: true
+    extra_hosts:
+      # Docker Desktop already provides this name; the line makes Linux engines (CI) behave the same.
+      - "host.docker.internal:host-gateway"
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=4).status == 200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+      start_interval: 2s
+    stop_grace_period: 30s
+    logging: *logging
+
+  web:
+    image: ${WEB_IMAGE:?WEB_IMAGE is required (set by the deploy script)}
+    restart: unless-stopped
+    init: true
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      API_UPSTREAM: http://api:8000
+      API_ALLOWED_PREFIXES: ${API_ALLOWED_PREFIXES:-/api/v1/health,/api/v1/cqa/}
+      API_READ_ONLY: ${API_READ_ONLY:-false}
+      RELEASE_SHA: ${RELEASE_SHA:-unknown}
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/healthz').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+      start_interval: 2s
+    stop_grace_period: 15s
+    logging: *logging

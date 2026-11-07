@@ -1,0 +1,132 @@
+# CI for ATLAS CQA. Runs on pull requests to main, and as the first stage of every release (release.yml calls it).
+# GitHub-hosted runners only. No real model, no Ollama: evaluations use the development mock.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      e2e:
+        description: Build the images and run the end-to-end test of the Compose stack
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  # Distinct from release.yml's group, so a release that calls this workflow never waits on itself.
+  group: ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  backend:
+    name: Backend (ruff, pytest)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: |
+            apps/api/requirements.txt
+            apps/api/requirements-dev.txt
+            apps/api/requirements.lock
+      - name: Install dependencies (pinned by requirements.lock)
+        run: python -m pip install -r requirements.txt -r requirements-dev.txt -c requirements.lock
+      - name: Ruff
+        run: ruff check .
+      - name: Pytest (scoring engine, evaluator contract, HTTP model adapter, persistence, workflow, data studio)
+        run: python -m pytest -q
+
+  web:
+    name: Web (server tests, frontend syntax)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Web server tests (static files, /api/v1 proxy, range requests, streaming)
+        run: node --test apps/web-server/server.test.mjs
+      - name: Frontend modules parse (static HTML/CSS/JS app, no build step)
+        run: |
+          test -f apps/web/index.html
+          for file in apps/web/js/*.js; do
+            node --input-type=module --check < "$file" || { echo "::error file=$file::syntax error"; exit 1; }
+          done
+
+  e2e:
+    name: End-to-end (Docker images + Compose stack)
+    # Pull requests and manual runs: yes. Called from release.yml with e2e=false: no (it verifies the pushed images).
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || inputs.e2e == true }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      WEB_IMAGE: hype-app-web:ci
+      API_IMAGE: hype-app-api:ci
+      RELEASE_SHA: ${{ github.sha }}
+      WEB_PORT: "3000"
+      PUBLIC_HOSTNAME: lumvy.io
+      # The http adapter points at a port with nothing listening: proves the app copes with the model offline.
+      ATLAS_CQA_EVALUATOR_URL: http://host.docker.internal:9/evaluate
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - name: Build web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.web
+          load: true
+          tags: ${{ env.WEB_IMAGE }}
+          build-args: RELEASE_SHA=${{ github.sha }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,scope=web,mode=max
+      - name: Build api image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.api
+          load: true
+          tags: ${{ env.API_IMAGE }}
+          build-args: RELEASE_SHA=${{ github.sha }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,scope=api,mode=max
+      - name: No secrets or private data in the images
+        run: bash deployment/check-images.sh "$WEB_IMAGE" "$API_IMAGE"
+      - name: Start the stack
+        run: |
+          export HYPE_DATA_DIR="$RUNNER_TEMP/cqa-data"
+          echo "HYPE_DATA_DIR=$HYPE_DATA_DIR" >> "$GITHUB_ENV"
+          mkdir -p "$HYPE_DATA_DIR" && chmod 0777 "$HYPE_DATA_DIR"   # the API runs as uid 10001
+          docker compose -f compose.prod.yml config --quiet
+          docker compose -f compose.prod.yml up -d --wait --wait-timeout 180
+      - name: Smoke test (import, list, detail, checklist edit, evaluation, appeal, decision, model offline)
+        run: python3 deployment/smoke_test.py --phase seed --state "$RUNNER_TEMP/smoke.json" --offline-model --expect-release "$RELEASE_SHA"
+      - name: Same flow as the public host name behind HTTPS
+        run: python3 deployment/smoke_test.py --phase seed --state "$RUNNER_TEMP/smoke-public.json" --host lumvy.io
+      - name: Data survives an API restart
+        run: |
+          docker compose -f compose.prod.yml restart api
+          docker compose -f compose.prod.yml up -d --wait --wait-timeout 180
+          python3 deployment/smoke_test.py --phase verify --state "$RUNNER_TEMP/smoke.json"
+      - name: Data survives recreating the containers (what an update does)
+        run: |
+          docker compose -f compose.prod.yml down
+          docker compose -f compose.prod.yml up -d --wait --wait-timeout 180
+          python3 deployment/smoke_test.py --phase verify --state "$RUNNER_TEMP/smoke.json"
+      - name: Container logs
+        if: failure()
+        run: docker compose -f compose.prod.yml logs --no-color --tail 200
+      - name: Stop the stack
+        if: always()
+        run: docker compose -f compose.prod.yml down --remove-orphans || true

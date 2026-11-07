@@ -1,0 +1,28 @@
+# Build-context ALLOWLIST for Dockerfile.web and Dockerfile.api: only what the images need is sent to Docker.
+# Everything else stays out — .env (secrets), data/workspaces and data/private (case data), .git, node_modules,
+# virtualenvs, caches, test output.
+*
+!apps/api/app
+!apps/api/requirements.txt
+!apps/api/requirements.lock
+!apps/web
+!apps/web-server/server.mjs
+!data/samples
+!compose.prod.yml
+
+# Re-exclude local leftovers inside the allowed folders.
+**/__pycache__
+**/*.py[cod]
+**/.DS_Store
+**/.env
+**/.env.*
+apps/web/**/.*
+apps/web/node_modules
+apps/web/.next
+apps/web/out
+apps/web/e2e
+apps/web/public
+apps/web/test-results
+apps/web/playwright-report
+apps/web/next-env.d.ts
+apps/web/*.tsbuildinfo

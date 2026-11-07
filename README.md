@@ -100,6 +100,7 @@ After changing backend schemas, run `pnpm gen:api` to regenerate `docs/openapi.j
 - [docs/architecture.md](docs/architecture.md): layout, request flow, backend layers, security, frontend structure, and how to add an analysis (worked example).
 - [docs/api-contract.md](docs/api-contract.md): endpoints, error envelope and codes, limits and `ATLAS_*` settings, downloads, replace/cancel.
 - [PRODUCT.md](PRODUCT.md) · [DESIGN.md](DESIGN.md): product principles and the design system.
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md): production at https://lumvy.io (Docker on a Windows PC, Cloudflare Tunnel), with [CI_CD.md](docs/CI_CD.md), [WINDOWS_SETUP.md](docs/WINDOWS_SETUP.md), [CLOUDFLARE_SETUP.md](docs/CLOUDFLARE_SETUP.md), [MODEL_INTEGRATION.md](docs/MODEL_INTEGRATION.md).
 
 ## Data and privacy
 

@@ -1,0 +1,25 @@
+# syntax=docker/dockerfile:1
+# Production image for the CQA web frontend: the static HTML/CSS/JS app (apps/web) served by a zero-dependency
+# Node server (apps/web-server/server.mjs) that also forwards /api/v1/* to the API container. Build from the
+# repository root:
+#   docker build -f Dockerfile.web -t hype-app-web .
+# There is no build step (no bundler, no npm install), so a single stage is enough.
+
+ARG NODE_VERSION=24
+FROM node:${NODE_VERSION}-alpine
+ARG RELEASE_SHA=dev
+ENV NODE_ENV=production \
+    HOST=0.0.0.0 \
+    PORT=3000 \
+    STATIC_ROOT=/srv/web \
+    API_UPSTREAM=http://api:8000 \
+    RELEASE_SHA=${RELEASE_SHA}
+WORKDIR /srv
+# Files stay owned by root and read-only for the runtime user.
+COPY apps/web-server/server.mjs /srv/server/server.mjs
+COPY apps/web/ /srv/web/
+USER node
+EXPOSE 3000
+HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=3 \
+  CMD ["node", "-e", "fetch('http://127.0.0.1:3000/healthz').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+CMD ["node", "/srv/server/server.mjs"]

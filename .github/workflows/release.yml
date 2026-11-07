@@ -1,0 +1,132 @@
+# Release pipeline for every push to main:
+#
+#   ci  ->  publish (web, api; same commit, pushed to GHCR with the full commit SHA as tag)  ->  verify
+#
+# "verify" pulls the two pushed images BY THAT SHA, runs them together with compose.prod.yml and the smoke test.
+# Only when every job succeeds is the workflow run "success". The Windows deploy agent deploys exclusively the
+# newest SUCCESSFUL run of this workflow on main (GitHub API: actions/workflows/release.yml/runs?status=success),
+# so a failing CI, a half-finished publish or a broken image pair can never be deployed, and a failed later run
+# never replaces the release that is running. No mutable tags (no "latest") are used.
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  # One release at a time. Not cancelled: a run that is publishing finishes; GitHub keeps only the newest pending run.
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+    with:
+      e2e: false   # the verify job below runs the end-to-end test against the published images instead
+    permissions:
+      contents: read
+
+  publish:
+    name: Publish ${{ matrix.image }} image
+    needs: ci
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: true
+      matrix:
+        image: [web, api]
+    steps:
+      - uses: actions/checkout@v5
+      - name: Image reference
+        id: ref
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY,,}-${{ matrix.image }}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push ${{ steps.ref.outputs.image }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.${{ matrix.image }}
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          tags: ${{ steps.ref.outputs.image }}
+          build-args: RELEASE_SHA=${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.title=hype-app-${{ matrix.image }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,scope=${{ matrix.image }},mode=max
+
+  verify:
+    name: Verify the published pair
+    needs: publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: read
+    env:
+      RELEASE_SHA: ${{ github.sha }}
+      WEB_PORT: "3000"
+      PUBLIC_HOSTNAME: lumvy.io
+      ATLAS_CQA_EVALUATOR_URL: http://host.docker.internal:9/evaluate
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Pull both images by commit SHA and check they belong to this commit
+        run: |
+          prefix="ghcr.io/${GITHUB_REPOSITORY,,}"
+          echo "WEB_IMAGE=$prefix-web:$GITHUB_SHA" >> "$GITHUB_ENV"
+          echo "API_IMAGE=$prefix-api:$GITHUB_SHA" >> "$GITHUB_ENV"
+          for image in "$prefix-web:$GITHUB_SHA" "$prefix-api:$GITHUB_SHA"; do
+            docker pull --quiet "$image"
+            revision=$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$image")
+            test "$revision" = "$GITHUB_SHA" || { echo "::error::$image is labelled $revision, expected $GITHUB_SHA"; exit 1; }
+          done
+      - name: No secrets or private data in the images
+        run: bash deployment/check-images.sh "$WEB_IMAGE" "$API_IMAGE"
+      - name: Run the pair with compose.prod.yml and smoke-test it
+        run: |
+          export HYPE_DATA_DIR="$RUNNER_TEMP/cqa-data"
+          mkdir -p "$HYPE_DATA_DIR" && chmod 0777 "$HYPE_DATA_DIR"
+          docker compose -f compose.prod.yml up -d --wait --wait-timeout 180
+          python3 deployment/smoke_test.py --phase seed --state "$RUNNER_TEMP/smoke.json" --offline-model --expect-release "$RELEASE_SHA"
+          docker compose -f compose.prod.yml restart api
+          docker compose -f compose.prod.yml up -d --wait --wait-timeout 180
+          python3 deployment/smoke_test.py --phase verify --state "$RUNNER_TEMP/smoke.json"
+      - name: Container logs
+        if: failure()
+        run: docker compose -f compose.prod.yml logs --no-color --tail 200
+      - name: Stop the stack
+        if: always()
+        run: docker compose -f compose.prod.yml down --remove-orphans || true
+      - name: Release summary
+        run: |
+          {
+            echo "## Deployable release"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Commit | \`$GITHUB_SHA\` |"
+            echo "| Web image | \`$WEB_IMAGE\` |"
+            echo "| API image | \`$API_IMAGE\` |"
+            echo ""
+            echo "The Windows deploy agent picks this run up within about a minute (newest successful run of release.yml on main)."
+          } >> "$GITHUB_STEP_SUMMARY"
