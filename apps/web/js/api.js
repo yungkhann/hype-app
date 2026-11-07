@@ -1,7 +1,7 @@
 // ATLAS backend client. Conversations are imported and stored by the backend (/api/v1/cqa); the browser never
 // calls the organizers' API itself, so its signed URL stays on the server.
 
-import { hasKey, t } from "./i18n.js?v=tape5";
+import { hasKey, t } from "./i18n.js?v=tape6";
 
 export const GROUP_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 
@@ -25,7 +25,7 @@ export class ApiError extends Error {
   }
 }
 
-async function request(path, { method = "GET", body } = {}) {
+async function request(path, { method = "GET", body, raw = false } = {}) {
   const base = apiBase();
   let response;
   try {
@@ -52,7 +52,7 @@ async function request(path, { method = "GET", body } = {}) {
       details: error?.details ?? null,
     });
   }
-  return data;
+  return raw ? text : data;
 }
 
 /**
@@ -78,6 +78,8 @@ export const listChecklistVersions = (id) => request(`/cqa/checklists/${encodeUR
 
 /** Queue a backend (GPT) evaluation; the response lists the queued evaluations, poll getEvaluation for the result. */
 export const startEvaluation = (body) => request("/cqa/evaluations", { method: "POST", body });
+/** A new evaluation like the given one; after a failure in a mode only the failed provider is asked again. */
+export const rerunEvaluation = (id) => request(`/cqa/evaluations/${encodeURIComponent(id)}/rerun`, { method: "POST" });
 export const getEvaluation = (id) => request(`/cqa/evaluations/${encodeURIComponent(id)}`);
 export const listEvaluations = (params) => request(`/cqa/evaluations?${new URLSearchParams(params)}`);
 
@@ -97,3 +99,9 @@ export const cqaInfo = () => request("/cqa/info");
 export const listConversationRecords = () => request("/cqa/conversation-records");
 export const importGroup = (groupId) => request("/cqa/imports", { method: "POST", body: { group_id: groupId } });
 export const importJson = (payload) => request("/cqa/imports/json", { method: "POST", body: payload });
+
+// Organizers' results file (JSON 1.0), built by the backend from stored evaluations; checking it evaluates nothing.
+export const cqaOverview = () => request("/cqa/overview");
+export const resultsReport = (params) => request(`/cqa/results/export?${new URLSearchParams(params)}`);
+/** The results.json text exactly as the backend renders it (409 with the reasons while it is not ready). */
+export const resultsFile = (params) => request(`/cqa/results/export/download?${new URLSearchParams(params)}`, { raw: true });

@@ -86,6 +86,7 @@ class EvaluationBrief(BaseModel):
     checklist_version: int
     evaluator: str
     is_mock: bool
+    mode_type: int | None = None
     original_total: float | None = None
     final_total: float | None = None
     max_score: float | None = None
@@ -653,6 +654,8 @@ class CriterionResult(BaseModel):
     model_raw_score: float | None = Field(default=None,
                                           description="The evaluator's own score claim. Recorded, never used.")
     source: Literal["evaluator", "reviewer"] = "evaluator"
+    provider: str | None = Field(default=None, description="Adapter that produced this answer (gemma, openai).")
+    model: str | None = Field(default=None, description="The model that produced it, as the provider reported it.")
 
 
 class EvaluatorInfo(BaseModel):
@@ -680,6 +683,30 @@ class Override(BaseModel):
     decided_at: str
 
 
+ModeType = Literal[1, 2]
+
+
+class EvaluationPart(BaseModel):
+    """One provider's share of an evaluation run in a mode (``mode_type``): the criteria routed to it, the model
+    that answered and its validated results. The record's final results merge every part, in checklist order."""
+
+    provider: str = Field(description="Adapter name: gemma or openai.")
+    label: str
+    requested_model: str = ""
+    model: str | None = Field(default=None, description="The model the provider reported.")
+    criteria_ids: list[str]
+    official_baseline: bool = Field(default=False, description=(
+        "These criteria still match the official definition (the only ones Gemma answers in mode 1)."))
+    status: Literal["pending", "completed", "failed"] = "pending"
+    results: list[CriterionResult] = []
+    warnings: list[str] = []
+    error: EvaluationError | None = None
+    raw_output: dict | None = None
+    reused_from: str | None = Field(default=None, description=(
+        "A retry reused this completed part from that failed evaluation instead of asking the provider again."))
+    completed_at: str | None = None
+
+
 class EvaluationRecord(BaseModel):
     id: str = Field(pattern=ID_PATTERN)
     conversation_id: str
@@ -689,6 +716,9 @@ class EvaluationRecord(BaseModel):
     checklist: ChecklistConfig = Field(description="Snapshot of the configuration used, for reproducibility.")
     transcript_hash: str
     evaluator: EvaluatorInfo
+    mode_type: ModeType | None = Field(default=None, description=(
+        "1 = hybrid (Gemma + GPT), 2 = GPT only. None: one adapter answered everything (adapter chosen explicitly)."))
+    parts: list[EvaluationPart] = Field(default=[], description="Per provider, when mode_type is set.")
     explanation_language: ExplanationLanguage = "en"
     status: EvaluationStatus
     batch_id: str | None = None
@@ -743,7 +773,12 @@ class EvaluateRequest(BaseModel):
     only_missing: bool = Field(default=False,
                                description="Skip conversations that already have a completed or queued evaluation "
                                            "with this checklist version.")
-    adapter: str | None = Field(default=None, max_length=64, description="Default: ATLAS_CQA_EVALUATOR.")
+    adapter: str | None = Field(default=None, max_length=64, description=(
+        "One adapter for every criterion (e.g. mock, http). Omit it to evaluate in a mode."))
+    mode_type: Literal[1, 2] | None = Field(default=None, description=(
+        "1 = hybrid: Gemma answers the official criteria that match the official definition, GPT the custom and "
+        "modified ones. 2 = GPT answers every criterion. Default: ATLAS_CQA_DEFAULT_MODE_TYPE (when "
+        "ATLAS_CQA_EVALUATOR=openai). Appeals are reassessed by GPT in both modes."))
     explanation_language: ExplanationLanguage = Field(
         default="en", description="Language of the evaluator's explanations (the UI language). Transcripts are "
                                   "never translated.")

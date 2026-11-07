@@ -1,4 +1,4 @@
-import { ensureChats, newThread } from "./chat.js?v=tape5";
+import { ensureChats, newThread } from "./chat.js?v=tape6";
 import { defaultChecklist, fromRecord } from "./data.js?v=tape2";
 
 const KEY = "cqa-studio-v2";

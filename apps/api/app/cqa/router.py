@@ -5,11 +5,14 @@ from __future__ import annotations
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Body, Depends, Path, Query, Request, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from app.api.deps import attachment
+from app.core.errors import ConflictError
+from app.cqa.checklists import OFFICIAL_CHECKLIST_ID
 from app.cqa.contract import EvaluationRequest, contract_schema
 from app.cqa.examples import example_output, example_request
+from app.cqa.results_export import ResultsExport, build_results, render
 from app.cqa.schemas import (
     CONVERSATION_ID_PATTERN,
     CRITERION_ID_PATTERN,
@@ -333,3 +336,42 @@ def reassess_appeal(appeal_id: HexId, cqa: Cqa) -> Appeal:
 def decide_appeal(appeal_id: HexId, body: AppealDecisionIn, cqa: Cqa) -> Appeal:
     """The manager's decision: confirm, accept GPT's recommendation, or override with another allowed answer."""
     return cqa.appeals.decide(appeal_id, body)
+
+
+# ---- organizers' results file (JSON 1.0) -------------------------------------------------------------------
+
+def _results(cqa: CqaService, group_id: str, checklist_id: str, checklist_version: int | None,
+             target: Literal["dev", "prod"] | None, team_name: str | None) -> ResultsExport:
+    return build_results(cqa.store, cqa.settings, group_id=group_id, checklist_id=checklist_id,
+                         checklist_version=checklist_version, target=target, team_name=team_name)
+
+
+ExportGroup = Annotated[str, Query(pattern=GROUP_ID_PATTERN, description="The imported dataset (group_id).")]
+ExportChecklist = Annotated[str, Query(pattern=ID_PATTERN)]
+ExportVersion = Annotated[int | None, Query(ge=1, description="Default: the newest evaluation of any version.")]
+ExportTarget = Annotated[Literal["dev", "prod"] | None, Query(description="Checks the expected record count.")]
+ExportTeam = Annotated[str | None, Query(max_length=200, description="Default: ATLAS_CQA_TEAM_NAME.")]
+
+
+@router.get("/results/export", response_model=ResultsExport)
+def results_export(cqa: Cqa, group_id: ExportGroup, checklist_id: ExportChecklist = OFFICIAL_CHECKLIST_ID,
+                   checklist_version: ExportVersion = None, target: ExportTarget = None,
+                   team_name: ExportTeam = None) -> ResultsExport:
+    """The dataset's results in the organizers' JSON 1.0 format, built from stored evaluations (final answers
+    after accepted appeals), with completeness per conversation and every validation problem. Runs nothing."""
+    return _results(cqa, group_id, checklist_id, checklist_version, target, team_name)
+
+
+@router.get("/results/export/download")
+def results_download(cqa: Cqa, group_id: ExportGroup, checklist_id: ExportChecklist = OFFICIAL_CHECKLIST_ID,
+                     checklist_version: ExportVersion = None, target: ExportTarget = None,
+                     team_name: ExportTeam = None) -> Response:
+    """``results.json`` for the organizers, only when it is complete and valid (409 with the reasons otherwise)."""
+    report = _results(cqa, group_id, checklist_id, checklist_version, target, team_name)
+    if not report.ready:
+        raise ConflictError("The results file is not ready: "
+                            + " ".join(i.message for i in report.issues if i.severity == "error"),
+                            code="results_not_ready",
+                            details=[i.model_dump() for i in report.issues if i.severity == "error"][:50])
+    return Response(render(report.document).encode("utf-8"), media_type="application/json; charset=utf-8",
+                    headers=attachment("results.json"))

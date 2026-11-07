@@ -1,6 +1,7 @@
 import {
   GROUP_ID_RE,
   cqaInfo,
+  cqaOverview,
   createAppeal,
   createChecklist,
   decideAppeal,
@@ -9,6 +10,7 @@ import {
   getAudio,
   getChecklist,
   getEvaluation,
+  rerunEvaluation,
   importGroup,
   importJson,
   listAppeals,
@@ -17,10 +19,12 @@ import {
   listConversationRecords,
   listEvaluations,
   reassessAppeal,
+  resultsFile,
+  resultsReport,
   startEvaluation,
   updateChecklist,
-} from "./api.js?v=tape5";
-import { activeChat, chatTitle, messageText, openChat, pushTurn, removeChat, startChat } from "./chat.js?v=tape5";
+} from "./api.js?v=tape6";
+import { activeChat, chatTitle, messageText, openChat, pushTurn, removeChat, startChat } from "./chat.js?v=tape6";
 import {
   adoptChecklist,
   appliedConfig,
@@ -32,17 +36,17 @@ import {
   scalePoints,
   sectionName,
   stageChange,
-} from "./checklist.js?v=tape5";
+} from "./checklist.js?v=tape6";
 import {
   closeCriterionEditor,
   isCriterionEditorDirty,
   isCriterionEditorOpen,
   openCriterionEditor,
-} from "./criterion-editor.js?v=tape5";
-import { applyStatic, getLang, hasKey, langCode, langName, locale, nextLang, setLang, t, tn } from "./i18n.js?v=tape5";
-import { loadState, saveState, setConversations, setScores } from "./store.js?v=tape5";
+} from "./criterion-editor.js?v=tape6";
+import { applyStatic, getLang, hasKey, langCode, langName, locale, nextLang, setLang, t, tn } from "./i18n.js?v=tape6";
+import { loadState, saveState, setConversations, setScores } from "./store.js?v=tape6";
 import { mountMessageScroller } from "./message-scroller.js?v=tape1";
-import { Bubble, Button, ChatPrompt, Field, Message, MessageScroller, MessageScrollerItem } from "./ui.js?v=tape5";
+import { Bubble, Button, ChatPrompt, Field, Message, MessageScroller, MessageScrollerItem } from "./ui.js?v=tape6";
 import { byId, esc } from "./util.js";
 
 const icon = {
@@ -176,6 +180,10 @@ function switchLanguage() {
     importDialog.remove();
     importDialog = null;
   }
+  if (exportDialog && !exportDialog.open) {
+    exportDialog.remove();
+    exportDialog = null;
+  }
   render();
 }
 
@@ -283,7 +291,10 @@ function viewList() {
       </article>
       <div class="list-head">
         <p class="hint" role="status">${esc(countText)}</p>
-        ${Button(esc(t("list.import")), { variant: "primary", attrs: 'data-action="open-import"' })}
+        <span class="ui-btn-row">
+          ${Button(esc(t("list.export")), { attrs: 'data-action="open-export"' })}
+          ${Button(esc(t("list.import")), { variant: "primary", attrs: 'data-action="open-import"' })}
+        </span>
       </div>
       ${conversationsStatus.error ? `<div class="notice notice-error list-notice" role="alert">${esc(t("list.loadError", { error: conversationsStatus.error }))} ${Button(esc(t("common.retry")), { attrs: 'data-action="reload-conversations"' })}</div>` : ""}
       <div class="table-wrap">
@@ -386,6 +397,7 @@ function viewDetail(id) {
 
 const OFFICIAL_TEMPLATE = "freedom-broker-official";
 const POLL_MS = 1500;
+const MODE_KEY = "cqa-eval-mode";
 const evaluationUi = {
   checklists: null, // ChecklistSummary[] (not archived), null until loaded
   checklistsError: "",
@@ -397,7 +409,31 @@ const evaluationUi = {
   errors: {}, // conversation id → message
   syncing: new Set(),
   polling: new Set(),
+  mode: storedMode(),
 };
+
+// Evaluation mode (backend: app/cqa/routing.py). 1: Gemma answers the official criteria that still match the
+// official definition, GPT the custom and modified ones. 2: GPT answers everything. GPT reassesses appeals in both.
+function storedMode() {
+  try {
+    return localStorage.getItem(MODE_KEY) === "2" ? 2 : 1;
+  } catch {
+    return 1;
+  }
+}
+
+function chooseMode(mode) {
+  evaluationUi.mode = mode === 2 ? 2 : 1;
+  try {
+    localStorage.setItem(MODE_KEY, String(evaluationUi.mode));
+  } catch {
+    // remembered for this page only
+  }
+}
+
+const modeLabel = (mode) => t(mode === 2 ? "eval.mode2" : "eval.mode1");
+const modeHint = (mode) => t(mode === 2 ? "eval.mode2Hint" : "eval.mode1Hint");
+const PROVIDER_NAMES = { gemma: "Gemma", openai: "GPT" };
 
 function pct(value) {
   return value == null ? "—" : `${Number(value).toFixed(2)}%`;
@@ -546,8 +582,28 @@ async function runEvaluation(convId) {
       checklist_version: version,
       conversation_ids: [convId],
       explanation_language: uiLanguage(),
+      mode_type: evaluationUi.mode,
     });
     const queued = response.evaluations[0];
+    evaluationUi.history[convId] = [queued, ...(evaluationUi.history[convId] ?? [])];
+    pollEvaluation(queued.id, convId);
+  } catch (err) {
+    evaluationUi.errors[convId] = t("eval.startError", { error: errorText(err) });
+  } finally {
+    evaluationUi.starting[convId] = false;
+    if (currentDetailId() === convId) render();
+  }
+}
+
+/** Re-run a failed evaluation in its mode: a new record that keeps the providers' answers that succeeded. */
+async function retryEvaluation(convId, button) {
+  const id = button?.dataset.rerun;
+  if (!id || !convId || evaluationUi.starting[convId]) return;
+  evaluationUi.errors[convId] = "";
+  evaluationUi.starting[convId] = true;
+  render();
+  try {
+    const queued = (await rerunEvaluation(id)).evaluations[0];
     evaluationUi.history[convId] = [queued, ...(evaluationUi.history[convId] ?? [])];
     pollEvaluation(queued.id, convId);
   } catch (err) {
@@ -618,7 +674,8 @@ function evaluationMeta(shown) {
   if (record) {
     const model = record.model_info?.name || record.evaluator.version;
     const at = record.completed_at ? ` · ${when(record.completed_at)}` : "";
-    return `${record.evaluator.label}${model ? ` · ${model}` : ""} · ${record.checklist_name} v${record.checklist_version}${at}`;
+    const by = record.mode_type ? modeLabel(record.mode_type) : record.evaluator.label;
+    return `${by}${model ? ` · ${model}` : ""} · ${record.checklist_name} v${record.checklist_version}${at}`;
   }
   const checklist = checklistSummary(selection?.checklistId);
   return checklist ? t("eval.metaChecklist", { name: checklist.name, version }) : "";
@@ -635,7 +692,9 @@ function evaluationControls(convId, shown) {
     ? versions.map((v) => `<option value="${v.version}" ${v.version === version ? "selected" : ""}>${esc(versionLabel(v.version, v.is_latest))}</option>`).join("")
     : version ? `<option value="${version}">${esc(versionLabel(version, false))}</option>` : "";
   const busy = evaluationUi.starting[convId] || status === "pending" || status === "running";
-  const progress = evaluationUi.starting[convId] ? t("eval.starting") : status === "pending" ? t("eval.queued") : status === "running" ? t("eval.running") : "";
+  const running = (shown.record?.mode_type ?? evaluationUi.mode) === 1 ? t("eval.runningHybrid") : t("eval.running");
+  const progress = evaluationUi.starting[convId] ? t("eval.starting") : status === "pending" ? t("eval.queued") : status === "running" ? running : "";
+  const mode = evaluationUi.mode;
   const label = busy ? t("eval.evaluating") : shown.summary ? t("eval.again") : t("eval.run");
   return `
           <form class="crit-card form-grid" data-evaluate-form novalidate>
@@ -646,6 +705,13 @@ function evaluationControls(convId, shown) {
             <div>
               <label class="field-label" for="eval-version">${esc(t("eval.version"))}</label>
               <select class="input" id="eval-version" name="version" ${versionOptions ? "" : "disabled"}>${versionOptions}</select>
+            </div>
+            <div>
+              <label class="field-label" for="eval-mode">${esc(t("eval.mode"))}</label>
+              <select class="input" id="eval-mode" name="mode" aria-describedby="eval-mode-hint">
+                ${[1, 2].map((m) => `<option value="${m}" ${m === mode ? "selected" : ""}>${esc(modeLabel(m))}</option>`).join("")}
+              </select>
+              <p class="hint" id="eval-mode-hint">${esc(modeHint(mode))}</p>
             </div>
             <div class="ui-btn-row">
               ${Button(esc(label), { variant: "primary", type: "submit", attrs: busy || !version ? "disabled" : "" })}
@@ -662,9 +728,13 @@ function evaluationNotices(convId, shown) {
   if (detail?.error) parts.push(noticeBox("notice-error", esc(t("eval.detailError", { error: detail.error })), "alert"));
   if (record?.status === "failed") {
     const issues = record.error?.issues ?? [];
+    const failedParts = (record.parts ?? []).filter((p) => p.status !== "completed");
+    const retry = record.mode_type && failedParts.length && failedParts.length < record.parts.length
+      ? `<p>${Button(esc(t("eval.retryPart", { provider: failedParts.map((p) => PROVIDER_NAMES[p.provider] ?? p.label).join(", ") })), { attrs: `data-rerun="${esc(record.id)}"` })}</p>`
+      : "";
     parts.push(noticeBox("notice-error", `<strong>${esc(t("eval.failed"))}</strong> ${esc(record.error?.message ?? "")}
       ${issues.length ? `<ul>${issues.slice(0, 5).map((i) => `<li>${esc(i)}</li>`).join("")}</ul>` : ""}
-      <p class="hint">${esc(t("eval.noScore"))}</p>`, "alert"));
+      <p class="hint">${esc(t("eval.noScore"))}</p>${retry}`, "alert"));
   }
   if (record?.evaluator?.is_mock) parts.push(noticeBox("notice-warn", esc(t("eval.mock"))));
   if (detail?.stale) parts.push(noticeBox("notice-warn", esc(t("eval.stale"))));
@@ -789,12 +859,14 @@ function criterionCard(view, sectionNames, record, detailAppeals) {
     ? r.severe_error_reason && r.severe_error_reason !== r.explanation ? t("crit.flaggedReason", { reason: r.severe_error_reason }) : t("crit.flagged")
     : "";
   const revised = view.overridden && view.original ? t("crit.revised", { value: answerText(c, view.original, view.original_score ?? s) }) : "";
+  const provider = record?.mode_type ? (view.original ?? r).provider : null;
+  const answeredBy = provider ? ` · ${t("crit.by", { model: PROVIDER_NAMES[provider] ?? provider })}` : "";
   return `<article class="crit-card ${s.severe_error ? "severe" : ""}" id="crit-${esc(c.id)}">
               <div class="crit-top">
                 <h3>${esc(c.name)}</h3>
                 <span class="badge ${tone}">${esc(answerText(c, r, s))}</span>
               </div>
-              <p class="crit-meta">${esc(meta)}${section ? ` · ${esc(section)}` : ""}</p>
+              <p class="crit-meta">${esc(meta)}${section ? ` · ${esc(section)}` : ""}${esc(answeredBy)}</p>
               ${revised ? `<p class="hint">${esc(revised)}</p>` : ""}
               <p>${esc(r.explanation)}</p>
               ${r.is_na && r.na_reason && r.na_reason !== r.explanation ? `<p class="hint">${esc(r.na_reason)}</p>` : ""}
@@ -1498,6 +1570,10 @@ function bind() {
       evaluationUi.selection = { checklistId: e.target.value, version: null };
       render();
     });
+    evaluateForm.elements.namedItem("mode")?.addEventListener("change", (e) => {
+      chooseMode(Number(e.target.value));
+      render();
+    });
     evaluateForm.elements.namedItem("version")?.addEventListener("change", (e) => {
       const selection = currentSelection();
       if (!selection) return;
@@ -1507,6 +1583,7 @@ function bind() {
       render();
     });
   }
+  document.querySelector("[data-rerun]")?.addEventListener("click", (e) => retryEvaluation(currentDetailId(), e.currentTarget));
   document.querySelectorAll("[data-appeal]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const form = btn.closest(".crit-card")?.querySelector("[data-appeal-form]");
@@ -1762,6 +1839,201 @@ function openImport() {
   refreshSourceHint();
 }
 
+// ---- Results export: the organizers' results.json (JSON 1.0), built by the backend from stored evaluations ----
+
+let exportDialog = null;
+let exportReport = null;
+
+function exportDialogHtml() {
+  const select = (name) => `<span class="ui-select-wrap"><select class="ui-select" name="${name}"></select></span>`;
+  return `
+    <div class="dialog-head">
+      <div>
+        <h2 id="export-title" class="sheet-title">${esc(t("exp.title"))}</h2>
+        <p class="hint">${esc(t("exp.hint"))}</p>
+      </div>
+      <button type="button" class="dialog-close" data-export-close aria-label="${esc(t("common.close"))}">
+        <svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <form class="dialog-panel" data-export-form novalidate>
+      ${Field(esc(t("exp.dataset")), select("group_id"))}
+      ${Field(esc(t("exp.set")), `<span class="ui-select-wrap"><select class="ui-select" name="target">
+        <option value="dev">DEV — results/dev/results.json (65)</option>
+        <option value="prod">PROD — results/prod/results.json (10)</option>
+        <option value="">${esc(t("exp.setOther"))}</option>
+      </select></span>`)}
+      ${Field(esc(t("eval.checklist")), select("checklist_id"))}
+      ${Field(esc(t("exp.version")), select("checklist_version"))}
+      ${Field(esc(t("exp.team")), `<input class="ui-input" name="team_name" type="text" maxlength="200" autocomplete="off" spellcheck="false" />`)}
+      <div data-export-status role="status" aria-live="polite"></div>
+      <div class="dialog-actions" style="flex-wrap: wrap">
+        ${Button(esc(t("common.close")), { attrs: "data-export-close" })}
+        ${Button(esc(t("exp.check")), { type: "submit" })}
+        ${Button(esc(t("exp.download")), { variant: "primary", attrs: "data-export-download disabled" })}
+      </div>
+    </form>`;
+}
+
+function exportParams(form) {
+  const params = { group_id: form.group_id.value, checklist_id: form.checklist_id.value };
+  if (form.target.value) params.target = form.target.value;
+  if (form.checklist_version.value) params.checklist_version = form.checklist_version.value;
+  const team = form.team_name.value.trim();
+  if (team) params.team_name = team; // empty: the server's ATLAS_CQA_TEAM_NAME
+  return params;
+}
+
+function exportStatusHtml(report) {
+  const s = report.summary;
+  const missing = s.missing + s.mock_only + s.stale + s.incompatible;
+  let html = `<strong>${esc(report.ready ? t("exp.ready", { count: s.exported }) : t("exp.notReady"))}</strong><br>`;
+  html += esc(t("exp.counts", { total: s.conversations, chats: s.chats, calls: s.calls, ok: s.ok, error: s.error, missing, running: s.in_progress, appeals: s.with_accepted_appeals }));
+  html += `<br>${esc(t("exp.model", { name: report.document.model.name || "—", mode: report.document.model.mode || "—" }))}`;
+  const issues = report.issues;
+  if (issues.length) {
+    html += `<ul>${issues.slice(0, 6).map((i) => `<li>${esc(i.message)}</li>`).join("")}</ul>`;
+    if (issues.length > 6) html += `<p class="hint">${esc(t("imp.more", { count: issues.length - 6 }))}</p>`;
+  }
+  if (s.missing + s.stale > 0 && !s.in_progress) {
+    const mode = evaluationUi.mode;
+    html += `<p class="hint">${esc(t("exp.evaluateHint", { mode: modeLabel(mode), hint: modeHint(mode) }))}</p>${Button(esc(t("exp.evaluate", { mode: modeLabel(mode) })), { attrs: "data-export-evaluate" })}`;
+  }
+  return html;
+}
+
+async function checkExport(form) {
+  const status = form.querySelector("[data-export-status]");
+  const download = form.querySelector("[data-export-download]");
+  download.disabled = true;
+  if (!form.group_id.value || !form.checklist_id.value) {
+    setImportStatus(status, "warn", esc(t("exp.noDatasets")));
+    return null;
+  }
+  setImportStatus(status, "info", esc(t("exp.checking")));
+  try {
+    exportReport = await resultsReport(exportParams(form));
+    if (!form.team_name.value.trim() && exportReport.team_name) form.team_name.value = exportReport.team_name;
+    setImportStatus(status, exportReport.ready ? "ok" : "warn", exportStatusHtml(exportReport));
+    download.disabled = !exportReport.ready;
+    return exportReport;
+  } catch (err) {
+    exportReport = null;
+    setImportStatus(status, "error", esc(errorText(err)));
+    return null;
+  }
+}
+
+async function loadExportVersions(form) {
+  const id = form.checklist_id.value;
+  const versions = id ? await listChecklistVersions(id).catch(() => []) : [];
+  form.checklist_version.innerHTML = `<option value="">${esc(t("exp.anyVersion"))}</option>`
+    + versions.map((v) => `<option value="${v.version}">${esc(t("exp.versionOption", { version: v.version, count: v.evaluations }))}</option>`).join("");
+}
+
+async function loadExportOptions(form) {
+  const status = form.querySelector("[data-export-status]");
+  try {
+    const [overview, checklists] = await Promise.all([cqaOverview(), listChecklists()]);
+    const groups = overview.by_group ?? [];
+    const previous = form.group_id.value;
+    form.group_id.innerHTML = groups.map((g) => `<option value="${esc(g.value)}">${esc(`${g.value} (${g.count})`)}</option>`).join("");
+    if (groups.some((g) => g.value === previous)) form.group_id.value = previous;
+    const official = checklists.find((c) => c.template_id === "freedom-broker-official") ?? checklists.find((c) => c.official_format_compatible);
+    form.checklist_id.innerHTML = checklists.map((c) => `<option value="${esc(c.id)}">${esc(c.official_format_compatible ? c.name : `${c.name} — ${t("exp.notOfficial")}`)}</option>`).join("");
+    if (official) form.checklist_id.value = official.id;
+    await loadExportVersions(form);
+    await checkExport(form);
+  } catch (err) {
+    setImportStatus(status, "error", esc(errorText(err)));
+  }
+}
+
+/** Queue GPT for the conversations that have no result yet (paid: asks first), then follow the status. */
+async function evaluateMissing(form) {
+  if (!exportReport || !window.confirm(t("exp.evaluateConfirm", { mode: modeLabel(evaluationUi.mode) }))) return;
+  const status = form.querySelector("[data-export-status]");
+  const body = { checklist_id: form.checklist_id.value, group_id: form.group_id.value, only_missing: true, explanation_language: uiLanguage(), mode_type: evaluationUi.mode };
+  if (form.checklist_version.value) body.checklist_version = Number(form.checklist_version.value);
+  try {
+    const response = await startEvaluation(body);
+    setImportStatus(status, "info", esc(t("exp.queued", { queued: response.queued, skipped: response.skipped })));
+  } catch (err) {
+    setImportStatus(status, "error", esc(t("eval.startError", { error: errorText(err) })));
+    return;
+  }
+  for (let i = 0; i < 400 && exportDialog?.open; i += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    if (!exportDialog?.open) break;
+    const report = await checkExport(form);
+    if (!report || !report.summary.in_progress) break;
+  }
+}
+
+async function downloadExport(form) {
+  const status = form.querySelector("[data-export-status]");
+  try {
+    const text = await resultsFile(exportParams(form));
+    const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "results.json";
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (err) {
+    setImportStatus(status, "error", esc(errorText(err)));
+  }
+}
+
+function bindExportDialog(dialog) {
+  const form = dialog.querySelector("[data-export-form]");
+  dialog.addEventListener("click", (e) => {
+    if (e.target.closest("[data-export-close]")) {
+      dialog.close();
+      return;
+    }
+    if (e.target.closest("[data-export-download]")) {
+      e.preventDefault();
+      downloadExport(form);
+      return;
+    }
+    if (e.target.closest("[data-export-evaluate]")) {
+      e.preventDefault();
+      evaluateMissing(form);
+      return;
+    }
+    if (e.target === dialog) {
+      const r = dialog.getBoundingClientRect();
+      const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+      if (!inside) dialog.close();
+    }
+  });
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    checkExport(form);
+  });
+  form.checklist_id.addEventListener("change", async () => {
+    await loadExportVersions(form);
+    checkExport(form);
+  });
+  ["group_id", "target", "checklist_version"].forEach((name) => form[name].addEventListener("change", () => checkExport(form)));
+}
+
+function openExport() {
+  if (!exportDialog) {
+    exportDialog = document.createElement("dialog");
+    exportDialog.className = "dialog";
+    exportDialog.setAttribute("aria-labelledby", "export-title");
+    exportDialog.innerHTML = exportDialogHtml();
+    document.body.append(exportDialog);
+    bindExportDialog(exportDialog);
+  }
+  if (!exportDialog.open) exportDialog.showModal();
+  loadExportOptions(exportDialog.querySelector("[data-export-form]"));
+}
+
 document.querySelector('[data-filter="q"]')?.addEventListener("keydown", (e) => {
   if (e.key !== "Enter") return;
   applyFilters();
@@ -1773,6 +2045,11 @@ document.addEventListener(
     if (e.target.closest("[data-action='open-import']")) {
       e.preventDefault();
       openImport();
+      return;
+    }
+    if (e.target.closest("[data-action='open-export']")) {
+      e.preventDefault();
+      openExport();
       return;
     }
     if (e.target.closest("[data-action='switch-lang']")) {

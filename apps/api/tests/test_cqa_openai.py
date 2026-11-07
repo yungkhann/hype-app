@@ -74,7 +74,7 @@ class FakeOpenAI:
 def client(tmp_path: Path):
     settings = Settings(data_dir=tmp_path / "workspaces", samples_dir=REPO_ROOT / "data" / "samples",
                         allowed_hosts=["testserver"], cqa_evaluator="openai", cqa_openai_api_key=FAKE_KEY,
-                        cqa_openai_model="gpt-test")
+                        cqa_openai_model="gpt-test", cqa_default_mode_type=2)  # GPT only (mode 1: test_cqa_modes)
     with TestClient(create_app(settings)) as test_client:
         test_client.app.state.cqa.adapters["openai"].retry_delay_s = 0
         response = test_client.post(f"{API}/imports/json", json=organizer_payload([chat_record(CONVERSATION)]))

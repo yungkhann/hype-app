@@ -390,11 +390,32 @@ class OpenAIEvaluator(EvaluatorAdapter):
     is_mock = False
     description = "Evaluates conversations with GPT through the OpenAI API (ATLAS_CQA_OPENAI_MODEL)."
     retry_delay_s = 2.0
+    # Names used in stored metadata and messages. A subclass for another OpenAI-compatible endpoint (gemma.py)
+    # overrides these and the connection properties below.
+    provider = "openai"
+    service = "OpenAI API"
+    family = "GPT"
 
     def __init__(self, settings) -> None:
         super().__init__(settings)
-        self.version = settings.cqa_openai_model  # recorded on every evaluation as the configured model
-        self._send_temperature = settings.cqa_openai_temperature is not None
+        self.version = self.model  # recorded on every evaluation as the configured model
+        self._send_temperature = self.temperature is not None
+
+    @property
+    def base_url(self) -> str:
+        return self.settings.cqa_openai_base_url
+
+    @property
+    def model(self) -> str:
+        return self.settings.cqa_openai_model
+
+    @property
+    def timeout_s(self) -> float:
+        return self.settings.cqa_openai_timeout_s
+
+    @property
+    def temperature(self) -> float | None:
+        return self.settings.cqa_openai_temperature
 
     def _key(self) -> str:
         key = self.settings.cqa_openai_api_key
@@ -403,9 +424,9 @@ class OpenAIEvaluator(EvaluatorAdapter):
     def availability(self) -> tuple[bool, str]:
         if not self._key():
             return False, "no OpenAI API key is configured on the server (OPENAI_API_KEY or ATLAS_CQA_OPENAI_API_KEY)."
-        if not self.settings.cqa_openai_model.strip():
+        if not self.model.strip():
             return False, "ATLAS_CQA_OPENAI_MODEL is empty."
-        parts = urlsplit(self.settings.cqa_openai_base_url)
+        parts = urlsplit(self.base_url)
         if not parts.hostname or (parts.scheme != "https" and not is_loopback(parts.hostname)):
             return False, "ATLAS_CQA_OPENAI_BASE_URL must be an https URL."
         return True, ""
@@ -413,39 +434,40 @@ class OpenAIEvaluator(EvaluatorAdapter):
     # ---- HTTP ----
     def _post(self, body: dict[str, Any]) -> dict[str, Any]:
         """POST {base}/chat/completions. Errors become EvaluatorError with a readable message and no secret."""
-        url = self.settings.cqa_openai_base_url.rstrip("/") + "/chat/completions"
+        url = self.base_url.rstrip("/") + "/chat/completions"
+        headers = {"Content-Type": "application/json", "Accept": "application/json", "User-Agent": "ATLAS-CQA/1.0"}
+        if self._key():
+            headers["Authorization"] = f"Bearer {self._key()}"
         http_request = urllib.request.Request(
-            url, data=json.dumps(body, ensure_ascii=False).encode("utf-8"), method="POST",
-            headers={"Authorization": f"Bearer {self._key()}", "Content-Type": "application/json",
-                     "Accept": "application/json", "User-Agent": "ATLAS-CQA/1.0"})
-        timeout = self.settings.cqa_openai_timeout_s
+            url, data=json.dumps(body, ensure_ascii=False).encode("utf-8"), method="POST", headers=headers)
+        timeout = self.timeout_s
+        service = self.service
         try:
             with urllib.request.urlopen(http_request, timeout=timeout) as response:  # noqa: S310 (https, see availability)
                 raw = response.read(MAX_RESPONSE_BYTES + 1)
         except urllib.error.HTTPError as error:
             raise self._http_error(error) from None
         except TimeoutError:
-            raise EvaluatorError(f"The OpenAI API did not answer within {timeout:g} s.",
+            raise EvaluatorError(f"The {service} did not answer within {timeout:g} s.",
                                  code="evaluator_timeout") from None
         except (urllib.error.URLError, OSError) as error:
             reason = getattr(error, "reason", error)
             if isinstance(reason, TimeoutError):
-                raise EvaluatorError(f"The OpenAI API did not answer within {timeout:g} s.",
+                raise EvaluatorError(f"The {service} did not answer within {timeout:g} s.",
                                      code="evaluator_timeout") from None
-            raise EvaluatorError(f"Could not reach the OpenAI API ({_redact(str(reason))}).",
+            raise EvaluatorError(f"Could not reach the {service} ({_redact(str(reason))}).",
                                  code="evaluator_unreachable") from None
         if len(raw) > MAX_RESPONSE_BYTES:
-            raise EvaluatorError("The OpenAI API response is larger than 8 MB.", code="evaluator_invalid_json")
+            raise EvaluatorError(f"The {service} response is larger than 8 MB.", code="evaluator_invalid_json")
         try:
             data = json.loads(raw.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError):
-            raise EvaluatorError("The OpenAI API did not return JSON.", code="evaluator_invalid_json") from None
+            raise EvaluatorError(f"The {service} did not return JSON.", code="evaluator_invalid_json") from None
         if not isinstance(data, dict):
-            raise EvaluatorError("The OpenAI API returned an unexpected response.", code="evaluator_invalid_json")
+            raise EvaluatorError(f"The {service} returned an unexpected response.", code="evaluator_invalid_json")
         return data
 
-    @staticmethod
-    def _http_error(error: urllib.error.HTTPError) -> EvaluatorError:
+    def _http_error(self, error: urllib.error.HTTPError) -> EvaluatorError:
         detail: dict[str, Any] = {}
         try:
             body = json.loads(error.read(4000).decode("utf-8", "replace")) if error.fp else {}
@@ -456,16 +478,16 @@ class OpenAIEvaluator(EvaluatorAdapter):
         message = _redact(str(detail.get("message") or "")).strip()[:300]
         status = error.code
         if status in (401, 403):  # the API's text can echo part of the key: never pass it on
-            return EvaluatorError(f"The OpenAI API rejected the API key (HTTP {status}). Check OPENAI_API_KEY on the "
-                                  "server.", code="evaluator_auth_failed")
+            return EvaluatorError(f"The {self.service} rejected the API key (HTTP {status}). Check OPENAI_API_KEY "
+                                  "on the server.", code="evaluator_auth_failed")
         if status == 429:
             quota = detail.get("code") == "insufficient_quota" or detail.get("type") == "insufficient_quota"
-            return EvaluatorError(f"The OpenAI API refused the request (HTTP 429): {message or 'rate limit'}.",
+            return EvaluatorError(f"The {self.service} refused the request (HTTP 429): {message or 'rate limit'}.",
                                   code="evaluator_quota_exceeded" if quota else "evaluator_rate_limited")
         if status >= 500:
-            return EvaluatorError(f"The OpenAI API failed (HTTP {status}). {message}".strip(),
+            return EvaluatorError(f"The {self.service} failed (HTTP {status}). {message}".strip(),
                                   code="evaluator_server_error")
-        failure = EvaluatorError(f"The OpenAI API answered HTTP {status}. {message}".strip(),
+        failure = EvaluatorError(f"The {self.service} answered HTTP {status}. {message}".strip(),
                                  code="evaluator_http_error")
         failure.issues = [f"param: {detail.get('param')}"] if detail.get("param") else []
         return failure
@@ -473,12 +495,12 @@ class OpenAIEvaluator(EvaluatorAdapter):
     def _complete(self, messages: list[dict[str, str]], schema: dict[str, Any],
                   schema_name: str = "cqa_evaluation") -> dict[str, Any]:
         body: dict[str, Any] = {
-            "model": self.settings.cqa_openai_model, "messages": messages,
+            "model": self.model, "messages": messages,
             "response_format": {"type": "json_schema",
                                 "json_schema": {"name": schema_name, "strict": True, "schema": schema}},
         }
         if self._send_temperature:
-            body["temperature"] = self.settings.cqa_openai_temperature
+            body["temperature"] = self.temperature
         try:
             return self._post(body)
         except EvaluatorError as error:
@@ -502,7 +524,7 @@ class OpenAIEvaluator(EvaluatorAdapter):
         usage: dict[str, int] = {}
         last_issues: list[str] = []
         last_answer: object = None
-        model = self.settings.cqa_openai_model
+        model = self.model
         for attempt in range(1, attempts + 1):
             try:
                 response = self._complete(messages, schema, schema_name)
@@ -520,10 +542,10 @@ class OpenAIEvaluator(EvaluatorAdapter):
             choice = (response.get("choices") or [{}])[0] or {}
             message = choice.get("message") or {}
             if message.get("refusal"):
-                raise EvaluatorError(f"GPT declined to answer: {str(message['refusal'])[:300]}",
+                raise EvaluatorError(f"{self.family} declined to answer: {str(message['refusal'])[:300]}",
                                      code="model_refused")
             if choice.get("finish_reason") == "length":
-                raise EvaluatorError("GPT's answer was cut off before it was complete.",
+                raise EvaluatorError(f"{self.family}'s answer was cut off before it was complete.",
                                      code="model_output_truncated")
             content = message.get("content")
             try:
@@ -535,7 +557,7 @@ class OpenAIEvaluator(EvaluatorAdapter):
             else:
                 result, issues = check(answer)
             if not issues:
-                return result, {"provider": "openai", "requested_model": self.settings.cqa_openai_model,
+                return result, {"provider": self.provider, "requested_model": self.model,
                                 "model": model, "attempts": attempt, "request_ids": request_ids, "usage": usage,
                                 "model_answer": answer, "rejected_answers": rejected}
             last_issues, last_answer = issues, answer if answer is not None else content
@@ -543,9 +565,9 @@ class OpenAIEvaluator(EvaluatorAdapter):
             messages = [*base, {"role": "assistant", "content": content if isinstance(content, str) else ""},
                         {"role": "user", "content": _feedback(issues)}]
         raise EvaluatorError(
-            f"GPT returned an invalid {what} {len(rejected)} time(s); nothing was saved.",
+            f"{self.family} returned an invalid {what} {len(rejected)} time(s); nothing was saved.",
             code="invalid_model_answer", issues=last_issues,
-            raw={"provider": "openai", "model": model, "request_ids": request_ids, "usage": usage,
+            raw={"provider": self.provider, "model": model, "request_ids": request_ids, "usage": usage,
                  "model_answer": last_answer, "rejected_answers": rejected})
 
     # ---- evaluation ----
