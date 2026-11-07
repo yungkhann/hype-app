@@ -1,7 +1,7 @@
 // Checklist configuration in the backend's shape (/api/v1/cqa/checklists) and the conversions to the shape the
 // browser-side views and mock scorer use. The backend owns checklists and their immutable versions; the browser
 // keeps the applied version (state.checklistConfig) and, while the manager edits, an unsaved draft
-// (state.checklistDraft) that "Save & re-evaluate" stores as the next version.
+// (state.checklistDraft) that "Save checklist" stores as the next version.
 
 import { defaultChecklist } from "./data.js?v=tape2";
 

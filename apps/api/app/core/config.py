@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import AliasChoices, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # apps/api/app/core/config.py -> repository root is four levels up.
@@ -53,9 +53,21 @@ class Settings(BaseSettings):
     cqa_source_timeout_s: float = 60.0
     # Synthetic, clearly labeled fixtures for development and tests (group ids starting with "FIXTURE").
     cqa_fixtures_enabled: bool = True
-    # Evaluator adapter used when a request does not name one: "mock" (development only), "http", or a
-    # name registered with @register_adapter (see app/cqa/adapters).
-    cqa_evaluator: str = "mock"
+    # Evaluator adapter used when a request does not name one: "openai" (GPT through the OpenAI API), "http",
+    # "mock" (development only, not AI), or a name registered with @register_adapter (see app/cqa/adapters).
+    cqa_evaluator: str = "openai"
+    # OpenAI GPT evaluator. The key is read from ATLAS_CQA_OPENAI_API_KEY or OPENAI_API_KEY (environment or the
+    # git-ignored .env only); it never reaches the browser. Setting it is the opt-in to send transcripts to OpenAI.
+    cqa_openai_api_key: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices("cqa_openai_api_key", "ATLAS_CQA_OPENAI_API_KEY", "OPENAI_API_KEY"))
+    cqa_openai_model: str = "gpt-4.1"
+    cqa_openai_base_url: str = "https://api.openai.com/v1"
+    cqa_openai_timeout_s: float = 120.0
+    # Total tries per conversation: an invalid or transiently failed answer is retried with feedback, never looped.
+    cqa_openai_max_attempts: int = Field(default=2, ge=1, le=3)
+    # Sent when the model accepts it; reasoning models that reject it are retried without it automatically.
+    cqa_openai_temperature: float | None = 0.0
     # The http adapter POSTs the evaluation request here. Non-loopback hosts require the explicit opt-in
     # below, so transcripts are never sent off this machine by accident.
     cqa_evaluator_url: str | None = None

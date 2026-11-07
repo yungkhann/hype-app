@@ -1,18 +1,17 @@
-import { ensureChats, newThread } from "./chat.js?v=tape2";
+import { ensureChats, newThread } from "./chat.js?v=tape4";
 import { defaultChecklist, fromRecord } from "./data.js?v=tape2";
-import { applyAppeal, evaluateConversation } from "./scoring.js?v=tape3";
-import { uid } from "./util.js";
 
 const KEY = "cqa-studio-v2";
 
-// Conversations live in the backend and are loaded on start (setConversations); they are never kept here.
+// Conversations and evaluation scores live in the backend and are loaded on start (setConversations, setScores);
+// they are never kept here. Evaluations are run by the backend (GPT); the browser never scores.
 // checklist: the applied checklist in the views' shape. checklistConfig: the same version in the backend's
 // shape (null until the checklist is saved in ATLAS). checklistDraft: unsaved edits from the checklist page.
 function fresh() {
   const thread = newThread();
   return {
     checklist: defaultChecklist(), checklistConfig: null, checklistDraft: null,
-    conversations: [], evaluations: {}, appeals: [], chats: [thread], chatId: thread.id,
+    conversations: [], scores: {}, appeals: [], chats: [thread], chatId: thread.id,
   };
 }
 
@@ -24,17 +23,21 @@ export function loadState() {
     if (!parsed.checklist) return fresh();
     let needsSave = !Array.isArray(parsed.chats) || !parsed.chats.length;
     if ("conversations" in parsed || "apiUrl" in parsed) {
-      // Saved by the earlier build, whose conversations were generated in the browser. Their evaluations and
-      // appeals belong to those generated cases, so they go too; checklist and chats are kept.
-      parsed.evaluations = {};
+      // Saved by the earlier build, whose conversations were generated in the browser. Their appeals belong to
+      // those generated cases, so they go too; checklist and chats are kept.
       parsed.appeals = [];
       delete parsed.apiUrl;
       needsSave = true;
     }
+    if ("evaluations" in parsed) {
+      // Placeholder scores computed in the browser by earlier builds: not evaluations, so they are dropped.
+      delete parsed.evaluations;
+      needsSave = true;
+    }
     parsed.conversations = [];
+    parsed.scores = {};
     parsed.checklistConfig ??= null;
     parsed.checklistDraft ??= null;
-    parsed.evaluations ??= {};
     parsed.appeals ??= [];
     const next = ensureChats(parsed);
     if (needsSave) saveState(next);
@@ -45,76 +48,26 @@ export function loadState() {
 }
 
 export function saveState(state) {
-  const { conversations, ...kept } = state;
+  const { conversations, scores, ...kept } = state;
   localStorage.setItem(KEY, JSON.stringify(kept));
 }
 
-function evaluate(conv, checklist) {
-  return { ...evaluateConversation(conv, checklist), transcriptHash: conv.hash };
-}
-
-/** Use the backend's stored records. Existing evaluations are kept unless the transcript or the checklist changed. */
+/** Use the backend's stored records. */
 export function setConversations(state, records) {
   state.conversations = records.map(fromRecord);
-  for (const conv of state.conversations) {
-    const prev = state.evaluations[conv.id];
-    if (!prev || prev.transcriptHash !== conv.hash || prev.checklistId !== state.checklist.id) {
-      const next = evaluate(conv, state.checklist);
-      if (prev?.originalTotal != null && prev.transcriptHash === conv.hash) next.originalTotal = prev.originalTotal;
-      state.evaluations[conv.id] = next;
-    }
-  }
+  return state;
+}
+
+/** The latest completed evaluation per conversation (backend summaries, newest first). */
+export function setScores(state, summaries) {
+  const scores = {};
+  for (const summary of summaries) scores[summary.conversation_id] ??= summary;
+  state.scores = scores;
   return state;
 }
 
 export function resetState() {
   const state = fresh();
   saveState(state);
-  return state;
-}
-
-export function reevaluateAll(state) {
-  for (const conv of state.conversations) {
-    const prev = state.evaluations[conv.id];
-    const next = evaluate(conv, state.checklist);
-    if (prev?.originalTotal != null) next.originalTotal = prev.originalTotal;
-    state.evaluations[conv.id] = next;
-  }
-  return state;
-}
-
-export function submitAppeal(state, conversationId, criterionId, comment) {
-  const evaluation = state.evaluations[conversationId];
-  const row = evaluation.rows.find((r) => r.criterionId === criterionId);
-  state.appeals.unshift({
-    id: uid("apl"),
-    conversationId,
-    criterionId,
-    comment,
-    originalScore: row.score,
-    originalAnswer: row.answer,
-    status: "open",
-    reviewerAnswer: null,
-    reviewerReason: "",
-    createdAt: new Date().toISOString(),
-    decidedAt: null,
-  });
-  return state;
-}
-
-export function decideAppeal(state, appealId, reviewerAnswer, reason) {
-  const appeal = state.appeals.find((a) => a.id === appealId);
-  if (!appeal) return state;
-  const checklist = state.checklist;
-  const evaluation = state.evaluations[appeal.conversationId];
-  if (evaluation.originalTotal == null) evaluation.originalTotal = evaluation.total;
-  state.evaluations[appeal.conversationId] = applyAppeal(evaluation, checklist, appeal.criterionId, reviewerAnswer);
-  appeal.status = "reviewed";
-  appeal.reviewerAnswer = reviewerAnswer;
-  appeal.reviewerReason = reason;
-  appeal.decidedAt = new Date().toISOString();
-  const row = state.evaluations[appeal.conversationId].rows.find((r) => r.criterionId === appeal.criterionId);
-  appeal.finalScore = row.score;
-  appeal.finalTotal = state.evaluations[appeal.conversationId].total;
   return state;
 }

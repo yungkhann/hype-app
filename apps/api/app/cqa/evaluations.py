@@ -118,7 +118,8 @@ class EvaluationService:
             record = EvaluationRecord(
                 id=new_id(), conversation_id=cid, checklist_id=checklist.id, checklist_name=checklist.name,
                 checklist_version=version.version, checklist=version.config,
-                transcript_hash=conversations[cid].transcript_hash, evaluator=info, status="pending",
+                transcript_hash=conversations[cid].transcript_hash, evaluator=info,
+                explanation_language=request.explanation_language, status="pending",
                 batch_id=batch_id, created_at=now, updated_at=now)
             self.store.save_evaluation(record)
             created.append(record)
@@ -137,13 +138,14 @@ class EvaluationService:
     def rerun(self, evaluation_id: str, actor: str = "User") -> EvaluateResponse:
         record = self.get(evaluation_id)
         return self.queue(EvaluateRequest(checklist_id=record.checklist_id, checklist_version=record.checklist_version,
-                                          conversation_ids=[record.conversation_id], adapter=record.evaluator.name),
+                                          conversation_ids=[record.conversation_id], adapter=record.evaluator.name,
+                                          explanation_language=record.explanation_language),
                           actor=actor)
 
     # ---- running ------------------------------------------------------------------------------
     def request_for(self, record: EvaluationRecord, conversation: ConversationRecord) -> EvaluationRequest:
         return build_request(record.id, conversation, record.checklist_id, record.checklist_name,
-                             record.checklist_version, record.checklist)
+                             record.checklist_version, record.checklist, record.explanation_language)
 
     def _fail(self, evaluation_id: str, code: str, message: str, issues: list[str] | None = None,
               raw_output: dict | None = None) -> None:
@@ -186,7 +188,7 @@ class EvaluationService:
                        violation.issues, _jsonable(output))
             return
         except EvaluatorError as error:
-            self._fail(record.id, error.code, error.message)
+            self._fail(record.id, error.code, error.message, error.issues, error.raw)
             return
         except Exception as error:  # the adapter is third-party code: contain anything it raises
             logger.exception("CQA evaluator '%s' crashed", record.evaluator.name)
@@ -202,13 +204,15 @@ class EvaluationService:
                 "original_results": validated.results, "original_score": score, "final_score": score,
                 "warnings": warnings, "model_info": validated.model_info, "raw_output": _jsonable(output)})
             self.store.save_evaluation(done)
-        total = "no total" if score.total is None else f"{score.total:g} / {score.max_score:g}"
+        total = "no total" if score.percent is None else f"{score.percent:.2f}%"
         self.store.log("evaluation.completed",
                        f"Evaluated {record.conversation_id} with '{record.checklist_name}' v{record.checklist_version}"
                        f": {total}{' (development mock)' if record.evaluator.is_mock else ''}.",
                        actor=record.evaluator.label, conversation_id=record.conversation_id, evaluation_id=record.id,
                        checklist_id=record.checklist_id,
-                       details={"total": score.total, "status": score.status, "severe_errors": score.severe_errors})
+                       details={"total": score.total, "percent": score.percent, "status": score.status,
+                                "severe_errors": score.severe_errors,
+                                "model": validated.model_info.get("name") or record.evaluator.version})
 
     # ---- reads --------------------------------------------------------------------------------
     def get(self, evaluation_id: str) -> EvaluationRecord:
@@ -230,7 +234,9 @@ class EvaluationService:
             checklist_version=record.checklist_version, evaluator=record.evaluator.label,
             is_mock=record.evaluator.is_mock, original_total=original.total if original else None,
             final_total=final.total if final else None, max_score=final.max_score if final else None,
-            score_status=final.status if final else None, severe_errors=len(final.severe_errors) if final else 0,
+            original_percent=original.percent if original else None,
+            final_percent=final.percent if final else None, score_status=final.status if final else None,
+            severe_errors=len(final.severe_errors) if final else 0,
             overridden=bool(record.overrides), created_at=record.created_at, completed_at=record.completed_at,
             stale=self.is_stale(record))
 

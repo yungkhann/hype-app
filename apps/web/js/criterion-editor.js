@@ -1,6 +1,6 @@
 // Add / Edit criterion dialog. A native modal <dialog> outside #view, so re-rendering the page behind it never
 // clears what the manager typed. It edits one criterion in the backend's shape and hands the result to the
-// caller (onSave / onRemove); the caller keeps it in the checklist draft, and "Save & re-evaluate" stores the
+// caller (onSave / onRemove); the caller keeps it in the checklist draft, and "Save checklist" stores the
 // draft as a new checklist version.
 
 import { Button } from "./ui.js?v=tape1";

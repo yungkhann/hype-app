@@ -32,10 +32,13 @@ from app.cqa.schemas import EvaluatorInfo
 class EvaluatorError(Exception):
     """The evaluator could not produce an answer (unreachable, timed out, crashed)."""
 
-    def __init__(self, message: str, code: str = "evaluator_error") -> None:
+    def __init__(self, message: str, code: str = "evaluator_error", issues: list[str] | None = None,
+                 raw: dict | None = None) -> None:
         super().__init__(message)
         self.code = code
         self.message = message
+        self.issues = issues or []  # e.g. why the model's last answer was rejected
+        self.raw = raw  # the model's last answer, kept on the failed evaluation for audit
 
 
 class EvaluatorAdapter:

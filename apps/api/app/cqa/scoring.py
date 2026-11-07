@@ -44,6 +44,7 @@ from app.cqa.schemas import (
 
 _DECIMAL_MODES = {"half_up": ROUND_HALF_UP, "half_even": ROUND_HALF_EVEN, "floor": ROUND_FLOOR,
                   "ceil": ROUND_CEILING}
+PERCENT_DIGITS = 2  # the percentage every evaluation reports (0–100), whatever the checklist's own max_score
 
 
 class AnswerError(ValueError):
@@ -180,7 +181,7 @@ def compute_score(config: ChecklistConfig, results: Iterable[CriterionResult]) -
 
     incomplete = any(row["status"] in ("missing", "invalid") for row in rows)
     severe_errors = [row["criterion"].id for row in rows if row["severe"]]
-    total = total_unrounded = total_before = None
+    total = total_unrounded = total_before = percent = None
     applied = False
     if incomplete:
         status = "incomplete"
@@ -194,6 +195,10 @@ def compute_score(config: ChecklistConfig, results: Iterable[CriterionResult]) -
         total = total_before
         if severe_errors and rules.severe_error_policy == "zero_total":
             total, applied = 0.0, True
+            exact_total = Fraction(0)
+        # The same total on a 0–100 scale, from the exact value (rounded once, never re-scaled from a rounded total).
+        percent = round_value(exact_total / max_score * 100, RoundingRule(
+            mode="half_up" if rules.rounding.mode == "none" else rules.rounding.mode, digits=PERCENT_DIGITS))
 
     sections: list[SectionScore] = []
     for section in config.sections:
@@ -230,7 +235,8 @@ def compute_score(config: ChecklistConfig, results: Iterable[CriterionResult]) -
         for row in rows
     ]
     return ScoreBreakdown(
-        status=status, total=total, total_unrounded=total_unrounded, total_before_severe_policy=total_before,
+        status=status, total=total, percent=percent, total_unrounded=total_unrounded,
+        total_before_severe_policy=total_before,
         max_score=float(max_score), rounding=rules.rounding, severe_error_policy=rules.severe_error_policy,
         severe_errors=severe_errors, severe_error_applied=applied, applicable_weight=float(applicable_weight),
         total_weight=float(total_weight), criteria=criteria, sections=sections, issues=issues)

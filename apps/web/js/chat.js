@@ -86,20 +86,23 @@ export function replyTo(state, text) {
   if (idMatch) {
     const id = known ? known.id : idMatch[0].toLowerCase();
     const conv = state.conversations.find((c) => c.id === id);
-    const ev = state.evaluations[id];
-    if (!conv || !ev) return `I don’t have ${id} in this workspace.`;
+    const ev = state.scores?.[id];
+    if (!conv) return `I don’t have ${id} in this workspace.`;
     const open = state.appeals.filter((a) => a.conversationId === id && a.status === "open").length;
-    const severe = ev.severe?.length ? ev.severe.length : 0;
     const operator = conv.operator ? ` · operator ${conv.operator}` : "";
-    return `${conv.id} · ${conv.language.toUpperCase()} · ${conv.source}${operator}. Score ${ev.total} / ${ev.maxTotal}. ${severe} severe flag${severe === 1 ? "" : "s"}, ${open} open appeal${open === 1 ? "" : "s"}.`;
+    const head = `${conv.id} · ${conv.language.toUpperCase()} · ${conv.source}${operator}.`;
+    if (ev?.final_percent == null) return `${head} Not evaluated yet. ${open} open appeal${open === 1 ? "" : "s"}.`;
+    const severe = ev.severe_errors ?? 0;
+    return `${head} Score ${ev.final_percent.toFixed(2)}%. ${severe} critical flag${severe === 1 ? "" : "s"}, ${open} open appeal${open === 1 ? "" : "s"}.`;
   }
   if (/\b(worst|low|слабые|худш)/i.test(low)) {
     const ranked = [...state.conversations]
-      .map((c) => ({ c, ev: state.evaluations[c.id] }))
-      .filter((x) => x.ev)
-      .sort((a, b) => a.ev.total - b.ev.total)
+      .map((c) => ({ c, ev: state.scores?.[c.id] }))
+      .filter((x) => x.ev?.final_percent != null)
+      .sort((a, b) => a.ev.final_percent - b.ev.final_percent)
       .slice(0, 5);
-    return ranked.map((x) => `${x.c.id} · ${x.c.language} · ${x.ev.total}/${x.ev.maxTotal}`).join("\n");
+    if (!ranked.length) return "No conversation has been evaluated yet.";
+    return ranked.map((x) => `${x.c.id} · ${x.c.language} · ${x.ev.final_percent.toFixed(2)}%`).join("\n");
   }
   if (/\b(appeal|апелл)/i.test(low)) {
     const open = state.appeals.filter((a) => a.status === "open").length;

@@ -68,6 +68,13 @@ export const createChecklist = (body) => request("/cqa/checklists", { method: "P
 /** Saves a changed configuration as a new version; base_version guards against overwriting someone else's save. */
 export const updateChecklist = (id, body) => request(`/cqa/checklists/${encodeURIComponent(id)}`, { method: "PUT", body });
 
+export const listChecklistVersions = (id) => request(`/cqa/checklists/${encodeURIComponent(id)}/versions`);
+
+/** Queue a backend (GPT) evaluation; the response lists the queued evaluations, poll getEvaluation for the result. */
+export const startEvaluation = (body) => request("/cqa/evaluations", { method: "POST", body });
+export const getEvaluation = (id) => request(`/cqa/evaluations/${encodeURIComponent(id)}`);
+export const listEvaluations = (params) => request(`/cqa/evaluations?${new URLSearchParams(params)}`);
+
 export const cqaInfo = () => request("/cqa/info");
 export const listConversationRecords = () => request("/cqa/conversation-records");
 export const importGroup = (groupId) => request("/cqa/imports", { method: "POST", body: { group_id: groupId } });

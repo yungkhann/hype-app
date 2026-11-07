@@ -17,7 +17,7 @@ See docs/cqa-model-contract.md for the narrative version and full examples.
 from __future__ import annotations
 
 import math
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictFloat, StrictInt, StrictStr, ValidationError
 
@@ -28,6 +28,7 @@ from app.cqa.schemas import (
     Criterion,
     CriterionResult,
     EvidenceRef,
+    ExplanationLanguage,
     InspectedSpan,
     Message,
     ScoringRules,
@@ -75,6 +76,9 @@ class RequestChecklist(BaseModel):
 
 class EvaluationRules(BaseModel):
     evaluated_speaker: Literal["operator"] = "operator"
+    explanation_language: ExplanationLanguage = Field(
+        default="en", description="Write explanations, N/A and severe-error reasons in this language (en, ru, kz). "
+                                  "Never translate or rewrite transcript text.")
     context_speakers: list[Speaker] = ["client", "bot", "system"]
     answer_formats: dict[str, str] = {
         "binary": "true (criterion met) or false",
@@ -157,6 +161,9 @@ class ModelOutput(BaseModel):
     checklist_version: StrictInt
     model: ModelInfo | None = None
     results: list[ModelCriterionResult] = Field(max_length=60)
+    meta: dict[str, Any] | None = Field(default=None, description=(
+        "Optional provider details (request id, token usage, the model's own answer). Recorded for audit, never "
+        "used for scoring."))
 
 
 # ---------------------------------------------------------------------------------------------------
@@ -179,8 +186,9 @@ class ValidatedOutput(BaseModel):
 
 
 def build_request(evaluation_id: str, conversation: ConversationRecord, checklist_id: str, checklist_name: str,
-                  version: int, config) -> EvaluationRequest:
+                  version: int, config, explanation_language: ExplanationLanguage = "en") -> EvaluationRequest:
     return EvaluationRequest(
+        rules=EvaluationRules(explanation_language=explanation_language),
         evaluation_id=evaluation_id,
         conversation=RequestConversation(
             conversation_id=conversation.id, language=conversation.language, channel=conversation.channel,

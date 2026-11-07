@@ -88,6 +88,8 @@ class EvaluationBrief(BaseModel):
     original_total: float | None = None
     final_total: float | None = None
     max_score: float | None = None
+    original_percent: float | None = Field(default=None, description="Original total as 0–100 (two decimals).")
+    final_percent: float | None = Field(default=None, description="Final total as 0–100 (two decimals).")
     score_status: str | None = None
     severe_errors: int = 0
     overridden: bool = False
@@ -587,6 +589,9 @@ class SectionScore(BaseModel):
 class ScoreBreakdown(BaseModel):
     status: Literal["scored", "not_applicable", "incomplete"]
     total: float | None
+    percent: float | None = Field(default=None, description=(
+        "The total as a percentage of max_score: 0–100, two decimals, a number (shown with % by the UI). None when "
+        "there is no total."))
     total_unrounded: float | None
     total_before_severe_policy: float | None
     max_score: float
@@ -606,6 +611,7 @@ class ScoreBreakdown(BaseModel):
 # ---------------------------------------------------------------------------------------------------
 
 EvaluationStatus = Literal["pending", "running", "completed", "failed"]
+ExplanationLanguage = Literal["en", "ru", "kz"]
 # Strict members: JSON 1 must stay the number 1 (a valid scale point), never become true.
 AnswerValue = StrictBool | StrictInt | StrictFloat | StrictStr | None
 
@@ -682,6 +688,7 @@ class EvaluationRecord(BaseModel):
     checklist: ChecklistConfig = Field(description="Snapshot of the configuration used, for reproducibility.")
     transcript_hash: str
     evaluator: EvaluatorInfo
+    explanation_language: ExplanationLanguage = "en"
     status: EvaluationStatus
     batch_id: str | None = None
     error: EvaluationError | None = None
@@ -736,6 +743,9 @@ class EvaluateRequest(BaseModel):
                                description="Skip conversations that already have a completed or queued evaluation "
                                            "with this checklist version.")
     adapter: str | None = Field(default=None, max_length=64, description="Default: ATLAS_CQA_EVALUATOR.")
+    explanation_language: ExplanationLanguage = Field(
+        default="en", description="Language of the evaluator's explanations (the UI language). Transcripts are "
+                                  "never translated.")
 
     @field_validator("conversation_ids")
     @classmethod

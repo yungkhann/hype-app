@@ -19,7 +19,9 @@ SAMPLES = REPO_ROOT / "data" / "samples"
 def settings(tmp_path: Path) -> Settings:
     return Settings(data_dir=tmp_path / "workspaces", samples_dir=SAMPLES, max_upload_mb=5,
                     max_chart_points=500, profile_sample_rows=50_000, model_workers=1,
-                    allowed_hosts=["testserver", "127.0.0.1", "localhost"])
+                    allowed_hosts=["testserver", "127.0.0.1", "localhost"],
+                    # Deterministic tests: never the paid GPT API, and never a key from the developer's environment.
+                    cqa_evaluator="mock", cqa_openai_api_key=None)
 
 
 @pytest.fixture
