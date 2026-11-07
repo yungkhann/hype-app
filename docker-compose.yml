@@ -53,8 +53,8 @@ services:
       - api
     restart: unless-stopped
 
-  # Cloudflare Tunnel. Routes (lumvy.io -> http://web:80, api.lumvy.io -> http://api:8000)
-  # are set in the Cloudflare dashboard on the tunnel's "Public Hostname" tab.
+  # Cloudflare Tunnel. Route lumvy.io -> http://web:80 is set in the Cloudflare dashboard on the tunnel's
+  # "Public Hostname" tab. The web container proxies https://lumvy.io/api/v1 to the api, so no api subdomain is needed.
   tunnel:
     image: cloudflare/cloudflared:2025.10.0
     command: tunnel --no-autoupdate run

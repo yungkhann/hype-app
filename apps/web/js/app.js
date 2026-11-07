@@ -23,8 +23,8 @@ import {
   resultsReport,
   startEvaluation,
   updateChecklist,
-} from "./api.js?v=tape6";
-import { activeChat, chatTitle, messageText, openChat, pushTurn, removeChat, startChat } from "./chat.js?v=tape6";
+} from "./api.js?v=tape7";
+import { activeChat, chatTitle, messageText, openChat, pushTurn, removeChat, startChat } from "./chat.js?v=tape7";
 import {
   adoptChecklist,
   appliedConfig,
@@ -36,17 +36,17 @@ import {
   scalePoints,
   sectionName,
   stageChange,
-} from "./checklist.js?v=tape6";
+} from "./checklist.js?v=tape7";
 import {
   closeCriterionEditor,
   isCriterionEditorDirty,
   isCriterionEditorOpen,
   openCriterionEditor,
-} from "./criterion-editor.js?v=tape6";
-import { applyStatic, getLang, hasKey, langCode, langName, locale, nextLang, setLang, t, tn } from "./i18n.js?v=tape6";
-import { loadState, saveState, setConversations, setScores } from "./store.js?v=tape6";
+} from "./criterion-editor.js?v=tape7";
+import { applyStatic, getLang, hasKey, langCode, langName, locale, nextLang, setLang, t, tn } from "./i18n.js?v=tape7";
+import { loadState, saveState, setConversations, setScores } from "./store.js?v=tape7";
 import { mountMessageScroller } from "./message-scroller.js?v=tape1";
-import { Bubble, Button, ChatPrompt, Field, Message, MessageScroller, MessageScrollerItem } from "./ui.js?v=tape6";
+import { Bubble, Button, ChatPrompt, Field, Message, MessageScroller, MessageScrollerItem } from "./ui.js?v=tape7";
 import { byId, esc } from "./util.js";
 
 const icon = {

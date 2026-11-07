@@ -2,7 +2,7 @@
 // the text people or GPT wrote are shown as stored. GPT writes its explanations in the interface language that was
 // active when the evaluation or appeal was submitted (explanation_language).
 //
-// Import this module with the same specifier everywhere ("./i18n.js?v=tape6"), so there is one current language.
+// Import this module with the same specifier everywhere ("./i18n.js?v=tape7"), so there is one current language.
 
 const STORE_KEY = "cqa-lang";
 export const LANGS = ["en", "ru", "kz"];

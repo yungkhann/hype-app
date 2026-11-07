@@ -1,19 +1,22 @@
 // ATLAS backend client. Conversations are imported and stored by the backend (/api/v1/cqa); the browser never
 // calls the organizers' API itself, so its signed URL stays on the server.
 
-import { hasKey, t } from "./i18n.js?v=tape6";
+import { hasKey, t } from "./i18n.js?v=tape7";
 
 export const GROUP_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 
-/** Where the API lives: <meta name="cqa-api"> when set, else :8000 on localhost, else api.<this domain>. */
+/**
+ * Where the API lives: <meta name="cqa-api"> when set, else :8000 on localhost, else /api/v1 on this origin
+ * (the web container's nginx proxies it to the api service, see docker/nginx-web.conf).
+ */
 export function apiBase() {
   const configured = document.querySelector('meta[name="cqa-api"]')?.content?.trim();
   if (configured) return configured.replace(/\/+$/, "");
-  const { protocol, hostname } = location;
+  const { hostname, origin } = location;
   if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]") {
     return `http://${hostname}:8000/api/v1`;
   }
-  return `${protocol}//api.${hostname.replace(/^www\./, "")}/api/v1`;
+  return `${origin}/api/v1`;
 }
 
 export class ApiError extends Error {

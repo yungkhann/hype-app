@@ -3,8 +3,8 @@
 // caller (onSave / onRemove); the caller keeps it in the checklist draft, and "Save checklist" stores the
 // draft as a new checklist version.
 
-import { t } from "./i18n.js?v=tape6";
-import { Button } from "./ui.js?v=tape6";
+import { t } from "./i18n.js?v=tape7";
+import { Button } from "./ui.js?v=tape7";
 import { esc } from "./util.js";
 import {
   CRITERION_ID_RE,
@@ -16,7 +16,7 @@ import {
   scalePoints,
   sectionName,
   weightSum,
-} from "./checklist.js?v=tape6";
+} from "./checklist.js?v=tape7";
 
 const closeIcon = '<svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
 const typeLabel = (type) => t(`ce.type.${type}`);
