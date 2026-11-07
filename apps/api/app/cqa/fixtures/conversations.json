@@ -1,0 +1,152 @@
+{
+  "_notice": "SYNTHETIC DEVELOPMENT FIXTURES. Written by hand for testing ATLAS CQA. Not organizer data, not real customers or operators. Every conversation id starts with 'fx-' and every group id with 'FIXTURE'.",
+  "groups": {
+    "FIXTURE": {
+      "error": "",
+      "isSuccess": true,
+      "data": {
+        "dataset_group_id": "FIXTURE",
+        "total_records": 6,
+        "records": [
+          {
+            "conversation_id": "fx-ru-001",
+            "channel": "agent chat",
+            "language": "RU",
+            "transcript": [
+              {"timestamp": "00:00", "speaker": "client", "text": "Здравствуйте, как вывести деньги со счёта на карту?"},
+              {"timestamp": "00:02", "speaker": "bot", "text": "Здравствуйте! Я виртуальный помощник. Подскажу по выводу средств или соединю с оператором."},
+              {"timestamp": "00:09", "speaker": "client", "text": "Соедините с оператором, пожалуйста."},
+              {"timestamp": "00:10", "speaker": "system", "text": "Эскалация на оператора."},
+              {"timestamp": "00:41", "speaker": "operator", "text": "Добрый день! Меня зовут Мария. Помогу с выводом средств."},
+              {"timestamp": "00:55", "speaker": "operator", "text": "Откройте раздел «Счета», выберите «Вывод» и укажите карту. Зачисление обычно занимает до одного рабочего дня."},
+              {"timestamp": "01:20", "speaker": "client", "text": "Получилось, заявка создана."},
+              {"timestamp": "01:31", "speaker": "operator", "text": "Отлично. Могу ещё чем-нибудь помочь?"},
+              {"timestamp": "01:40", "speaker": "client", "text": "Нет, спасибо."},
+              {"timestamp": "01:44", "speaker": "operator", "text": "Спасибо за обращение! Хорошего дня."}
+            ],
+            "audio_url": null
+          },
+          {
+            "conversation_id": "fx-kz-001",
+            "channel": "agent chat",
+            "language": "KZ",
+            "transcript": [
+              {"timestamp": "00:00", "speaker": "client", "text": "Сәлеметсіз бе, брокерлік шотты қалай ашуға болады?"},
+              {"timestamp": "00:03", "speaker": "bot", "text": "Сәлеметсіз бе! Мен виртуалды көмекшімін. Сұрағыңызды операторға жіберейін бе?"},
+              {"timestamp": "00:08", "speaker": "client", "text": "Иә, операторға жіберіңіз."},
+              {"timestamp": "00:09", "speaker": "system", "text": "Операторға қосылу."},
+              {"timestamp": "00:52", "speaker": "operator", "text": "Қайырлы күн! Менің атым Айгерім. Шот ашу үшін қосымшада «Шот ашу» батырмасын басыңыз."},
+              {"timestamp": "01:10", "speaker": "client", "text": "Жеке куәлік керек пе?"},
+              {"timestamp": "01:25", "speaker": "operator", "text": "Иә, жеке куәлік пен телефон нөмірі қажет. Тексеру бір күнге дейін созылады."},
+              {"timestamp": "01:40", "speaker": "client", "text": "Түсінікті, рақмет."}
+            ],
+            "audio_url": null
+          },
+          {
+            "conversation_id": "fx-en-001",
+            "channel": "agent chat",
+            "language": "EN",
+            "transcript": [
+              {"timestamp": "00:00", "speaker": "client", "text": "Hi, my card was blocked after I entered the PIN three times."},
+              {"timestamp": "00:02", "speaker": "bot", "text": "Hello! I am the virtual assistant. I will connect you with an operator."},
+              {"timestamp": "00:04", "speaker": "system", "text": "Escalated to operator."},
+              {"timestamp": "00:37", "speaker": "operator", "text": "Good afternoon, this is Daniel. I am sorry for the trouble. Could you confirm your date of birth?"},
+              {"timestamp": "00:51", "speaker": "client", "text": "It is the 4th of May."},
+              {"timestamp": "00:53", "speaker": "system", "text": "Client identity verified."},
+              {"timestamp": "01:12", "speaker": "operator", "text": "Thank you. I have unblocked the card. Please wait ten minutes before using it."},
+              {"timestamp": "01:30", "speaker": "client", "text": "Great, thanks a lot."},
+              {"timestamp": "01:34", "speaker": "operator", "text": "You are welcome. Have a nice day!"}
+            ],
+            "audio_url": null
+          },
+          {
+            "conversation_id": "fx-ru-002",
+            "channel": "voice call",
+            "language": "RU",
+            "transcript": [
+              {"timestamp": "2026-11-03T09:00:00.0000000+05:00", "speaker": "system", "text": "Входящий звонок."},
+              {"timestamp": "2026-11-03T09:00:04.5000000+05:00", "speaker": "operator", "text": "Добрый день, служба поддержки, меня зовут Ержан. Чем могу помочь?"},
+              {"timestamp": "2026-11-03T09:00:11.2500000+05:00", "speaker": "client", "text": "Здравствуйте. Не приходит код подтверждения в приложении."},
+              {"timestamp": "2026-11-03T09:00:20.0000000+05:00", "speaker": "operator", "text": "Понимаю. Проверьте, пожалуйста, что номер телефона в профиле указан верно."},
+              {"timestamp": "2026-11-03T09:00:41.7500000+05:00", "speaker": "client", "text": "Номер правильный, но смс всё равно нет."},
+              {"timestamp": "2026-11-03T09:01:02.0000000+05:00", "speaker": "operator", "text": "Я отправил повторный код вручную. Он должен прийти в течение минуты."},
+              {"timestamp": "2026-11-03T09:01:35.0000000+05:00", "speaker": "client", "text": "Пришёл, спасибо."},
+              {"timestamp": "2026-11-03T09:01:39.0000000+05:00", "speaker": "operator", "text": "Рад помочь. Всего доброго!"},
+              {"timestamp": "2026-11-03T09:01:42.0000000+05:00", "speaker": "system", "text": "Звонок завершён."}
+            ],
+            "audio_url": null
+          },
+          {
+            "conversation_id": "fx-en-002",
+            "channel": "agent chat",
+            "language": "EN",
+            "transcript": [
+              {"timestamp": "00:00", "speaker": "client", "text": "Where can I download my monthly statement?"},
+              {"timestamp": "00:01", "speaker": "bot", "text": "Hello! Statements are in the app under Profile, then Documents, then Statements."},
+              {"timestamp": "00:20", "speaker": "client", "text": "Found it, thank you."},
+              {"timestamp": "00:21", "speaker": "bot", "text": "Glad I could help. Is there anything else?"},
+              {"timestamp": "00:30", "speaker": "client", "text": "No, that is all."},
+              {"timestamp": "00:31", "speaker": "system", "text": "Chat closed by the client."}
+            ],
+            "audio_url": null
+          },
+          {
+            "conversation_id": "fx-kz-002",
+            "channel": "agent chat",
+            "language": "KZ",
+            "transcript": [
+              {"timestamp": "00:00", "speaker": "client", "text": "Ақша аудару неге кешігіп жатыр?"},
+              {"timestamp": "00:02", "speaker": "bot", "text": "Сәлеметсіз бе! Операторға қосамын."},
+              {"timestamp": "00:03", "speaker": "system", "text": "Операторға қосылу."},
+              {"timestamp": "02:15", "speaker": "operator", "text": "Аударым өңделуде."},
+              {"timestamp": "02:40", "speaker": "client", "text": "Қашан түседі?"},
+              {"timestamp": "03:55", "speaker": "operator", "text": "Білмеймін, күте тұрыңыз."},
+              {"timestamp": "04:10", "speaker": "client", "text": "Жақсы."}
+            ],
+            "audio_url": null
+          }
+        ]
+      }
+    },
+    "FIXTURE-CONTROL": {
+      "error": "",
+      "isSuccess": true,
+      "data": {
+        "dataset_group_id": "FIXTURE-CONTROL",
+        "total_records": 2,
+        "records": [
+          {
+            "conversation_id": "fx-ru-101",
+            "channel": "agent chat",
+            "language": "RU",
+            "transcript": [
+              {"timestamp": "00:00", "speaker": "client", "text": "Почему списали комиссию за обслуживание?"},
+              {"timestamp": "00:02", "speaker": "bot", "text": "Здравствуйте! Соединяю с оператором."},
+              {"timestamp": "00:03", "speaker": "system", "text": "Эскалация на оператора."},
+              {"timestamp": "00:30", "speaker": "operator", "text": "Здравствуйте! Меня зовут Олжас. Комиссия списывается ежемесячно по вашему тарифу."},
+              {"timestamp": "00:48", "speaker": "client", "text": "А можно сменить тариф?"},
+              {"timestamp": "01:05", "speaker": "operator", "text": "Да, в разделе «Тарифы» можно выбрать другой. Изменение вступит в силу с первого числа."},
+              {"timestamp": "01:20", "speaker": "client", "text": "Спасибо."}
+            ],
+            "audio_url": null
+          },
+          {
+            "conversation_id": "fx-en-101",
+            "channel": "voice call",
+            "language": "EN",
+            "transcript": [
+              {"timestamp": "2026-11-04T14:30:00Z", "speaker": "system", "text": "Incoming call."},
+              {"timestamp": "2026-11-04T14:30:03Z", "speaker": "operator", "text": "Hello, support desk, Anna speaking. How can I help?"},
+              {"timestamp": "2026-11-04T14:30:09Z", "speaker": "client", "text": "I want to close my account."},
+              {"timestamp": "2026-11-04T14:30:20Z", "speaker": "operator", "text": "I can help with that. May I ask why you would like to close it?"},
+              {"timestamp": "2026-11-04T14:30:31Z", "speaker": "client", "text": "I am moving abroad."},
+              {"timestamp": "2026-11-04T14:30:50Z", "speaker": "operator", "text": "Understood. I have created the closure request; you will get an email confirmation today."},
+              {"timestamp": "2026-11-04T14:31:02Z", "speaker": "client", "text": "Thank you, goodbye."}
+            ],
+            "audio_url": null
+          }
+        ]
+      }
+    }
+  }
+}

@@ -46,6 +46,27 @@ class Settings(BaseSettings):
     model_workers: int = 2
     dataframe_cache_size: int = 4
 
+    # ---- Conversation Quality Analytics (app/cqa) ----------------------------------------------------
+    # The organizers' GET endpoint. It carries a signed token, so it lives in .env only (never in git).
+    # `group_id` is set on this URL per import; any group_id already in the URL is replaced.
+    cqa_source_url: str | None = None
+    cqa_source_timeout_s: float = 60.0
+    # Synthetic, clearly labeled fixtures for development and tests (group ids starting with "FIXTURE").
+    cqa_fixtures_enabled: bool = True
+    # Evaluator adapter used when a request does not name one: "mock" (development only), "http", or a
+    # name registered with @register_adapter (see app/cqa/adapters).
+    cqa_evaluator: str = "mock"
+    # The http adapter POSTs the evaluation request here. Non-loopback hosts require the explicit opt-in
+    # below, so transcripts are never sent off this machine by accident.
+    cqa_evaluator_url: str | None = None
+    cqa_evaluator_timeout_s: float = 180.0
+    cqa_evaluator_allow_remote: bool = False
+    cqa_evaluation_workers: int = 2
+    # Hosts (suffix match) the API may contact to resolve a call recording's player page.
+    cqa_audio_hosts: list[str] = Field(default=["powerplatform.com", "dynamics.com"])
+    cqa_max_messages: int = 3_000
+    cqa_max_message_chars: int = 20_000
+
     @property
     def max_upload_bytes(self) -> int:
         return self.max_upload_mb * 1024 * 1024

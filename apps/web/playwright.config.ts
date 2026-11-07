@@ -35,6 +35,8 @@ export default defineConfig({
       command:
         `rm -rf '${DATA_DIR}' && mkdir -p '${DATA_DIR}' && cd ../api && ` +
         `ATLAS_DATA_DIR='${DATA_DIR}' ATLAS_CORS_ORIGINS='["http://127.0.0.1:${WEB_PORT}"]' ` +
+        // CQA: never reach the organizers' API or a real model from tests, whatever apps/api/.env or the shell sets.
+        `ATLAS_CQA_SOURCE_URL='' ATLAS_CQA_EVALUATOR=mock ` +
         `exec .venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port ${API_PORT}`,
       url: `${API_URL}/health`,
       reuseExistingServer: false,

@@ -16,6 +16,8 @@ from app.challenge import router as challenge
 from app.core.config import Settings, get_settings
 from app.core.errors import install_error_handlers
 from app.core.security import OriginGuard
+from app.cqa import router as cqa_router
+from app.cqa.service import CqaService
 from app.services.datasets import DatasetService
 from app.services.modeling.runner import ExperimentManager
 from app.services.reporting.store import ReportStore
@@ -36,7 +38,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.datasets = DatasetService(workspace, settings)
         app.state.experiments = ExperimentManager(workspace, app.state.datasets, settings)
         app.state.reports = ReportStore(workspace)
+        app.state.cqa = CqaService(settings)
         yield
+        app.state.cqa.shutdown()
         app.state.experiments.shutdown()
 
     app = FastAPI(title=settings.app_name, version=__version__, lifespan=lifespan,
@@ -52,6 +56,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     for module in (system, datasets, analysis, analyses, experiments, findings):
         app.include_router(module.router, prefix=API_PREFIX)
     app.include_router(challenge.router, prefix=API_PREFIX)
+    app.include_router(cqa_router.router, prefix=API_PREFIX)
     return app
 
 

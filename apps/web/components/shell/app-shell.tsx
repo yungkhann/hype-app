@@ -6,6 +6,7 @@ import {
   BrainCircuit,
   ChevronRight,
   FlaskConical,
+  Headphones,
   Home,
   LayoutDashboard,
   Lightbulb,
@@ -21,16 +22,18 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { useHealth } from "@/lib/api/hooks";
 import { cn } from "@/lib/utils";
 import { Kbd } from "@/components/ui/surface";
 import { CommandMenu, type CommandPage } from "./command-menu";
 import { DatasetSwitcher } from "./dataset-switcher";
 
-type NavItem = { href: string; label: string; icon: LucideIcon };
+export type NavItem = { href: string; label: string; icon: LucideIcon; exact?: boolean };
+export type NavGroup = { label: string; items: NavItem[] };
+export type Brand = { name: string; sub: string; href: string; icon?: LucideIcon };
 
-const NAV: { label: string; items: NavItem[] }[] = [
+const NAV: NavGroup[] = [
   { label: "Workspace", items: [{ href: "/", label: "Datasets", icon: Home }] },
   {
     label: "Understand",
@@ -55,23 +58,82 @@ const NAV: { label: string; items: NavItem[] }[] = [
       { href: "/report", label: "Report", icon: Printer },
     ],
   },
-  { label: "Case", items: [{ href: "/challenge", label: "Challenge", icon: Puzzle }] },
+  {
+    label: "Case",
+    items: [
+      { href: "/challenge", label: "Challenge", icon: Puzzle },
+      { href: "/cqa", label: "Quality analytics", icon: Headphones },
+    ],
+  },
 ];
 
-const PAGES: CommandPage[] = NAV.flatMap((group) => group.items.map((item) => ({ ...item, group: group.label })));
+const ATLAS_BRAND: Brand = { name: "ATLAS", sub: "Studio", href: "/", icon: Boxes };
 
-function isActive(pathname: string, href: string) {
-  return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+const toPages = (nav: NavGroup[]): CommandPage[] =>
+  nav.flatMap((group) => group.items.map((item) => ({ ...item, group: group.label })));
+
+function isActive(pathname: string, item: Pick<NavItem, "href" | "exact">) {
+  const { href } = item;
+  return href === "/" || item.exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function SidebarContent({ onNavigate, onSearch }: { onNavigate?: () => void; onSearch: () => void }) {
-  const pathname = usePathname();
+function NavLinks({ nav, pathname, onNavigate }: { nav: NavGroup[]; pathname: string | null; onNavigate?: () => void }) {
+  return (
+    <>
+      {nav.map((group) => (
+        <div key={group.label} className="mt-4 first:mt-1">
+          <p className="px-2 pb-1 text-xs font-medium text-ink-3">{group.label}</p>
+          <ul className="flex flex-col gap-px">
+            {group.items.map((item) => {
+              const active = pathname !== null && isActive(pathname, item);
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    onClick={onNavigate}
+                    aria-current={active ? "page" : undefined}
+                    className={cn(
+                      "flex h-[30px] items-center gap-2.5 rounded-md px-2 text-dense text-ink-2 transition-colors duration-100 hover:bg-hover hover:text-ink",
+                      active && "bg-raised font-medium text-ink hover:bg-raised",
+                    )}
+                  >
+                    <item.icon className={cn("size-4 shrink-0", active ? "text-accent" : "text-ink-3")} aria-hidden />
+                    {item.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
+    </>
+  );
+}
+
+function ActiveNavLinks({ nav, onNavigate }: { nav: NavGroup[]; onNavigate?: () => void }) {
+  return <NavLinks nav={nav} pathname={usePathname()} onNavigate={onNavigate} />;
+}
+
+function SidebarContent({
+  nav,
+  brand,
+  footer,
+  onNavigate,
+  onSearch,
+}: {
+  nav: NavGroup[];
+  brand: Brand;
+  footer: ReactNode;
+  onNavigate?: () => void;
+  onSearch: () => void;
+}) {
+  const BrandIcon = brand.icon ?? Boxes;
   return (
     <div className="flex h-full flex-col">
-      <Link href="/" onClick={onNavigate} className="flex h-12 shrink-0 items-center gap-2 px-4 text-ink">
-        <Boxes className="size-[18px] text-accent" aria-hidden />
-        <span className="text-dense font-semibold tracking-[0.04em]">ATLAS</span>
-        <span className="text-dense text-ink-3">Studio</span>
+      <Link href={brand.href} onClick={onNavigate} className="flex h-12 shrink-0 items-center gap-2 px-4 text-ink">
+        <BrandIcon className="size-[18px] text-accent" aria-hidden />
+        <span className="text-dense font-semibold tracking-[0.04em]">{brand.name}</span>
+        <span className="text-dense text-ink-3">{brand.sub}</span>
       </Link>
       <div className="px-3 pb-1">
         <button
@@ -88,39 +150,18 @@ function SidebarContent({ onNavigate, onSearch }: { onNavigate?: () => void; onS
         </button>
       </div>
       <nav aria-label="Main" className="flex-1 overflow-y-auto px-3 pt-2 pb-4">
-        {NAV.map((group) => (
-          <div key={group.label} className="mt-4 first:mt-1">
-            <p className="px-2 pb-1 text-xs font-medium text-ink-3">{group.label}</p>
-            <ul className="flex flex-col gap-px">
-              {group.items.map((item) => {
-                const active = isActive(pathname, item.href);
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      onClick={onNavigate}
-                      aria-current={active ? "page" : undefined}
-                      className={cn(
-                        "flex h-[30px] items-center gap-2.5 rounded-md px-2 text-dense text-ink-2 transition-colors duration-100 hover:bg-hover hover:text-ink",
-                        active && "bg-raised font-medium text-ink hover:bg-raised",
-                      )}
-                    >
-                      <item.icon className={cn("size-4 shrink-0", active ? "text-accent" : "text-ink-3")} aria-hidden />
-                      {item.label}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
+        {/* The active link needs the pathname, which routes with runtime params (/cqa/conversations/[id]) only
+            know at request time; the fallback is the same list without a highlight, so the shell still prerenders. */}
+        <Suspense fallback={<NavLinks nav={nav} pathname={null} onNavigate={onNavigate} />}>
+          <ActiveNavLinks nav={nav} onNavigate={onNavigate} />
+        </Suspense>
       </nav>
-      <ApiStatus />
+      {footer}
     </div>
   );
 }
 
-function ApiStatus() {
+export function ApiStatus() {
   const health = useHealth();
   const ok = health.isSuccess;
   const label = health.isPending ? "Connecting to API…" : ok ? "API connected · local only" : "API offline";
@@ -140,9 +181,9 @@ function ApiStatus() {
   );
 }
 
-function Breadcrumb() {
+function Breadcrumb({ pages }: { pages: CommandPage[] }) {
   const pathname = usePathname();
-  const page = PAGES.find((p) => isActive(pathname, p.href));
+  const page = pages.find((p) => isActive(pathname, p));
   if (!page) return null;
   return (
     <p className="hidden min-w-0 items-center gap-1.5 text-dense lg:flex">
@@ -153,7 +194,27 @@ function Breadcrumb() {
   );
 }
 
-export function AppShell({ children }: { children: ReactNode }) {
+/**
+ * The application frame. Defaults are the ATLAS studio; other areas (CQA) pass their own navigation, brand,
+ * header controls and sidebar footer, and can leave dataset switching out of the command menu.
+ */
+export function AppShell({
+  children,
+  nav = NAV,
+  brand = ATLAS_BRAND,
+  headerRight,
+  footer,
+  datasetCommands = true,
+}: {
+  children: ReactNode;
+  nav?: NavGroup[];
+  brand?: Brand;
+  headerRight?: ReactNode;
+  footer?: ReactNode;
+  datasetCommands?: boolean;
+}) {
+  const pages = toPages(nav);
+  const sidebarFooter = footer ?? <ApiStatus />;
   const [open, setOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
 
@@ -177,22 +238,28 @@ export function AppShell({ children }: { children: ReactNode }) {
         Skip to content
       </a>
       <aside className="no-print sticky top-0 hidden h-dvh w-[220px] shrink-0 border-r border-line bg-canvas lg:block">
-        <SidebarContent onSearch={() => setCommandOpen(true)} />
+        <SidebarContent nav={nav} brand={brand} footer={sidebarFooter} onSearch={() => setCommandOpen(true)} />
       </aside>
       <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
         <DialogPrimitive.Portal>
           <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-black/60 lg:hidden" />
           <DialogPrimitive.Content className="fixed inset-y-0 left-0 z-50 w-[272px] border-r border-line bg-canvas shadow-overlay focus:outline-none data-[state=open]:animate-[atlas-rise_160ms_var(--ease-out-quart)] lg:hidden">
             <DialogPrimitive.Title className="sr-only">Navigation</DialogPrimitive.Title>
-            <DialogPrimitive.Description className="sr-only">ATLAS sections</DialogPrimitive.Description>
+            <DialogPrimitive.Description className="sr-only">{brand.name} sections</DialogPrimitive.Description>
             <DialogPrimitive.Close className="absolute top-3 right-3 rounded-md p-1 text-ink-3 hover:bg-hover hover:text-ink" aria-label="Close navigation">
               <X className="size-4" />
             </DialogPrimitive.Close>
-            <SidebarContent onNavigate={() => setOpen(false)} onSearch={() => setCommandOpen(true)} />
+            <SidebarContent
+              nav={nav}
+              brand={brand}
+              footer={sidebarFooter}
+              onNavigate={() => setOpen(false)}
+              onSearch={() => setCommandOpen(true)}
+            />
           </DialogPrimitive.Content>
         </DialogPrimitive.Portal>
       </DialogPrimitive.Root>
-      <CommandMenu pages={PAGES} open={commandOpen} onOpenChange={setCommandOpen} />
+      <CommandMenu pages={pages} datasets={datasetCommands} open={commandOpen} onOpenChange={setCommandOpen} />
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="no-print sticky top-0 z-30 flex h-12 shrink-0 items-center gap-3 border-b border-line bg-canvas px-4 md:px-6">
           <button
@@ -203,18 +270,20 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <MenuIcon className="size-[18px]" />
           </button>
-          <span className="text-dense font-semibold tracking-[0.04em] text-ink lg:hidden">ATLAS</span>
-          <Breadcrumb />
+          <span className="text-dense font-semibold tracking-[0.04em] text-ink lg:hidden">{brand.name}</span>
+          <Suspense fallback={null}>
+            <Breadcrumb pages={pages} />
+          </Suspense>
           <div className="ml-auto flex min-w-0 items-center gap-2">
             <button
               type="button"
               onClick={() => setCommandOpen(true)}
               className="rounded-md p-1.5 text-ink-2 hover:bg-hover hover:text-ink lg:hidden"
-              aria-label="Jump to a page or dataset"
+              aria-label={datasetCommands ? "Jump to a page or dataset" : "Jump to a page"}
             >
               <Search className="size-4" />
             </button>
-            <DatasetSwitcher />
+            {headerRight ?? <DatasetSwitcher />}
           </div>
         </header>
         <main id="main" tabIndex={-1} className="min-w-0 flex-1 px-4 pt-6 pb-16 focus:outline-none md:px-8">

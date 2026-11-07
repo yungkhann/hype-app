@@ -1,0 +1,269 @@
+{
+  "contract_version": "cqa-eval/1",
+  "evaluation_id": "0123456789abcdef0123456789abcdef",
+  "conversation": {
+    "conversation_id": "fx-ru-001",
+    "language": "RU",
+    "channel": "chat",
+    "channel_raw": "agent chat",
+    "audio_url": null,
+    "messages": [
+      {
+        "id": "m1",
+        "index": 0,
+        "speaker": "client",
+        "timestamp": "00:00",
+        "offset_seconds": 0.0,
+        "text": "Здравствуйте, как вывести деньги со счёта на карту?"
+      },
+      {
+        "id": "m2",
+        "index": 1,
+        "speaker": "bot",
+        "timestamp": "00:02",
+        "offset_seconds": 2.0,
+        "text": "Здравствуйте! Я виртуальный помощник. Подскажу по выводу средств или соединю с оператором."
+      },
+      {
+        "id": "m3",
+        "index": 2,
+        "speaker": "client",
+        "timestamp": "00:09",
+        "offset_seconds": 9.0,
+        "text": "Соедините с оператором, пожалуйста."
+      },
+      {
+        "id": "m4",
+        "index": 3,
+        "speaker": "system",
+        "timestamp": "00:10",
+        "offset_seconds": 10.0,
+        "text": "Эскалация на оператора."
+      },
+      {
+        "id": "m5",
+        "index": 4,
+        "speaker": "operator",
+        "timestamp": "00:41",
+        "offset_seconds": 41.0,
+        "text": "Добрый день! Меня зовут Мария. Помогу с выводом средств."
+      },
+      {
+        "id": "m6",
+        "index": 5,
+        "speaker": "operator",
+        "timestamp": "00:55",
+        "offset_seconds": 55.0,
+        "text": "Откройте раздел «Счета», выберите «Вывод» и укажите карту. Зачисление обычно занимает до одного рабочего дня."
+      },
+      {
+        "id": "m7",
+        "index": 6,
+        "speaker": "client",
+        "timestamp": "01:20",
+        "offset_seconds": 80.0,
+        "text": "Получилось, заявка создана."
+      },
+      {
+        "id": "m8",
+        "index": 7,
+        "speaker": "operator",
+        "timestamp": "01:31",
+        "offset_seconds": 91.0,
+        "text": "Отлично. Могу ещё чем-нибудь помочь?"
+      },
+      {
+        "id": "m9",
+        "index": 8,
+        "speaker": "client",
+        "timestamp": "01:40",
+        "offset_seconds": 100.0,
+        "text": "Нет, спасибо."
+      },
+      {
+        "id": "m10",
+        "index": 9,
+        "speaker": "operator",
+        "timestamp": "01:44",
+        "offset_seconds": 104.0,
+        "text": "Спасибо за обращение! Хорошего дня."
+      }
+    ]
+  },
+  "checklist": {
+    "checklist_id": "fedcba9876543210fedcba9876543210",
+    "version": 1,
+    "name": "Development sample checklist (unofficial)",
+    "sections": [
+      {
+        "id": "opening",
+        "name": "Opening",
+        "description": "Placeholder section."
+      },
+      {
+        "id": "resolution",
+        "name": "Resolution",
+        "description": "Placeholder section."
+      },
+      {
+        "id": "closing",
+        "name": "Closing",
+        "description": "Placeholder section."
+      }
+    ],
+    "criteria": [
+      {
+        "id": "greeting",
+        "name": "Greeting (sample)",
+        "description": "Sample criterion: the operator greets the client in their first message.",
+        "section_id": "opening",
+        "weight": 10.0,
+        "answer_type": "binary",
+        "scale": null,
+        "options": null,
+        "na_allowed": true,
+        "na_rule": "Sample rule: no operator joined the conversation.",
+        "severe_error_enabled": false,
+        "severe_error_rule": ""
+      },
+      {
+        "id": "introduction",
+        "name": "Introduces themselves (sample)",
+        "description": "Sample criterion: the operator gives their name.",
+        "section_id": "opening",
+        "weight": 5.0,
+        "answer_type": "binary",
+        "scale": null,
+        "options": null,
+        "na_allowed": true,
+        "na_rule": "Sample rule: no operator joined the conversation.",
+        "severe_error_enabled": false,
+        "severe_error_rule": ""
+      },
+      {
+        "id": "need_identified",
+        "name": "Identifies the need (sample)",
+        "description": "Sample criterion: how well the operator establishes what the client needs, 0–5.",
+        "section_id": "resolution",
+        "weight": 20.0,
+        "answer_type": "scale",
+        "scale": {
+          "min": 0.0,
+          "max": 5.0,
+          "step": 1.0,
+          "labels": {
+            "0": "Not at all",
+            "5": "Fully"
+          }
+        },
+        "options": null,
+        "na_allowed": false,
+        "na_rule": "",
+        "severe_error_enabled": false,
+        "severe_error_rule": ""
+      },
+      {
+        "id": "solution",
+        "name": "Correct solution (sample)",
+        "description": "Sample criterion: the information or action given solves the client's request.",
+        "section_id": "resolution",
+        "weight": 30.0,
+        "answer_type": "options",
+        "scale": null,
+        "options": [
+          {
+            "id": "full",
+            "label": "Fully resolved",
+            "points": 2.0
+          },
+          {
+            "id": "partial",
+            "label": "Partly resolved",
+            "points": 1.0
+          },
+          {
+            "id": "none",
+            "label": "Not resolved",
+            "points": 0.0
+          }
+        ],
+        "na_allowed": false,
+        "na_rule": "",
+        "severe_error_enabled": true,
+        "severe_error_rule": "Sample rule: wrong information that could cause the client a financial loss."
+      },
+      {
+        "id": "tone",
+        "name": "Polite tone (sample)",
+        "description": "Sample criterion: politeness and empathy, 1–5.",
+        "section_id": "resolution",
+        "weight": 15.0,
+        "answer_type": "scale",
+        "scale": {
+          "min": 1.0,
+          "max": 5.0,
+          "step": 1.0,
+          "labels": {}
+        },
+        "options": null,
+        "na_allowed": false,
+        "na_rule": "",
+        "severe_error_enabled": false,
+        "severe_error_rule": ""
+      },
+      {
+        "id": "further_help",
+        "name": "Offers further help (sample)",
+        "description": "Sample criterion: the operator asks whether anything else is needed.",
+        "section_id": "closing",
+        "weight": 10.0,
+        "answer_type": "binary",
+        "scale": null,
+        "options": null,
+        "na_allowed": true,
+        "na_rule": "Sample rule: the client ended the conversation first.",
+        "severe_error_enabled": false,
+        "severe_error_rule": ""
+      },
+      {
+        "id": "farewell",
+        "name": "Farewell (sample)",
+        "description": "Sample criterion: the operator closes politely.",
+        "section_id": "closing",
+        "weight": 10.0,
+        "answer_type": "binary",
+        "scale": null,
+        "options": null,
+        "na_allowed": true,
+        "na_rule": "Sample rule: the client ended the conversation first.",
+        "severe_error_enabled": false,
+        "severe_error_rule": ""
+      }
+    ],
+    "scoring": {
+      "max_score": 100.0,
+      "rounding": {
+        "mode": "half_up",
+        "digits": 1
+      },
+      "severe_error_policy": "flag_only",
+      "na_policy": "redistribute"
+    }
+  },
+  "rules": {
+    "evaluated_speaker": "operator",
+    "context_speakers": [
+      "client",
+      "bot",
+      "system"
+    ],
+    "answer_formats": {
+      "binary": "true (criterion met) or false",
+      "scale": "a number on the criterion's scale: min ≤ value ≤ max, on the step grid",
+      "options": "the id of one of the criterion's options"
+    },
+    "evidence": "Every non-N/A result needs at least one evidence reference (message_id, optional verbatim quote) or, when an expected action is missing, an inspected span (start/end message ids) showing which part of the conversation was checked.",
+    "not_applicable": "Set is_na=true with na_reason only when the criterion allows N/A (na_allowed) and its na_rule applies; value must then be null.",
+    "severe_error": "Set severe_error=true with severe_error_reason only for criteria with severe_error_enabled."
+  }
+}

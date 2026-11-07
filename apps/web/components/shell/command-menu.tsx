@@ -36,7 +36,18 @@ function matches(command: Command, query: string) {
  * ⌘K / Ctrl+K: jump to any page or switch the active dataset without leaving the keyboard.
  * A dialog because it is a global, transient, focus-owning action; it never holds state.
  */
-export function CommandMenu({ pages, open, onOpenChange }: { pages: CommandPage[]; open: boolean; onOpenChange: (open: boolean) => void }) {
+export function CommandMenu({
+  pages,
+  open,
+  onOpenChange,
+  datasets: includeDatasets = true,
+}: {
+  pages: CommandPage[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** List "Switch dataset" commands (the ATLAS studio). Other areas leave them out. */
+  datasets?: boolean;
+}) {
   const router = useRouter();
   const datasets = useDatasets();
   const activeId = useActiveDatasetId();
@@ -85,7 +96,7 @@ export function CommandMenu({ pages, open, onOpenChange }: { pages: CommandPage[
         router.push(page.href);
       },
     }));
-    const switchTo: Command[] = (datasets.data ?? [])
+    const switchTo: Command[] = (includeDatasets ? (datasets.data ?? []) : [])
       .filter((d) => d.status === "ready")
       .map((d) => ({
         id: `dataset:${d.id}`,
@@ -101,7 +112,7 @@ export function CommandMenu({ pages, open, onOpenChange }: { pages: CommandPage[
         },
       }));
     return [...go, ...switchTo];
-  }, [pages, datasets.data, activeId, router, setOpen]);
+  }, [pages, includeDatasets, datasets.data, activeId, router, setOpen]);
 
   const visible = commands.filter((command) => matches(command, query));
   const current = Math.min(index, Math.max(0, visible.length - 1));
@@ -156,7 +167,7 @@ export function CommandMenu({ pages, open, onOpenChange }: { pages: CommandPage[
                 setIndex(0);
               }}
               onKeyDown={onInputKey}
-              placeholder="Jump to a page or dataset…"
+              placeholder={includeDatasets ? "Jump to a page or dataset…" : "Jump to a page…"}
               aria-label="Search commands"
               role="combobox"
               aria-expanded

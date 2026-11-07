@@ -652,6 +652,418 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cqa/info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Info */
+        get: operations["info_api_v1_cqa_info_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cqa/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Overview */
+        get: operations["overview_api_v1_cqa_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cqa/contract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Contract
+         * @description The evaluator integration contract: JSON schemas plus a worked example request and response.
+         */
+        get: operations["contract_api_v1_cqa_contract_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cqa/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Audit */
+        get: operations["audit_api_v1_cqa_audit_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cqa/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Imports */
+        get: operations["list_imports_api_v1_cqa_imports_get"];
+        put?: never;
+        /**
+         * Import Group
+         * @description Fetch a group from the organizers' API (server-side, so the browser never hits CORS) or load fixtures.
+         */
+        post: operations["import_group_api_v1_cqa_imports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cqa/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Conversations */
+        get: operations["list_conversations_api_v1_cqa_conversations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cqa/conversations/{conversation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Conversation */
+        get: operations["get_conversation_api_v1_cqa_conversations__conversation_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cqa/conversations/{conversation_id}/audio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Audio */
+        get: operations["get_audio_api_v1_cqa_conversations__conversation_id__audio_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cqa/checklists": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Checklists */
+        get: operations["list_checklists_api_v1_cqa_checklists_get"];
+        put?: never;
+        /** Create Checklist */
+        post: operations["create_checklist_api_v1_cqa_checklists_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cqa/checklists/dev-sample": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Dev Sample
+         * @description Create the unofficial development sample checklist (placeholder criteria, clearly labeled).
+         */
+        post: operations["create_dev_sample_api_v1_cqa_checklists_dev_sample_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cqa/checklists/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import Checklist */
+        post: operations["import_checklist_api_v1_cqa_checklists_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cqa/checklists/{checklist_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Checklist */
+        get: operations["get_checklist_api_v1_cqa_checklists__checklist_id__get"];
+        /** Update Checklist */
+        put: operations["update_checklist_api_v1_cqa_checklists__checklist_id__put"];
+        post?: never;
+        /** Delete Checklist */
+        delete: operations["delete_checklist_api_v1_cqa_checklists__checklist_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cqa/checklists/{checklist_id}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Duplicate Checklist */
+        post: operations["duplicate_checklist_api_v1_cqa_checklists__checklist_id__duplicate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cqa/checklists/{checklist_id}/criteria/{criterion_id}/replace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replace Criterion */
+        post: operations["replace_criterion_api_v1_cqa_checklists__checklist_id__criteria__criterion_id__replace_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cqa/checklists/{checklist_id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Checklist */
+        get: operations["export_checklist_api_v1_cqa_checklists__checklist_id__export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cqa/evaluations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Evaluations */
+        get: operations["list_evaluations_api_v1_cqa_evaluations_get"];
+        put?: never;
+        /**
+         * Evaluate
+         * @description Queue evaluations (pending → running → completed | failed). Poll the batch or the evaluations.
+         */
+        post: operations["evaluate_api_v1_cqa_evaluations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cqa/evaluations/batches/{batch_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Batch Status */
+        get: operations["batch_status_api_v1_cqa_evaluations_batches__batch_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cqa/evaluations/{evaluation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Evaluation */
+        get: operations["get_evaluation_api_v1_cqa_evaluations__evaluation_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cqa/evaluations/{evaluation_id}/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Evaluation Request
+         * @description The exact contract request this evaluation sends to its adapter (for debugging the model integration).
+         */
+        get: operations["evaluation_request_api_v1_cqa_evaluations__evaluation_id__request_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cqa/evaluations/{evaluation_id}/rerun": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rerun Evaluation */
+        post: operations["rerun_evaluation_api_v1_cqa_evaluations__evaluation_id__rerun_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cqa/appeals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Appeals */
+        get: operations["list_appeals_api_v1_cqa_appeals_get"];
+        put?: never;
+        /** Create Appeal */
+        post: operations["create_appeal_api_v1_cqa_appeals_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cqa/appeals/{appeal_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Appeal */
+        get: operations["get_appeal_api_v1_cqa_appeals__appeal_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cqa/appeals/{appeal_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Appeal */
+        post: operations["decide_appeal_api_v1_cqa_appeals__appeal_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -723,6 +1135,198 @@ export interface components {
              */
             notes: string[];
             meta: components["schemas"]["SourceMeta"];
+        };
+        /** AnswerOption */
+        AnswerOption: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Points */
+            points: number;
+        };
+        /** Appeal */
+        Appeal: {
+            /** Id */
+            id: string;
+            /** Evaluation Id */
+            evaluation_id: string;
+            /** Conversation Id */
+            conversation_id: string;
+            /** Checklist Id */
+            checklist_id: string;
+            /** Checklist Version */
+            checklist_version: number;
+            /** Criterion Id */
+            criterion_id: string;
+            /** Criterion Name */
+            criterion_name: string;
+            /** Comment */
+            comment: string;
+            /** Submitted By */
+            submitted_by: string;
+            /** Created At */
+            created_at: string;
+            /** Updated At */
+            updated_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "confirmed" | "overridden";
+            disputed_result: components["schemas"]["CriterionResult"] | null;
+            /** Disputed Points */
+            disputed_points: number | null;
+            /** Disputed Max Points */
+            disputed_max_points: number | null;
+            /** Total At Submission */
+            total_at_submission: number | null;
+            decision?: components["schemas"]["AppealDecision"] | null;
+        };
+        /** AppealCreate */
+        AppealCreate: {
+            /** Evaluation Id */
+            evaluation_id: string;
+            /** Criterion Id */
+            criterion_id: string;
+            /** Comment */
+            comment: string;
+            /**
+             * Submitted By
+             * @default Operator
+             */
+            submitted_by: string;
+        };
+        /** AppealDecision */
+        AppealDecision: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "confirm" | "override";
+            /** Explanation */
+            explanation: string;
+            /** Reviewer */
+            reviewer: string;
+            /** Decided At */
+            decided_at: string;
+            previous_result: components["schemas"]["CriterionResult"] | null;
+            new_result: components["schemas"]["CriterionResult"] | null;
+            /** Total Before */
+            total_before: number | null;
+            /** Total After */
+            total_after: number | null;
+        };
+        /** AppealDecisionIn */
+        AppealDecisionIn: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "confirm" | "override";
+            /**
+             * Explanation
+             * @description Mandatory reason for the decision.
+             */
+            explanation: string;
+            /**
+             * Reviewer
+             * @default Reviewer
+             */
+            reviewer: string;
+            override?: components["schemas"]["OverrideAnswer"] | null;
+        };
+        /** AppealDetail */
+        AppealDetail: {
+            appeal: components["schemas"]["Appeal"];
+            criterion: components["schemas"]["Criterion"];
+            evaluation: components["schemas"]["EvaluationSummary"];
+            current_result: components["schemas"]["CriterionResult"] | null;
+            current_score: components["schemas"]["CriterionScore"] | null;
+            original_score: components["schemas"]["CriterionScore"] | null;
+            /**
+             * Context
+             * @description Transcript lines around the evidence (and the evidence itself).
+             */
+            context: components["schemas"]["Message"][];
+            /** Evaluation Stale */
+            evaluation_stale: boolean;
+            /** Audit */
+            audit: components["schemas"]["AuditEvent"][];
+        };
+        /** AudioInfo */
+        AudioInfo: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ready" | "player_only" | "unavailable";
+            /**
+             * Stream Url
+             * @description Direct audio URL the browser can play (short-lived).
+             */
+            stream_url?: string | null;
+            /**
+             * Player Url
+             * @description The original audio_url (an organizer-hosted player page).
+             */
+            player_url?: string | null;
+            /** Content Type */
+            content_type?: string | null;
+            /** Message */
+            message?: string | null;
+            /**
+             * Offset Basis
+             * @default Offsets are measured from the first transcript line; the recording may start earlier.
+             */
+            offset_basis: string;
+        };
+        /** AuditEvent */
+        AuditEvent: {
+            /** Id */
+            id: string;
+            /** At */
+            at: string;
+            /** Type */
+            type: string;
+            /** Actor */
+            actor: string;
+            /** Summary */
+            summary: string;
+            /** Conversation Id */
+            conversation_id?: string | null;
+            /** Evaluation Id */
+            evaluation_id?: string | null;
+            /** Checklist Id */
+            checklist_id?: string | null;
+            /** Appeal Id */
+            appeal_id?: string | null;
+            /**
+             * Details
+             * @default {}
+             */
+            details: {
+                [key: string]: unknown;
+            };
+        };
+        /** BatchStatus */
+        BatchStatus: {
+            /** Batch Id */
+            batch_id: string;
+            /** Total */
+            total: number;
+            /** Pending */
+            pending: number;
+            /** Running */
+            running: number;
+            /** Completed */
+            completed: number;
+            /** Failed */
+            failed: number;
+            /** Done */
+            done: boolean;
+            /** Evaluation Ids */
+            evaluation_ids: string[];
         };
         /** Body_replace_dataset_api_v1_datasets__dataset_id__replace_post */
         Body_replace_dataset_api_v1_datasets__dataset_id__replace_post: {
@@ -863,6 +1467,182 @@ export interface components {
              */
             sort: "value_desc" | "value_asc" | "label";
         };
+        /** Checklist */
+        Checklist: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /**
+             * Origin
+             * @default custom
+             * @enum {string}
+             */
+            origin: "custom" | "official" | "dev_sample";
+            /**
+             * Archived
+             * @default false
+             */
+            archived: boolean;
+            /** Created At */
+            created_at: string;
+            /** Updated At */
+            updated_at: string;
+            /** Latest Version */
+            latest_version: number;
+            /** Duplicated From */
+            duplicated_from?: string | null;
+            /** Versions */
+            versions: components["schemas"]["ChecklistVersion"][];
+        };
+        /** ChecklistConfig */
+        ChecklistConfig: {
+            /**
+             * Sections
+             * @default []
+             */
+            sections: components["schemas"]["Section"][];
+            /** Criteria */
+            criteria: components["schemas"]["Criterion"][];
+            scoring?: components["schemas"]["ScoringRules"];
+        };
+        /** ChecklistCreate */
+        ChecklistCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /**
+             * Origin
+             * @default custom
+             * @enum {string}
+             */
+            origin: "custom" | "official" | "dev_sample";
+            config: components["schemas"]["ChecklistConfig"];
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+        };
+        /** ChecklistDuplicate */
+        ChecklistDuplicate: {
+            /** Name */
+            name?: string | null;
+            /**
+             * Version
+             * @description Version to copy (default: latest).
+             */
+            version?: number | null;
+        };
+        /**
+         * ChecklistImport
+         * @description A checklist as exported by GET /cqa/checklists/{id}/export (or written by hand).
+         */
+        ChecklistImport: {
+            /** Name */
+            name: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /**
+             * Origin
+             * @default custom
+             * @enum {string}
+             */
+            origin: "custom" | "official" | "dev_sample";
+            config: components["schemas"]["ChecklistConfig"];
+        };
+        /** ChecklistSummary */
+        ChecklistSummary: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /**
+             * Origin
+             * @enum {string}
+             */
+            origin: "custom" | "official" | "dev_sample";
+            /** Archived */
+            archived: boolean;
+            /** Latest Version */
+            latest_version: number;
+            /** Versions */
+            versions: number;
+            /** Criteria */
+            criteria: number;
+            /** Sections */
+            sections: number;
+            /** Total Weight */
+            total_weight: number;
+            /** Created At */
+            created_at: string;
+            /** Updated At */
+            updated_at: string;
+            /**
+             * Evaluations
+             * @default 0
+             */
+            evaluations: number;
+        };
+        /**
+         * ChecklistUpdate
+         * @description Save edits. A changed configuration always becomes a new version; metadata edits do not.
+         */
+        ChecklistUpdate: {
+            /**
+             * Base Version
+             * @description The version the edits started from (stale-edit protection).
+             */
+            base_version: number;
+            /** Name */
+            name?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Origin */
+            origin?: ("custom" | "official" | "dev_sample") | null;
+            /** Archived */
+            archived?: boolean | null;
+            config?: components["schemas"]["ChecklistConfig"] | null;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+        };
+        /** ChecklistVersion */
+        ChecklistVersion: {
+            /** Version */
+            version: number;
+            /** Created At */
+            created_at: string;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            config: components["schemas"]["ChecklistConfig"];
+            /** Config Hash */
+            config_hash: string;
+            /**
+             * Replacements
+             * @default []
+             */
+            replacements: components["schemas"]["Replacement"][];
+        };
         /** ColumnInfo */
         ColumnInfo: {
             /** Name */
@@ -918,6 +1698,121 @@ export interface components {
             /** Matrix */
             matrix: number[][];
         };
+        /** ConversationDetail */
+        ConversationDetail: {
+            /** Id */
+            id: string;
+            /** Group Ids */
+            group_ids: string[];
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "chat" | "voice";
+            /** Channel Raw */
+            channel_raw: string;
+            /** Language */
+            language: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "organizer_api" | "fixture";
+            /** Has Audio */
+            has_audio: boolean;
+            /** Message Count */
+            message_count: number;
+            /** Speaker Counts */
+            speaker_counts: {
+                [key: string]: number;
+            };
+            /** Duration Seconds */
+            duration_seconds: number | null;
+            /** Preview */
+            preview: string;
+            /** Imported At */
+            imported_at: string;
+            /** Updated At */
+            updated_at: string;
+            /** Revision */
+            revision: number;
+            latest_evaluation?: components["schemas"]["EvaluationBrief"] | null;
+            /**
+             * Open Appeals
+             * @default 0
+             */
+            open_appeals: number;
+            /** Audio Url */
+            audio_url: string | null;
+            /** Messages */
+            messages: components["schemas"]["Message"][];
+            /** Transcript Hash */
+            transcript_hash: string;
+            /** Warnings */
+            warnings: string[];
+            /** Evaluations */
+            evaluations: components["schemas"]["EvaluationBrief"][];
+        };
+        /** ConversationPage */
+        ConversationPage: {
+            /** Items */
+            items: components["schemas"]["ConversationSummary"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Facets */
+            facets: {
+                [key: string]: components["schemas"]["Facet"][];
+            };
+        };
+        /** ConversationSummary */
+        ConversationSummary: {
+            /** Id */
+            id: string;
+            /** Group Ids */
+            group_ids: string[];
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "chat" | "voice";
+            /** Channel Raw */
+            channel_raw: string;
+            /** Language */
+            language: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "organizer_api" | "fixture";
+            /** Has Audio */
+            has_audio: boolean;
+            /** Message Count */
+            message_count: number;
+            /** Speaker Counts */
+            speaker_counts: {
+                [key: string]: number;
+            };
+            /** Duration Seconds */
+            duration_seconds: number | null;
+            /** Preview */
+            preview: string;
+            /** Imported At */
+            imported_at: string;
+            /** Updated At */
+            updated_at: string;
+            /** Revision */
+            revision: number;
+            latest_evaluation?: components["schemas"]["EvaluationBrief"] | null;
+            /**
+             * Open Appeals
+             * @default 0
+             */
+            open_appeals: number;
+        };
         /** Correlation */
         Correlation: {
             /**
@@ -933,6 +1828,219 @@ export interface components {
             n_rows_used: number;
             /** Sampled */
             sampled: boolean;
+        };
+        /** CqaInfo */
+        CqaInfo: {
+            /** Source Configured */
+            source_configured: boolean;
+            /** Fixtures Enabled */
+            fixtures_enabled: boolean;
+            /** Fixture Groups */
+            fixture_groups: string[];
+            /** Default Evaluator */
+            default_evaluator: string;
+            /** Evaluators */
+            evaluators: components["schemas"]["EvaluatorInfo"][];
+            /** Contract Version */
+            contract_version: string;
+        };
+        /** Criterion */
+        Criterion: {
+            /**
+             * Id
+             * @description Stable key; evaluations and appeals refer to it.
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Description
+             * @description What the evaluator must check.
+             * @default
+             */
+            description: string;
+            /** Section Id */
+            section_id?: string | null;
+            /** Weight */
+            weight: number;
+            /**
+             * Answer Type
+             * @default binary
+             * @enum {string}
+             */
+            answer_type: "binary" | "scale" | "options";
+            scale?: components["schemas"]["ScaleConfig"] | null;
+            /** Options */
+            options?: components["schemas"]["AnswerOption"][] | null;
+            /**
+             * Na Allowed
+             * @default false
+             */
+            na_allowed: boolean;
+            /**
+             * Na Rule
+             * @description When N/A applies.
+             * @default
+             */
+            na_rule: string;
+            /**
+             * Severe Error Enabled
+             * @default false
+             */
+            severe_error_enabled: boolean;
+            /**
+             * Severe Error Rule
+             * @description What counts as a severe error.
+             * @default
+             */
+            severe_error_rule: string;
+        };
+        /** CriterionReplace */
+        CriterionReplace: {
+            /** Base Version */
+            base_version: number;
+            /** @description The new criterion. It takes the replaced criterion's position. */
+            criterion: components["schemas"]["Criterion"];
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+        };
+        /** CriterionResult */
+        CriterionResult: {
+            /** Criterion Id */
+            criterion_id: string;
+            /** Value */
+            value?: boolean | number | string | null;
+            /**
+             * Is Na
+             * @default false
+             */
+            is_na: boolean;
+            /** Na Reason */
+            na_reason?: string | null;
+            /**
+             * Explanation
+             * @default
+             */
+            explanation: string;
+            /**
+             * Evidence
+             * @default []
+             */
+            evidence: components["schemas"]["EvidenceRef"][];
+            /**
+             * Inspected Spans
+             * @default []
+             */
+            inspected_spans: components["schemas"]["InspectedSpan"][];
+            /**
+             * Severe Error
+             * @default false
+             */
+            severe_error: boolean;
+            /** Severe Error Reason */
+            severe_error_reason?: string | null;
+            /**
+             * Model Raw Score
+             * @description The evaluator's own score claim. Recorded, never used.
+             */
+            model_raw_score?: number | null;
+            /**
+             * Source
+             * @default evaluator
+             * @enum {string}
+             */
+            source: "evaluator" | "reviewer";
+        };
+        /** CriterionScore */
+        CriterionScore: {
+            /** Criterion Id */
+            criterion_id: string;
+            /** Name */
+            name: string;
+            /** Section Id */
+            section_id: string | null;
+            /**
+             * Answer Type
+             * @enum {string}
+             */
+            answer_type: "binary" | "scale" | "options";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "scored" | "na" | "missing" | "invalid";
+            /**
+             * Raw Score
+             * @description Points on the criterion's own scale (binary 0/1, scale value, option points).
+             */
+            raw_score: number | null;
+            /** Raw Max */
+            raw_max: number | null;
+            /**
+             * Normalized
+             * @description 0–1 after normalizing to the criterion's scale.
+             */
+            normalized: number | null;
+            /**
+             * Weight
+             * @description Configured weight.
+             */
+            weight: number;
+            /**
+             * Effective Weight
+             * @description Share of the total after N/A redistribution (0–1).
+             */
+            effective_weight: number;
+            /**
+             * Points
+             * @description Contribution to the total (unrounded).
+             */
+            points: number | null;
+            /** Max Points */
+            max_points: number;
+            /** Severe Error */
+            severe_error: boolean;
+            /** Issue */
+            issue?: string | null;
+        };
+        /** CriterionStat */
+        CriterionStat: {
+            /** Criterion Id */
+            criterion_id: string;
+            /** Name */
+            name: string;
+            /** Evaluated */
+            evaluated: number;
+            /** Scored */
+            scored: number;
+            /** Na */
+            na: number;
+            /** Severe */
+            severe: number;
+            /** Mean Normalized */
+            mean_normalized: number | null;
+        };
+        /**
+         * CriterionView
+         * @description Everything the results screen needs for one criterion, original next to final.
+         */
+        CriterionView: {
+            criterion: components["schemas"]["Criterion"];
+            original: components["schemas"]["CriterionResult"] | null;
+            final: components["schemas"]["CriterionResult"] | null;
+            original_score: components["schemas"]["CriterionScore"] | null;
+            final_score: components["schemas"]["CriterionScore"] | null;
+            /** Overridden */
+            overridden: boolean;
+            /**
+             * Appeals
+             * @description Appeal ids for this criterion, newest first.
+             * @default []
+             */
+            appeals: string[];
         };
         /** DatasetDetail */
         DatasetDetail: {
@@ -1100,12 +2208,379 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** EvaluateRequest */
+        EvaluateRequest: {
+            /** Checklist Id */
+            checklist_id: string;
+            /**
+             * Checklist Version
+             * @description Default: the latest version.
+             */
+            checklist_version?: number | null;
+            /**
+             * Conversation Ids
+             * @description Explicit conversations. Omit to use the scope below.
+             */
+            conversation_ids?: string[] | null;
+            /**
+             * Group Id
+             * @description Scope: only conversations imported with this group.
+             */
+            group_id?: string | null;
+            /**
+             * Only Missing
+             * @description Skip conversations that already have a completed or queued evaluation with this checklist version.
+             * @default false
+             */
+            only_missing: boolean;
+            /**
+             * Adapter
+             * @description Default: ATLAS_CQA_EVALUATOR.
+             */
+            adapter?: string | null;
+        };
+        /** EvaluateResponse */
+        EvaluateResponse: {
+            /** Batch Id */
+            batch_id: string;
+            /** Queued */
+            queued: number;
+            /** Skipped */
+            skipped: number;
+            /** Evaluations */
+            evaluations: components["schemas"]["EvaluationBrief"][];
+        };
+        /** EvaluationBrief */
+        EvaluationBrief: {
+            /** Id */
+            id: string;
+            /** Conversation Id */
+            conversation_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "running" | "completed" | "failed";
+            /** Checklist Id */
+            checklist_id: string;
+            /** Checklist Name */
+            checklist_name: string;
+            /** Checklist Version */
+            checklist_version: number;
+            /** Evaluator */
+            evaluator: string;
+            /** Is Mock */
+            is_mock: boolean;
+            /** Original Total */
+            original_total?: number | null;
+            /** Final Total */
+            final_total?: number | null;
+            /** Max Score */
+            max_score?: number | null;
+            /** Score Status */
+            score_status?: string | null;
+            /**
+             * Severe Errors
+             * @default 0
+             */
+            severe_errors: number;
+            /**
+             * Overridden
+             * @default false
+             */
+            overridden: boolean;
+            /** Created At */
+            created_at: string;
+            /** Completed At */
+            completed_at?: string | null;
+            /**
+             * Stale
+             * @description The transcript changed after this evaluation ran.
+             * @default false
+             */
+            stale: boolean;
+        };
+        /** EvaluationDetail */
+        EvaluationDetail: {
+            evaluation: components["schemas"]["EvaluationRecord"];
+            /** Criteria */
+            criteria: components["schemas"]["CriterionView"][];
+            /** Final Results */
+            final_results: components["schemas"]["CriterionResult"][];
+            /** Stale */
+            stale: boolean;
+            /** Appeals */
+            appeals: components["schemas"]["Appeal"][];
+            /** Audit */
+            audit: components["schemas"]["AuditEvent"][];
+        };
+        /** EvaluationError */
+        EvaluationError: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+            /**
+             * Issues
+             * @default []
+             */
+            issues: string[];
+        };
+        /** EvaluationPage */
+        EvaluationPage: {
+            /** Items */
+            items: components["schemas"]["EvaluationSummary"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+        };
+        /** EvaluationRecord */
+        EvaluationRecord: {
+            /** Id */
+            id: string;
+            /** Conversation Id */
+            conversation_id: string;
+            /** Checklist Id */
+            checklist_id: string;
+            /** Checklist Name */
+            checklist_name: string;
+            /** Checklist Version */
+            checklist_version: number;
+            /** @description Snapshot of the configuration used, for reproducibility. */
+            checklist: components["schemas"]["ChecklistConfig"];
+            /** Transcript Hash */
+            transcript_hash: string;
+            evaluator: components["schemas"]["EvaluatorInfo"];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "running" | "completed" | "failed";
+            /** Batch Id */
+            batch_id?: string | null;
+            error?: components["schemas"]["EvaluationError"] | null;
+            /** Created At */
+            created_at: string;
+            /** Updated At */
+            updated_at: string;
+            /** Started At */
+            started_at?: string | null;
+            /** Completed At */
+            completed_at?: string | null;
+            /**
+             * Original Results
+             * @default []
+             */
+            original_results: components["schemas"]["CriterionResult"][];
+            original_score?: components["schemas"]["ScoreBreakdown"] | null;
+            /**
+             * Overrides
+             * @default []
+             */
+            overrides: components["schemas"]["Override"][];
+            final_score?: components["schemas"]["ScoreBreakdown"] | null;
+            /**
+             * Warnings
+             * @default []
+             */
+            warnings: string[];
+            /**
+             * Model Info
+             * @default {}
+             */
+            model_info: {
+                [key: string]: string;
+            };
+            /**
+             * Raw Output
+             * @description The evaluator's response, kept for audit.
+             */
+            raw_output?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** EvaluationRequest */
+        EvaluationRequest: {
+            /**
+             * Contract Version
+             * @default cqa-eval/1
+             * @constant
+             */
+            contract_version: "cqa-eval/1";
+            /** Evaluation Id */
+            evaluation_id: string;
+            conversation: components["schemas"]["RequestConversation"];
+            checklist: components["schemas"]["RequestChecklist"];
+            rules?: components["schemas"]["EvaluationRules"];
+        };
+        /** EvaluationRules */
+        EvaluationRules: {
+            /**
+             * Evaluated Speaker
+             * @default operator
+             * @constant
+             */
+            evaluated_speaker: "operator";
+            /**
+             * Context Speakers
+             * @default [
+             *       "client",
+             *       "bot",
+             *       "system"
+             *     ]
+             */
+            context_speakers: ("client" | "operator" | "bot" | "system" | "unknown")[];
+            /**
+             * Answer Formats
+             * @default {
+             *       "binary": "true (criterion met) or false",
+             *       "scale": "a number on the criterion's scale: min ≤ value ≤ max, on the step grid",
+             *       "options": "the id of one of the criterion's options"
+             *     }
+             */
+            answer_formats: {
+                [key: string]: string;
+            };
+            /**
+             * Evidence
+             * @default Every non-N/A result needs at least one evidence reference (message_id, optional verbatim quote) or, when an expected action is missing, an inspected span (start/end message ids) showing which part of the conversation was checked.
+             */
+            evidence: string;
+            /**
+             * Not Applicable
+             * @default Set is_na=true with na_reason only when the criterion allows N/A (na_allowed) and its na_rule applies; value must then be null.
+             */
+            not_applicable: string;
+            /**
+             * Severe Error
+             * @default Set severe_error=true with severe_error_reason only for criteria with severe_error_enabled.
+             */
+            severe_error: string;
+        };
+        /** EvaluationSummary */
+        EvaluationSummary: {
+            /** Id */
+            id: string;
+            /** Conversation Id */
+            conversation_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "running" | "completed" | "failed";
+            /** Checklist Id */
+            checklist_id: string;
+            /** Checklist Name */
+            checklist_name: string;
+            /** Checklist Version */
+            checklist_version: number;
+            /** Evaluator */
+            evaluator: string;
+            /** Is Mock */
+            is_mock: boolean;
+            /** Original Total */
+            original_total?: number | null;
+            /** Final Total */
+            final_total?: number | null;
+            /** Max Score */
+            max_score?: number | null;
+            /** Score Status */
+            score_status?: string | null;
+            /**
+             * Severe Errors
+             * @default 0
+             */
+            severe_errors: number;
+            /**
+             * Overridden
+             * @default false
+             */
+            overridden: boolean;
+            /** Created At */
+            created_at: string;
+            /** Completed At */
+            completed_at?: string | null;
+            /**
+             * Stale
+             * @description The transcript changed after this evaluation ran.
+             * @default false
+             */
+            stale: boolean;
+            /** Conversation Language */
+            conversation_language?: string | null;
+            /** Conversation Channel */
+            conversation_channel?: string | null;
+            /** Batch Id */
+            batch_id?: string | null;
+            error?: components["schemas"]["EvaluationError"] | null;
+            /** Started At */
+            started_at?: string | null;
+        };
+        /** EvaluatorInfo */
+        EvaluatorInfo: {
+            /** Name */
+            name: string;
+            /** Label */
+            label: string;
+            /**
+             * Version
+             * @default
+             */
+            version: string;
+            /** Is Mock */
+            is_mock: boolean;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /**
+             * Available
+             * @default true
+             */
+            available: boolean;
+            /** Contract Version */
+            contract_version: string;
+        };
         /** EvidenceItem */
         EvidenceItem: {
             /** Label */
             label: string;
             /** Value */
             value: string;
+        };
+        /**
+         * EvidenceRef
+         * @description A pointer to a real transcript line, with the excerpt taken from the transcript (never from the model).
+         */
+        EvidenceRef: {
+            /** Message Id */
+            message_id: string;
+            /** Message Index */
+            message_index: number;
+            /**
+             * Speaker
+             * @enum {string}
+             */
+            speaker: "client" | "operator" | "bot" | "system" | "unknown";
+            /** Timestamp */
+            timestamp: string;
+            /** Offset Seconds */
+            offset_seconds: number | null;
+            /** Excerpt */
+            excerpt: string;
+            /** Char Start */
+            char_start?: number | null;
+            /** Char End */
+            char_end?: number | null;
+            /**
+             * Quote Matched
+             * @description True when the evaluator's quote was found in the message.
+             */
+            quote_matched: boolean;
         };
         /** ExperimentDetail */
         ExperimentDetail: {
@@ -1278,6 +2753,13 @@ export interface components {
             baseline_metric?: components["schemas"]["MetricValue"] | null;
             /** Error */
             error?: string | null;
+        };
+        /** Facet */
+        Facet: {
+            /** Value */
+            value: string;
+            /** Count */
+            count: number;
         };
         /** FeatureImportance */
         FeatureImportance: {
@@ -1455,6 +2937,99 @@ export interface components {
             /** Counts */
             counts: number[];
         };
+        /** ImportIssue */
+        ImportIssue: {
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "error" | "warning";
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+            /** Record Index */
+            record_index?: number | null;
+            /** Conversation Id */
+            conversation_id?: string | null;
+        };
+        /** ImportRequest */
+        ImportRequest: {
+            /**
+             * Group Id
+             * @example DEV
+             */
+            group_id: string;
+            /**
+             * Source
+             * @default organizer_api
+             * @enum {string}
+             */
+            source: "organizer_api" | "fixture";
+        };
+        /** ImportRun */
+        ImportRun: {
+            /** Id */
+            id: string;
+            /** Group Id */
+            group_id: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "organizer_api" | "fixture";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "completed" | "partial" | "failed";
+            /** Started At */
+            started_at: string;
+            /** Finished At */
+            finished_at: string;
+            /**
+             * Reported Total
+             * @description total_records as reported by the source.
+             */
+            reported_total?: number | null;
+            /**
+             * Received
+             * @default 0
+             */
+            received: number;
+            /**
+             * Created
+             * @default 0
+             */
+            created: number;
+            /**
+             * Updated
+             * @default 0
+             */
+            updated: number;
+            /**
+             * Unchanged
+             * @default 0
+             */
+            unchanged: number;
+            /**
+             * Rejected
+             * @default 0
+             */
+            rejected: number;
+            /**
+             * Conversation Ids
+             * @default []
+             */
+            conversation_ids: string[];
+            /**
+             * Issues
+             * @default []
+             */
+            issues: components["schemas"]["ImportIssue"][];
+            /** Error */
+            error?: string | null;
+        };
         /**
          * IngestOptions
          * @description Parsing options. ``None`` means "use what detection found".
@@ -1477,6 +3052,24 @@ export interface components {
              * @enum {string}
              */
             decimal: "." | ",";
+        };
+        /** InspectedSpan */
+        InspectedSpan: {
+            /** Start Message Id */
+            start_message_id: string;
+            /** End Message Id */
+            end_message_id: string;
+            /** Start Index */
+            start_index: number;
+            /** End Index */
+            end_index: number;
+            /** Message Count */
+            message_count: number;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
         };
         /** LabelValue */
         LabelValue: {
@@ -1520,6 +3113,43 @@ export interface components {
             split?: {
                 [key: string]: unknown;
             } | null;
+        };
+        /**
+         * Message
+         * @description One transcript line. ``id`` is stable: ``m{n}`` is the n-th line (1-based) of the source transcript.
+         */
+        Message: {
+            /** Id */
+            id: string;
+            /** Index */
+            index: number;
+            /**
+             * Speaker
+             * @enum {string}
+             */
+            speaker: "client" | "operator" | "bot" | "system" | "unknown";
+            /**
+             * Speaker Raw
+             * @description Speaker exactly as received.
+             */
+            speaker_raw: string;
+            /** Text */
+            text: string;
+            /**
+             * Timestamp
+             * @description Timestamp exactly as received (MM:SS for chats, ISO 8601 for calls).
+             */
+            timestamp: string;
+            /**
+             * Offset Seconds
+             * @description Seconds from the start of the conversation. Chats: MM:SS. Calls: time since the first line.
+             */
+            offset_seconds?: number | null;
+            /**
+             * At
+             * @description Absolute instant (ISO 8601) when the source gives one.
+             */
+            at?: string | null;
         };
         /** Metric */
         Metric: {
@@ -1660,6 +3290,87 @@ export interface components {
             size_bytes: number;
             /** Sha256 */
             sha256: string;
+        };
+        /** Override */
+        Override: {
+            /** Criterion Id */
+            criterion_id: string;
+            /** Appeal Id */
+            appeal_id: string;
+            result: components["schemas"]["CriterionResult"];
+            /** Reviewer */
+            reviewer: string;
+            /** Explanation */
+            explanation: string;
+            /** Decided At */
+            decided_at: string;
+        };
+        /** OverrideAnswer */
+        OverrideAnswer: {
+            /** Value */
+            value?: boolean | number | string | null;
+            /**
+             * Is Na
+             * @default false
+             */
+            is_na: boolean;
+            /** Na Reason */
+            na_reason?: string | null;
+            /**
+             * Severe Error
+             * @default false
+             */
+            severe_error: boolean;
+            /** Severe Error Reason */
+            severe_error_reason?: string | null;
+        };
+        /** Overview */
+        Overview: {
+            /** Conversations */
+            conversations: number;
+            /** By Language */
+            by_language: components["schemas"]["Facet"][];
+            /** By Channel */
+            by_channel: components["schemas"]["Facet"][];
+            /** By Group */
+            by_group: components["schemas"]["Facet"][];
+            /** By Source */
+            by_source: components["schemas"]["Facet"][];
+            /** Evaluated Conversations */
+            evaluated_conversations: number;
+            /** Evaluations By Status */
+            evaluations_by_status: components["schemas"]["Facet"][];
+            /** Mean Final Score */
+            mean_final_score: number | null;
+            /** Max Score */
+            max_score: number | null;
+            /** Score Bins */
+            score_bins: components["schemas"]["ScoreBin"][];
+            /** Severe Error Conversations */
+            severe_error_conversations: number;
+            /** Appeals Pending */
+            appeals_pending: number;
+            /** Appeals Decided */
+            appeals_decided: number;
+            /** Overridden Criteria */
+            overridden_criteria: number;
+            /** Checklist Id */
+            checklist_id: string | null;
+            /** Checklist Name */
+            checklist_name: string | null;
+            /** Checklist Version */
+            checklist_version: number | null;
+            /** Criterion Stats */
+            criterion_stats: components["schemas"]["CriterionStat"][];
+            /**
+             * Mock Results
+             * @description Latest evaluations produced by the development mock.
+             */
+            mock_results: number;
+            /** Recent Imports */
+            recent_imports: components["schemas"]["ImportRun"][];
+            /** Recent Activity */
+            recent_activity: components["schemas"]["AuditEvent"][];
         };
         /** PitchDeck */
         PitchDeck: {
@@ -1826,6 +3537,94 @@ export interface components {
             /** Ids */
             ids: string[];
         };
+        /** Replacement */
+        Replacement: {
+            /** Old Id */
+            old_id: string;
+            /** New Id */
+            new_id: string;
+            /** Old Name */
+            old_name: string;
+            /** New Name */
+            new_name: string;
+        };
+        /** RequestChecklist */
+        RequestChecklist: {
+            /** Checklist Id */
+            checklist_id: string;
+            /** Version */
+            version: number;
+            /** Name */
+            name: string;
+            /** Sections */
+            sections: components["schemas"]["Section"][];
+            /** Criteria */
+            criteria: components["schemas"]["Criterion"][];
+            /** @description For information only: the backend computes all scores. */
+            scoring: components["schemas"]["ScoringRules"];
+        };
+        /** RequestConversation */
+        RequestConversation: {
+            /** Conversation Id */
+            conversation_id: string;
+            /**
+             * Language
+             * @description RU, KZ or EN.
+             */
+            language: string;
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "chat" | "voice";
+            /** Channel Raw */
+            channel_raw: string;
+            /**
+             * Audio Url
+             * @description Recording player page for calls; null for chats.
+             */
+            audio_url: string | null;
+            /** Messages */
+            messages: components["schemas"]["RequestMessage"][];
+        };
+        /** RequestMessage */
+        RequestMessage: {
+            /**
+             * Id
+             * @description Stable message id (m1, m2, …). Evidence must use these ids.
+             */
+            id: string;
+            /** Index */
+            index: number;
+            /**
+             * Speaker
+             * @enum {string}
+             */
+            speaker: "client" | "operator" | "bot" | "system" | "unknown";
+            /**
+             * Timestamp
+             * @description Original timestamp: MM:SS for chats, ISO 8601 for calls.
+             */
+            timestamp: string;
+            /** Offset Seconds */
+            offset_seconds: number | null;
+            /** Text */
+            text: string;
+        };
+        /** RoundingRule */
+        RoundingRule: {
+            /**
+             * Mode
+             * @default half_up
+             * @enum {string}
+             */
+            mode: "half_up" | "half_even" | "floor" | "ceil" | "none";
+            /**
+             * Digits
+             * @default 1
+             */
+            digits: number;
+        };
         /** RunAnalysisRequest */
         RunAnalysisRequest: {
             /**
@@ -1898,6 +3697,142 @@ export interface components {
             spec: {
                 [key: string]: unknown;
             };
+        };
+        /** ScaleConfig */
+        ScaleConfig: {
+            /**
+             * Min
+             * @default 0
+             */
+            min: number;
+            /**
+             * Max
+             * @default 5
+             */
+            max: number;
+            /**
+             * Step
+             * @default 1
+             */
+            step: number;
+            /**
+             * Labels
+             * @description Optional labels per scale point, keyed by the value as text.
+             */
+            labels?: {
+                [key: string]: string;
+            };
+        };
+        /** ScoreBin */
+        ScoreBin: {
+            /** Start */
+            start: number;
+            /** End */
+            end: number;
+            /** Count */
+            count: number;
+        };
+        /** ScoreBreakdown */
+        ScoreBreakdown: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "scored" | "not_applicable" | "incomplete";
+            /** Total */
+            total: number | null;
+            /** Total Unrounded */
+            total_unrounded: number | null;
+            /** Total Before Severe Policy */
+            total_before_severe_policy: number | null;
+            /** Max Score */
+            max_score: number;
+            rounding: components["schemas"]["RoundingRule"];
+            /** Severe Error Policy */
+            severe_error_policy: string;
+            /** Severe Errors */
+            severe_errors: string[];
+            /** Severe Error Applied */
+            severe_error_applied: boolean;
+            /** Applicable Weight */
+            applicable_weight: number;
+            /** Total Weight */
+            total_weight: number;
+            /** Criteria */
+            criteria: components["schemas"]["CriterionScore"][];
+            /** Sections */
+            sections: components["schemas"]["SectionScore"][];
+            /** Issues */
+            issues: string[];
+        };
+        /** ScoringRules */
+        ScoringRules: {
+            /**
+             * Max Score
+             * @default 100
+             */
+            max_score: number;
+            rounding?: components["schemas"]["RoundingRule"];
+            /**
+             * Severe Error Policy
+             * @description flag_only: severe errors are reported next to the score. zero_total: any severe error sets the total to 0. Set it from the official checklist.
+             * @default flag_only
+             * @enum {string}
+             */
+            severe_error_policy: "flag_only" | "zero_total";
+            /**
+             * Na Policy
+             * @description N/A criteria are removed and their weight is shared proportionally by the applicable ones.
+             * @default redistribute
+             * @constant
+             */
+            na_policy: "redistribute";
+        };
+        /** Section */
+        Section: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+        };
+        /** SectionScore */
+        SectionScore: {
+            /** Section Id */
+            section_id: string;
+            /** Name */
+            name: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "scored" | "na" | "incomplete";
+            /**
+             * Score
+             * @description Section subtotal on the 0–max_score scale (rounded).
+             */
+            score: number | null;
+            /** Score Unrounded */
+            score_unrounded: number | null;
+            /**
+             * Points
+             * @description The section's contribution to the total (rounded).
+             */
+            points: number | null;
+            /** Max Points */
+            max_points: number;
+            /** Weight */
+            weight: number;
+            /** Effective Weight */
+            effective_weight: number;
+            /** Criteria Ids */
+            criteria_ids: string[];
+            /** Severe Errors */
+            severe_errors: string[];
         };
         /** SortKey */
         SortKey: {
@@ -3516,6 +5451,916 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ChallengeInfo"];
+                };
+            };
+        };
+    };
+    info_api_v1_cqa_info_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CqaInfo"];
+                };
+            };
+        };
+    };
+    overview_api_v1_cqa_overview_get: {
+        parameters: {
+            query?: {
+                checklist_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Overview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    contract_api_v1_cqa_contract_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    audit_api_v1_cqa_audit_get: {
+        parameters: {
+            query?: {
+                conversation_id?: string | null;
+                evaluation_id?: string | null;
+                checklist_id?: string | null;
+                appeal_id?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditEvent"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_imports_api_v1_cqa_imports_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportRun"][];
+                };
+            };
+        };
+    };
+    import_group_api_v1_cqa_imports_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportRun"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_conversations_api_v1_cqa_conversations_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                language?: string[] | null;
+                channel?: ("chat" | "voice")[] | null;
+                status?: ("not_evaluated" | "pending" | "running" | "completed" | "failed" | "appealed")[] | null;
+                group_id?: string | null;
+                source?: ("organizer_api" | "fixture") | null;
+                min_score?: number | null;
+                max_score?: number | null;
+                checklist_id?: string | null;
+                sort?: "id" | "imported_at" | "score" | "messages" | "duration" | "language" | "channel" | "evaluated_at";
+                desc?: boolean;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_conversation_api_v1_cqa_conversations__conversation_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_audio_api_v1_cqa_conversations__conversation_id__audio_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AudioInfo"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_checklists_api_v1_cqa_checklists_get: {
+        parameters: {
+            query?: {
+                include_archived?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChecklistSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_checklist_api_v1_cqa_checklists_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChecklistCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Checklist"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_dev_sample_api_v1_cqa_checklists_dev_sample_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Checklist"];
+                };
+            };
+        };
+    };
+    import_checklist_api_v1_cqa_checklists_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChecklistImport"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Checklist"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_checklist_api_v1_cqa_checklists__checklist_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                checklist_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Checklist"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_checklist_api_v1_cqa_checklists__checklist_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                checklist_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChecklistUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Checklist"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_checklist_api_v1_cqa_checklists__checklist_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                checklist_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Deleted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    duplicate_checklist_api_v1_cqa_checklists__checklist_id__duplicate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                checklist_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChecklistDuplicate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Checklist"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    replace_criterion_api_v1_cqa_checklists__checklist_id__criteria__criterion_id__replace_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                checklist_id: string;
+                criterion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriterionReplace"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Checklist"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_checklist_api_v1_cqa_checklists__checklist_id__export_get: {
+        parameters: {
+            query?: {
+                version?: number | null;
+            };
+            header?: never;
+            path: {
+                checklist_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_evaluations_api_v1_cqa_evaluations_get: {
+        parameters: {
+            query?: {
+                conversation_id?: string | null;
+                checklist_id?: string | null;
+                status?: ("pending" | "running" | "completed" | "failed") | null;
+                batch_id?: string | null;
+                mock?: boolean | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    evaluate_api_v1_cqa_evaluations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvaluateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    batch_status_api_v1_cqa_evaluations_batches__batch_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_evaluation_api_v1_cqa_evaluations__evaluation_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                evaluation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    evaluation_request_api_v1_cqa_evaluations__evaluation_id__request_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                evaluation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationRequest"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rerun_evaluation_api_v1_cqa_evaluations__evaluation_id__rerun_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                evaluation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_appeals_api_v1_cqa_appeals_get: {
+        parameters: {
+            query?: {
+                status?: ("pending" | "confirmed" | "overridden") | null;
+                evaluation_id?: string | null;
+                conversation_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Appeal"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_appeal_api_v1_cqa_appeals_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppealCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Appeal"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_appeal_api_v1_cqa_appeals__appeal_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                appeal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppealDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_appeal_api_v1_cqa_appeals__appeal_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                appeal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppealDecisionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Appeal"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

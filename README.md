@@ -58,14 +58,42 @@ Open **http://127.0.0.1:3000**. On the Datasets page, either drop a file or clic
 | `/report` | Printable report (print / save as PDF) |
 | `/challenge` | The case-specific extension area and the case-reveal checklist |
 
+## Conversation Quality Analytics (`/cqa`)
+
+A separate area inside ATLAS for the CQA hackathon: import operator chats and calls by `group_id` from the
+organizers' API, score them against a versioned checklist, show evidence linked to the transcript, and run
+appeals with reviewer overrides. Open **http://127.0.0.1:3000/cqa**. It has its own navigation (Overview,
+Conversations, Evaluations, Checklists, Appeals); the studio above is unchanged apart from a sidebar link.
+
+- **The AI model is not in this repository.** It plugs in through an adapter (an HTTP service or a Python
+  module) without frontend or scoring changes: see [docs/cqa-model-contract.md](docs/cqa-model-contract.md)
+  (contract `cqa-eval/1`, example request/response in `docs/cqa-contract/`).
+- Until then, the **development mock** answers deterministically so every screen and the appeal workflow can
+  be exercised. It is not AI and is labelled "Dev mock · not AI" wherever its results appear.
+- **Every score comes from the ATLAS scoring engine** (weights, N/A redistribution, sections, severe-error
+  policy, rounding); scores the model states are recorded and never used.
+- The **official checklist** is entered from the organizers' document in the checklist editor (or imported as
+  JSON). The bundled "development sample" checklist is a placeholder and labelled unofficial.
+
+Setup: add the organizers' URL from the student guide to the root `.env` (git-ignored), **without**
+`group_id`, in single quotes, then start with `pnpm dev` (which loads `.env`; `pnpm dev:api` alone does not):
+
+```bash
+ATLAS_CQA_SOURCE_URL='https://…/triggers/manual/paths/invoke?api-version=1&sp=…&sv=1.0&sig=…'
+```
+
+Without it (or offline), use **Load FIXTURE**: synthetic conversations in RU, KZ and EN, labelled as fixtures.
+Architecture, the five-minute demo, all `ATLAS_CQA_*` settings and the Dynamics 365 embed view
+(`/cqa/embed/conversations/{id}`) are in [docs/cqa.md](docs/cqa.md).
+
 ## Checks
 
 ```bash
-pnpm test:api        # pytest: 58 tests (ingestion, security, profiling, queries, charts, transforms, models, findings, extensions)
-pnpm test:web        # vitest: unit tests for formatting, provenance, filters, chart rules, schema forms, recipes
+pnpm test:api        # pytest: 172 tests (ingestion, security, profiling, queries, charts, transforms, models, findings, extensions, CQA)
+pnpm test:web        # vitest: unit tests for formatting, provenance, filters, chart rules, schema forms, recipes, CQA helpers
 pnpm typecheck && pnpm lint
 pnpm --filter web e2e:install   # once: Chromium into node_modules (no global install)
-pnpm e2e             # Playwright, 9 tests: workflows W1–W6, the ⌘K command menu, desktop/phone layout checks
+pnpm e2e             # Playwright, 15 tests: workflows W1–W6, the ⌘K command menu, the CQA demo flow, desktop/phone layout checks
 ```
 
 E2E tests start their **own** API (127.0.0.1:8100) and web build (127.0.0.1:3100) on a throwaway workspace in
@@ -80,10 +108,12 @@ apps/api/            FastAPI backend (Python)
   app/services/      ingestion · profiling · analytics · preprocessing · modeling · reporting
   app/extensions/    analysis registry + built-in analyses (the extension pattern)
   app/challenge/     ← case-specific analyses and endpoints go here
+  app/cqa/           Conversation Quality Analytics: ingestion, checklists, scoring engine, evaluator contract and adapters, appeals
   tests/             pytest
 apps/web/            Next.js 16 App Router frontend (TypeScript)
   app/(studio)/      the studio pages (one folder per route)
   app/present, app/report   full-screen pages outside the app shell
+  app/cqa/           the CQA pages (own shell); components/cqa, lib/cqa
   components/        ui · charts · data · shell · findings · datasets · analysis
   lib/api/           typed client, TanStack Query hooks, generated schema types
 data/samples/        synthetic practice datasets (safe to commit)
@@ -99,6 +129,7 @@ After changing backend schemas, run `pnpm gen:api` to regenerate `docs/openapi.j
 - [docs/team-handoff.md](docs/team-handoff.md): four roles, file ownership, git workflow.
 - [docs/architecture.md](docs/architecture.md): layout, request flow, backend layers, security, frontend structure, and how to add an analysis (worked example).
 - [docs/api-contract.md](docs/api-contract.md): endpoints, error envelope and codes, limits and `ATLAS_*` settings, downloads, replace/cancel.
+- [docs/cqa.md](docs/cqa.md) · [docs/cqa-model-contract.md](docs/cqa-model-contract.md): Conversation Quality Analytics, and how the AI evaluator plugs in.
 - [PRODUCT.md](PRODUCT.md) · [DESIGN.md](DESIGN.md): product principles and the design system.
 
 ## Data and privacy
