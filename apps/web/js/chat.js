@@ -81,15 +81,17 @@ export function removeChat(state, id) {
 export function replyTo(state, text) {
   const q = text.trim();
   const low = q.toLowerCase();
-  const idMatch = q.match(/conv-\d+/i);
+  const known = state.conversations.find((c) => low.includes(c.id.toLowerCase()));
+  const idMatch = known ? [known.id] : q.match(/conv-\d+/i);
   if (idMatch) {
-    const id = idMatch[0].toLowerCase();
+    const id = known ? known.id : idMatch[0].toLowerCase();
     const conv = state.conversations.find((c) => c.id === id);
     const ev = state.evaluations[id];
     if (!conv || !ev) return `I don’t have ${id} in this workspace.`;
     const open = state.appeals.filter((a) => a.conversationId === id && a.status === "open").length;
     const severe = ev.severe?.length ? ev.severe.length : 0;
-    return `${conv.id} · ${conv.language.toUpperCase()} · ${conv.source} · operator ${conv.operator}. Score ${ev.total} / ${ev.maxTotal}. ${severe} severe flag${severe === 1 ? "" : "s"}, ${open} open appeal${open === 1 ? "" : "s"}.`;
+    const operator = conv.operator ? ` · operator ${conv.operator}` : "";
+    return `${conv.id} · ${conv.language.toUpperCase()} · ${conv.source}${operator}. Score ${ev.total} / ${ev.maxTotal}. ${severe} severe flag${severe === 1 ? "" : "s"}, ${open} open appeal${open === 1 ? "" : "s"}.`;
   }
   if (/\b(worst|low|слабые|худш)/i.test(low)) {
     const ranked = [...state.conversations]

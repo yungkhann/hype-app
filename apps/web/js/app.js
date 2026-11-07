@@ -1,7 +1,6 @@
-import { activeChat, openChat, pushTurn, removeChat, startChat } from "./chat.js?v=tape1";
-import { parseApiPayload } from "./data.js";
-import { evaluateConversation } from "./scoring.js";
-import { decideAppeal, loadState, reevaluateAll, saveState, submitAppeal } from "./store.js?v=tape1";
+import { GROUP_ID_RE, cqaInfo, importGroup, importJson, listConversationRecords } from "./api.js?v=tape2";
+import { activeChat, openChat, pushTurn, removeChat, startChat } from "./chat.js?v=tape2";
+import { decideAppeal, loadState, reevaluateAll, saveState, setConversations, submitAppeal } from "./store.js?v=tape2";
 import { mountMessageScroller } from "./message-scroller.js?v=tape1";
 import {
   Bubble,
@@ -16,7 +15,7 @@ import {
   Select,
   Textarea,
 } from "./ui.js?v=tape1";
-import { byId, esc, fmtTime, uid } from "./util.js";
+import { byId, esc, uid } from "./util.js";
 
 const icon = {
   grid: '<svg viewBox="0 0 24 24"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>',
@@ -29,9 +28,31 @@ const icon = {
 };
 
 let state = loadState();
+// Conversations come from the backend; until the first answer the list shows that it is loading.
+const conversationsStatus = { loading: true, error: "" };
 
 function persist() {
   saveState(state);
+}
+
+async function reloadConversations() {
+  conversationsStatus.loading = true;
+  conversationsStatus.error = "";
+  try {
+    setConversations(state, await listConversationRecords());
+    persist();
+  } catch (err) {
+    conversationsStatus.error = err.message;
+  } finally {
+    conversationsStatus.loading = false;
+  }
+  render();
+}
+
+/** Show a timestamp as the source wrote it: MM:SS as is, ISO 8601 by its own clock time (no time-zone shift). */
+function clock(ts) {
+  const text = String(ts ?? "");
+  return text.match(/T(\d{2}:\d{2}:\d{2})/)?.[1] ?? text;
 }
 
 function navKey() {
@@ -48,6 +69,8 @@ function setNav() {
   document.querySelectorAll("[data-nav]").forEach((el) => {
     el.classList.toggle("is-active", el.dataset.nav === key);
   });
+  const demo = document.querySelector("[data-demo-link]");
+  if (demo) demo.setAttribute("href", state.conversations[0] ? `#/c/${encodeURIComponent(state.conversations[0].id)}` : "#/");
   const search = document.querySelector('[data-filter="q"]');
   if (search && document.activeElement !== search) {
     const q = new URLSearchParams(location.hash.split("?")[1] || "");
@@ -131,6 +154,10 @@ function viewList() {
     if (search && !`${c.id} ${c.operator} ${c.language}`.toLowerCase().includes(search)) return false;
     return true;
   });
+  const all = state.conversations.length;
+  const first = state.conversations[0];
+  const countText = conversationsStatus.loading && !all ? "Loading conversations…"
+    : rows.length === all ? `${all} conversation${all === 1 ? "" : "s"}` : `${rows.length} of ${all} conversations`;
   const chip = (key, value, label, href, ico) => {
     const on = (key === "lang" && lang === value) || (key === "source" && source === value) || (!value && !lang && !source && key === "all");
     return `<a class="tool ${on ? "is-on" : ""}" href="${href}"><span class="tool-ico">${ico}</span>${label}</a>`;
@@ -150,19 +177,25 @@ function viewList() {
         ${chip("lang", "ru", "Russian", "#/?lang=ru", '<span class="tool-mark">ru</span>')}
         ${chip("lang", "en", "English", "#/?lang=en", '<span class="tool-mark">en</span>')}
         ${chip("source", "call", "Calls", "#/?source=call", icon.phone)}
-        ${chip("source", "synthetic", "Chats", "#/?source=synthetic", icon.messages)}
+        ${chip("source", "chat", "Chats", "#/?source=chat", icon.messages)}
         <a class="tool" href="#/checklist"><span class="tool-ico">${icon.checks}</span>Checklist</a>
         <a class="tool" href="#/review"><span class="tool-ico">${icon.file}</span>Appeals</a>
       </div>
       <article class="promo">
         <h2>Introducing operator scoring</h2>
         <p>Configure a checklist, inspect a transcript, jump to the supporting utterance, then appeal and recalculate.</p>
-        <a class="btn btn-primary" href="#/c/conv-01">Try v1</a>
+        ${first ? `<a class="btn btn-primary" href="#/c/${esc(encodeURIComponent(first.id))}">Try v1</a>` : ""}
       </article>
+      <div class="list-head">
+        <p class="hint" role="status">${esc(countText)}</p>
+        ${Button("Import conversations", { variant: "primary", attrs: 'data-action="open-import"' })}
+      </div>
+      ${conversationsStatus.error ? `<div class="notice notice-error list-notice" role="alert">Could not load conversations: ${esc(conversationsStatus.error)} ${Button("Retry", { attrs: 'data-action="reload-conversations"' })}</div>` : ""}
       <div class="table-wrap">
         <table>
           <thead><tr><th>ID</th><th>Lang</th><th>Source</th><th>Operator</th><th>Score</th><th>Flags</th></tr></thead>
           <tbody>
+            ${!rows.length ? `<tr><td colspan="6" class="hint">${conversationsStatus.loading ? "Loading conversations…" : all ? "No conversations match these filters." : "No conversations yet. Choose Import conversations to load a group from the organizers' API or paste its JSON."}</td></tr>` : ""}
             ${rows.map((c) => {
               const ev = state.evaluations[c.id];
               const open = state.appeals.filter((a) => a.conversationId === c.id && a.status === "open").length;
@@ -170,7 +203,7 @@ function viewList() {
                 <td><a class="linkish" href="#/c/${esc(c.id)}">${esc(c.id)}</a></td>
                 <td>${esc(c.language.toUpperCase())}</td>
                 <td>${c.source === "call" ? `<span class="badge badge-info">call</span>` : `<span class="badge badge-muted">chat</span>`}</td>
-                <td>${esc(c.operator)}</td>
+                <td>${esc(c.operator || "—")}</td>
                 <td class="num">${ev ? `${ev.total} / ${ev.maxTotal}` : "—"}</td>
                 <td>${ev?.severe?.length ? `<span class="badge badge-crit">severe</span>` : ""} ${open ? `<span class="badge badge-warn">${open} appeal</span>` : ""}</td>
               </tr>`;
@@ -183,7 +216,7 @@ function viewList() {
 
 function viewDetail(id) {
   const conv = state.conversations.find((c) => c.id === id);
-  if (!conv) return `<section class="page"><p>Conversation not found.</p></section>`;
+  if (!conv) return `<section class="page"><p>${conversationsStatus.loading ? "Loading conversation…" : "Conversation not found."}</p></section>`;
   const ev = state.evaluations[id];
   const openAppeals = state.appeals.filter((a) => a.conversationId === id);
   return `
@@ -212,7 +245,7 @@ function viewDetail(id) {
               const bubbleAlign = align === "center" ? "start" : align;
               return `
               <article class="msg" id="msg-${esc(m.id)}" data-msg="${esc(m.id)}" data-align="${align}">
-                <div class="msg-meta"><span class="role role-${esc(m.speaker)}">${esc(m.speaker)}</span><span class="tape">${esc(fmtTime(m.ts))}</span></div>
+                <div class="msg-meta"><span class="role role-${esc(m.speaker)}">${esc(m.speaker)}</span><span class="tape" title="${esc(m.ts)}">${esc(clock(m.ts))}</span></div>
                 ${Bubble({ align: bubbleAlign, variant, children: esc(m.text) })}
               </article>`;
             }).join("")}
@@ -502,27 +535,207 @@ function applyFilters() {
   location.hash = qs ? `/?${qs}` : "/";
 }
 
-byId("btn-fetch").addEventListener("click", async () => {
-  const groupId = byId("group-id").value.trim();
-  const url = prompt("Organizer GET URL (group_id will be appended)", state.apiUrl || "https://example.invalid/api/data");
-  if (!url) return;
-  state.apiUrl = url;
-  try {
-    const sep = url.includes("?") ? "&" : "?";
-    const res = await fetch(`${url}${sep}group_id=${encodeURIComponent(groupId)}`);
-    const json = await res.json();
-    const records = parseApiPayload(json, groupId);
-    if (!records.length) throw new Error("No data.records in response");
-    state.conversations = records;
-    state.evaluations = {};
-    for (const conv of records) state.evaluations[conv.id] = evaluateConversation(conv, state.checklist);
-    persist();
-    location.hash = "#/";
-    render();
-  } catch (err) {
-    alert(`Could not load API: ${err.message}`);
+// ---- Import conversations ------------------------------------------------------------------------------
+// One dialog, two methods. Both go to the backend, which validates, de-duplicates and stores the records with
+// the same ingestion code; the list is then reloaded from the backend. The dialog lives outside #view, so
+// re-rendering the page behind it never clears a pasted document.
+
+const SOURCE_HINT = "ATLAS requests this group from the organizers' API on the server.";
+const JSON_PLACEHOLDER = `Paste the organizers' API response here, exactly as the API returned it:
+{
+  "error": "",
+  "isSuccess": true,
+  "data": {
+    "dataset_group_id": "DEV",
+    "total_records": 65,
+    "records": [
+      { "conversation_id": "…", "channel": "…", "language": "…", "transcript": [ … ], "audio_url": null }
+    ]
   }
-});
+}`;
+
+let importDialog = null;
+
+function importDialogHtml() {
+  const tab = (key, label, selected) => `<button type="button" class="tab" role="tab" id="import-tab-${key}"
+    aria-controls="import-panel-${key}" aria-selected="${selected}" tabindex="${selected ? 0 : -1}"
+    data-import-tab="${key}">${label}</button>`;
+  const actions = (label) => `<div class="dialog-actions">
+      ${Button("Cancel", { attrs: "data-import-close" })}
+      ${Button(label, { variant: "primary", type: "submit" })}
+    </div>`;
+  return `
+    <div class="dialog-head">
+      <div>
+        <h2 id="import-title" class="sheet-title">Import conversations</h2>
+        <p class="hint">ATLAS validates and stores them. Importing the same conversations again does not create duplicates.</p>
+      </div>
+      <button type="button" class="dialog-close" data-import-close aria-label="Close">
+        <svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Import method">
+      ${tab("api", "Import via API", true)}
+      ${tab("json", "Paste JSON", false)}
+    </div>
+    <form class="dialog-panel" id="import-panel-api" role="tabpanel" aria-labelledby="import-tab-api" data-import-form="api" novalidate>
+      ${Field("Group ID", '<input class="ui-input" name="group_id" type="text" placeholder="e.g. DEV" maxlength="64" autocomplete="off" autocapitalize="off" spellcheck="false" />')}
+      <p class="hint" data-import-source>${esc(SOURCE_HINT)}</p>
+      <div data-import-status role="status" aria-live="polite"></div>
+      ${actions("Import")}
+    </form>
+    <form class="dialog-panel" id="import-panel-json" role="tabpanel" aria-labelledby="import-tab-json" data-import-form="json" novalidate hidden>
+      ${Field("Organizers' API response (JSON)", `<textarea class="ui-textarea import-json" name="json" rows="14" wrap="off" autocomplete="off" spellcheck="false" placeholder="${esc(JSON_PLACEHOLDER)}"></textarea>`)}
+      <div data-import-status role="status" aria-live="polite"></div>
+      ${actions("Import JSON")}
+    </form>`;
+}
+
+function selectImportTab(key, focus = false) {
+  importDialog.querySelectorAll("[data-import-tab]").forEach((btn) => {
+    const on = btn.dataset.importTab === key;
+    btn.setAttribute("aria-selected", String(on));
+    btn.tabIndex = on ? 0 : -1;
+    if (on && focus) btn.focus();
+  });
+  importDialog.querySelectorAll("[data-import-form]").forEach((form) => {
+    form.hidden = form.dataset.importForm !== key;
+  });
+}
+
+function activeImportField() {
+  return importDialog.querySelector("[data-import-form]:not([hidden]) input, [data-import-form]:not([hidden]) textarea");
+}
+
+function setImportStatus(el, tone, html) {
+  el.className = tone === "info" ? "notice" : `notice notice-${tone}`;
+  el.innerHTML = html;
+}
+
+function importSummary(run) {
+  const counts = `${run.created} new · ${run.updated} updated · ${run.unchanged} already imported · ${run.rejected} rejected`;
+  const head = run.status === "failed" ? `Nothing was imported from group ${run.group_id}.` : `Imported group ${run.group_id}.`;
+  const reported = run.reported_total != null && run.reported_total !== run.received ? ` (total_records says ${run.reported_total})` : "";
+  let html = `<strong>${esc(head)}</strong> ${esc(counts)}.<br>${esc(`Received ${run.received} record${run.received === 1 ? "" : "s"}${reported}.`)}`;
+  const issues = run.issues ?? [];
+  if (issues.length) {
+    const where = (i) => i.conversation_id ?? (i.record_index != null ? `record ${i.record_index + 1}` : "import");
+    html += `<ul>${issues.slice(0, 6).map((i) => `<li>${esc(`${where(i)}: ${i.message}`)}</li>`).join("")}</ul>`;
+    if (issues.length > 6) html += `<p class="hint">…and ${issues.length - 6} more.</p>`;
+  }
+  return html;
+}
+
+/** JSON.parse's message, plus line and column when the engine only reports a character position. */
+function jsonError(err, text) {
+  const message = String(err?.message || "Invalid JSON.");
+  const pos = message.match(/position (\d+)/);
+  if (!pos || /line \d+/i.test(message)) return message;
+  const before = text.slice(0, Number(pos[1]));
+  return `${message} (line ${before.split("\n").length}, column ${before.length - before.lastIndexOf("\n")})`;
+}
+
+async function runImport(form) {
+  const status = form.querySelector("[data-import-status]");
+  const submit = form.querySelector('button[type="submit"]');
+  let call;
+  let pending;
+  if (form.dataset.importForm === "api") {
+    const groupId = form.group_id.value.trim();
+    if (!groupId) return setImportStatus(status, "error", "Enter a group_id, for example DEV.");
+    if (!GROUP_ID_RE.test(groupId)) {
+      return setImportStatus(status, "error", esc("A group_id starts with a letter or digit and contains only letters, digits, '.', '_' and '-' (at most 64 characters)."));
+    }
+    call = () => importGroup(groupId);
+    pending = `Requesting group ${groupId} from the organizers' API…`;
+  } else {
+    const text = form.json.value;
+    if (!text.trim()) return setImportStatus(status, "error", esc("Paste the organizers' API response first."));
+    let payload;
+    try {
+      payload = JSON.parse(text);
+    } catch (err) {
+      return setImportStatus(status, "error", esc(`This is not valid JSON. ${jsonError(err, text)}`));
+    }
+    call = () => importJson(payload);
+    pending = "Validating and importing…";
+  }
+  const label = submit.textContent;
+  submit.disabled = true;
+  submit.textContent = "Importing…";
+  setImportStatus(status, "info", esc(pending));
+  try {
+    const run = await call();
+    setImportStatus(status, run.status === "failed" ? "error" : run.status === "partial" ? "warn" : "ok", importSummary(run));
+    if (navKey() !== "list") location.hash = "#/";
+    await reloadConversations();
+  } catch (err) {
+    setImportStatus(status, "error", esc(err.message));
+  } finally {
+    submit.disabled = false;
+    submit.textContent = label;
+  }
+}
+
+async function refreshSourceHint() {
+  const hint = importDialog.querySelector("[data-import-source]");
+  try {
+    const info = await cqaInfo();
+    hint.textContent = info.source_configured ? SOURCE_HINT
+      : "The organizers' API is not configured on this server (ATLAS_CQA_SOURCE_URL), so an API import will fail. Use Paste JSON instead.";
+    hint.classList.toggle("hint-warn", !info.source_configured);
+  } catch {
+    // An unreachable API is reported by the import itself.
+  }
+}
+
+function bindImportDialog(dialog) {
+  dialog.addEventListener("click", (e) => {
+    if (e.target.closest("[data-import-close]")) {
+      dialog.close();
+      return;
+    }
+    const tab = e.target.closest("[data-import-tab]");
+    if (tab) {
+      selectImportTab(tab.dataset.importTab);
+      activeImportField()?.focus();
+      return;
+    }
+    if (e.target === dialog) {
+      const r = dialog.getBoundingClientRect();
+      const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+      if (!inside) dialog.close();
+    }
+  });
+  dialog.querySelector("[role='tablist']").addEventListener("keydown", (e) => {
+    const keys = ["api", "json"];
+    const current = keys.indexOf(dialog.querySelector("[data-import-tab][aria-selected='true']").dataset.importTab);
+    const next = { ArrowRight: current + 1, ArrowLeft: current - 1, Home: 0, End: keys.length - 1 }[e.key];
+    if (next === undefined) return;
+    e.preventDefault();
+    selectImportTab(keys[(next + keys.length) % keys.length], true);
+  });
+  dialog.querySelectorAll("[data-import-form]").forEach((form) => {
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      runImport(form);
+    });
+  });
+}
+
+function openImport() {
+  if (!importDialog) {
+    importDialog = document.createElement("dialog");
+    importDialog.className = "dialog";
+    importDialog.setAttribute("aria-labelledby", "import-title");
+    importDialog.innerHTML = importDialogHtml();
+    document.body.append(importDialog);
+    bindImportDialog(importDialog);
+  }
+  if (!importDialog.open) importDialog.showModal();
+  activeImportField()?.focus();
+  refreshSourceHint();
+}
 
 document.querySelector('[data-filter="q"]')?.addEventListener("keydown", (e) => {
   if (e.key !== "Enter") return;
@@ -532,6 +745,16 @@ document.querySelector('[data-filter="q"]')?.addEventListener("keydown", (e) => 
 document.addEventListener(
   "click",
   (e) => {
+    if (e.target.closest("[data-action='open-import']")) {
+      e.preventDefault();
+      openImport();
+      return;
+    }
+    if (e.target.closest("[data-action='reload-conversations']")) {
+      e.preventDefault();
+      reloadConversations();
+      return;
+    }
     const neu = e.target.closest("[data-action='new-chat']");
     if (neu) {
       e.preventDefault();
@@ -581,3 +804,4 @@ document.addEventListener("keydown", (e) => {
 
 window.addEventListener("hashchange", render);
 render();
+reloadConversations();

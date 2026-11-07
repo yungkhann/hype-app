@@ -1,0 +1,746 @@
+{
+  "contract_version": "cqa-eval/1",
+  "request_schema": {
+    "$defs": {
+      "AnswerOption": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,47}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "points": {
+            "maximum": 1000,
+            "minimum": 0,
+            "title": "Points",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "points"
+        ],
+        "title": "AnswerOption",
+        "type": "object"
+      },
+      "Criterion": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "Stable key; evaluations and appeals refer to it.",
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,47}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "description": "What the evaluator must check.",
+            "maxLength": 4000,
+            "title": "Description",
+            "type": "string"
+          },
+          "section_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Section Id"
+          },
+          "weight": {
+            "exclusiveMinimum": 0,
+            "maximum": 1000,
+            "title": "Weight",
+            "type": "number"
+          },
+          "answer_type": {
+            "default": "binary",
+            "enum": [
+              "binary",
+              "scale",
+              "options"
+            ],
+            "title": "Answer Type",
+            "type": "string"
+          },
+          "scale": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ScaleConfig"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "options": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/$defs/AnswerOption"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Options"
+          },
+          "na_allowed": {
+            "default": false,
+            "title": "Na Allowed",
+            "type": "boolean"
+          },
+          "na_rule": {
+            "default": "",
+            "description": "When N/A applies.",
+            "maxLength": 2000,
+            "title": "Na Rule",
+            "type": "string"
+          },
+          "severe_error_enabled": {
+            "default": false,
+            "title": "Severe Error Enabled",
+            "type": "boolean"
+          },
+          "severe_error_rule": {
+            "default": "",
+            "description": "What counts as a severe error.",
+            "maxLength": 2000,
+            "title": "Severe Error Rule",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "weight"
+        ],
+        "title": "Criterion",
+        "type": "object"
+      },
+      "EvaluationRules": {
+        "properties": {
+          "evaluated_speaker": {
+            "const": "operator",
+            "default": "operator",
+            "title": "Evaluated Speaker",
+            "type": "string"
+          },
+          "context_speakers": {
+            "default": [
+              "client",
+              "bot",
+              "system"
+            ],
+            "items": {
+              "enum": [
+                "client",
+                "operator",
+                "bot",
+                "system",
+                "unknown"
+              ],
+              "type": "string"
+            },
+            "title": "Context Speakers",
+            "type": "array"
+          },
+          "answer_formats": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "default": {
+              "binary": "true (criterion met) or false",
+              "scale": "a number on the criterion's scale: min ≤ value ≤ max, on the step grid",
+              "options": "the id of one of the criterion's options"
+            },
+            "title": "Answer Formats",
+            "type": "object"
+          },
+          "evidence": {
+            "default": "Every non-N/A result needs at least one evidence reference (message_id, optional verbatim quote) or, when an expected action is missing, an inspected span (start/end message ids) showing which part of the conversation was checked.",
+            "title": "Evidence",
+            "type": "string"
+          },
+          "not_applicable": {
+            "default": "Set is_na=true with na_reason only when the criterion allows N/A (na_allowed) and its na_rule applies; value must then be null.",
+            "title": "Not Applicable",
+            "type": "string"
+          },
+          "severe_error": {
+            "default": "Set severe_error=true with severe_error_reason only for criteria with severe_error_enabled.",
+            "title": "Severe Error",
+            "type": "string"
+          }
+        },
+        "title": "EvaluationRules",
+        "type": "object"
+      },
+      "RequestChecklist": {
+        "properties": {
+          "checklist_id": {
+            "title": "Checklist Id",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/$defs/Section"
+            },
+            "title": "Sections",
+            "type": "array"
+          },
+          "criteria": {
+            "items": {
+              "$ref": "#/$defs/Criterion"
+            },
+            "title": "Criteria",
+            "type": "array"
+          },
+          "scoring": {
+            "$ref": "#/$defs/ScoringRules",
+            "description": "For information only: the backend computes all scores."
+          }
+        },
+        "required": [
+          "checklist_id",
+          "version",
+          "name",
+          "sections",
+          "criteria",
+          "scoring"
+        ],
+        "title": "RequestChecklist",
+        "type": "object"
+      },
+      "RequestConversation": {
+        "properties": {
+          "conversation_id": {
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "language": {
+            "description": "RU, KZ or EN.",
+            "title": "Language",
+            "type": "string"
+          },
+          "channel": {
+            "enum": [
+              "chat",
+              "voice"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "channel_raw": {
+            "title": "Channel Raw",
+            "type": "string"
+          },
+          "audio_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Recording player page for calls; null for chats.",
+            "title": "Audio Url"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/$defs/RequestMessage"
+            },
+            "title": "Messages",
+            "type": "array"
+          }
+        },
+        "required": [
+          "conversation_id",
+          "language",
+          "channel",
+          "channel_raw",
+          "audio_url",
+          "messages"
+        ],
+        "title": "RequestConversation",
+        "type": "object"
+      },
+      "RequestMessage": {
+        "properties": {
+          "id": {
+            "description": "Stable message id (m1, m2, …). Evidence must use these ids.",
+            "title": "Id",
+            "type": "string"
+          },
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
+          "speaker": {
+            "enum": [
+              "client",
+              "operator",
+              "bot",
+              "system",
+              "unknown"
+            ],
+            "title": "Speaker",
+            "type": "string"
+          },
+          "timestamp": {
+            "description": "Original timestamp: MM:SS for chats, ISO 8601 for calls.",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "offset_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offset Seconds"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "index",
+          "speaker",
+          "timestamp",
+          "offset_seconds",
+          "text"
+        ],
+        "title": "RequestMessage",
+        "type": "object"
+      },
+      "RoundingRule": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "default": "half_up",
+            "enum": [
+              "half_up",
+              "half_even",
+              "floor",
+              "ceil",
+              "none"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "digits": {
+            "default": 1,
+            "maximum": 4,
+            "minimum": 0,
+            "title": "Digits",
+            "type": "integer"
+          }
+        },
+        "title": "RoundingRule",
+        "type": "object"
+      },
+      "ScaleConfig": {
+        "additionalProperties": false,
+        "properties": {
+          "min": {
+            "default": 0,
+            "title": "Min",
+            "type": "number"
+          },
+          "max": {
+            "default": 5,
+            "title": "Max",
+            "type": "number"
+          },
+          "step": {
+            "default": 1,
+            "title": "Step",
+            "type": "number"
+          },
+          "labels": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Optional labels per scale point, keyed by the value as text.",
+            "title": "Labels",
+            "type": "object"
+          }
+        },
+        "title": "ScaleConfig",
+        "type": "object"
+      },
+      "ScoringRules": {
+        "additionalProperties": false,
+        "properties": {
+          "max_score": {
+            "default": 100,
+            "exclusiveMinimum": 0,
+            "maximum": 10000,
+            "title": "Max Score",
+            "type": "number"
+          },
+          "rounding": {
+            "$ref": "#/$defs/RoundingRule"
+          },
+          "severe_error_policy": {
+            "default": "flag_only",
+            "description": "flag_only: severe errors are reported next to the score. zero_total: any severe error sets the total to 0. Set it from the official checklist.",
+            "enum": [
+              "flag_only",
+              "zero_total"
+            ],
+            "title": "Severe Error Policy",
+            "type": "string"
+          },
+          "na_policy": {
+            "const": "redistribute",
+            "default": "redistribute",
+            "description": "N/A criteria are removed and their weight is shared proportionally by the applicable ones.",
+            "title": "Na Policy",
+            "type": "string"
+          }
+        },
+        "title": "ScoringRules",
+        "type": "object"
+      },
+      "Section": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,47}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Description",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "Section",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "contract_version": {
+        "const": "cqa-eval/1",
+        "default": "cqa-eval/1",
+        "title": "Contract Version",
+        "type": "string"
+      },
+      "evaluation_id": {
+        "title": "Evaluation Id",
+        "type": "string"
+      },
+      "conversation": {
+        "$ref": "#/$defs/RequestConversation"
+      },
+      "checklist": {
+        "$ref": "#/$defs/RequestChecklist"
+      },
+      "rules": {
+        "$ref": "#/$defs/EvaluationRules"
+      }
+    },
+    "required": [
+      "evaluation_id",
+      "conversation",
+      "checklist"
+    ],
+    "title": "EvaluationRequest",
+    "type": "object"
+  },
+  "output_schema": {
+    "$defs": {
+      "ModelCriterionResult": {
+        "additionalProperties": false,
+        "properties": {
+          "criterion_id": {
+            "title": "Criterion Id",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Value"
+          },
+          "raw_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional. Recorded, never used for scoring.",
+            "title": "Raw Score"
+          },
+          "is_na": {
+            "default": false,
+            "title": "Is Na",
+            "type": "boolean"
+          },
+          "na_reason": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Na Reason"
+          },
+          "explanation": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Explanation",
+            "type": "string"
+          },
+          "evidence": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/ModelEvidence"
+            },
+            "maxItems": 20,
+            "title": "Evidence",
+            "type": "array"
+          },
+          "inspected_spans": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/ModelSpan"
+            },
+            "maxItems": 10,
+            "title": "Inspected Spans",
+            "type": "array"
+          },
+          "severe_error": {
+            "default": false,
+            "title": "Severe Error",
+            "type": "boolean"
+          },
+          "severe_error_reason": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Severe Error Reason"
+          }
+        },
+        "required": [
+          "criterion_id",
+          "explanation"
+        ],
+        "title": "ModelCriterionResult",
+        "type": "object"
+      },
+      "ModelEvidence": {
+        "additionalProperties": false,
+        "properties": {
+          "message_id": {
+            "pattern": "^m[1-9][0-9]{0,5}$",
+            "title": "Message Id",
+            "type": "string"
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Verbatim text from that message (optional but recommended).",
+            "title": "Quote"
+          }
+        },
+        "required": [
+          "message_id"
+        ],
+        "title": "ModelEvidence",
+        "type": "object"
+      },
+      "ModelInfo": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "maxLength": 120,
+            "title": "Name",
+            "type": "string"
+          },
+          "version": {
+            "default": "",
+            "maxLength": 120,
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "ModelInfo",
+        "type": "object"
+      },
+      "ModelSpan": {
+        "additionalProperties": false,
+        "properties": {
+          "start_message_id": {
+            "pattern": "^m[1-9][0-9]{0,5}$",
+            "title": "Start Message Id",
+            "type": "string"
+          },
+          "end_message_id": {
+            "pattern": "^m[1-9][0-9]{0,5}$",
+            "title": "End Message Id",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start_message_id",
+          "end_message_id"
+        ],
+        "title": "ModelSpan",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "contract_version": {
+        "title": "Contract Version",
+        "type": "string"
+      },
+      "evaluation_id": {
+        "title": "Evaluation Id",
+        "type": "string"
+      },
+      "conversation_id": {
+        "title": "Conversation Id",
+        "type": "string"
+      },
+      "checklist_id": {
+        "title": "Checklist Id",
+        "type": "string"
+      },
+      "checklist_version": {
+        "title": "Checklist Version",
+        "type": "integer"
+      },
+      "model": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/ModelInfo"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "results": {
+        "items": {
+          "$ref": "#/$defs/ModelCriterionResult"
+        },
+        "maxItems": 60,
+        "title": "Results",
+        "type": "array"
+      }
+    },
+    "required": [
+      "contract_version",
+      "evaluation_id",
+      "conversation_id",
+      "checklist_id",
+      "checklist_version",
+      "results"
+    ],
+    "title": "ModelOutput",
+    "type": "object"
+  }
+}

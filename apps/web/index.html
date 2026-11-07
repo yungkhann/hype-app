@@ -4,7 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>CQA Studio</title>
-    <link rel="stylesheet" href="css/app.css?v=tape1" />
+    <!-- ATLAS API base URL. Empty: http://<host>:8000/api/v1 on localhost, https://api.<domain>/api/v1 otherwise. -->
+    <meta name="cqa-api" content="" />
+    <link rel="stylesheet" href="css/app.css?v=tape2" />
   </head>
   <body>
     <div class="app">
@@ -28,7 +30,7 @@
           <input data-filter="q" type="search" placeholder="Search" />
         </label>
         <div class="island-side">
-          <a class="island-btn" href="#/c/conv-01">
+          <a class="island-btn" data-demo-link href="#/">
             <svg viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
             <span class="island-name">Demo</span>
           </a>
@@ -36,15 +38,14 @@
             <svg viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
             <span class="island-name">Chat</span>
           </a>
-          <button type="button" class="island-btn" id="btn-fetch">
+          <button type="button" class="island-btn" data-action="open-import">
             <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
-            <span class="island-name">Load</span>
+            <span class="island-name">Import</span>
           </button>
         </div>
       </header>
-      <input id="group-id" type="hidden" value="dev" />
       <main id="view" class="view"></main>
     </div>
-    <script type="module" src="js/app.js?v=tape1"></script>
+    <script type="module" src="js/app.js?v=tape2"></script>
   </body>
 </html>

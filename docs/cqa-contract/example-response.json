@@ -1,0 +1,111 @@
+{
+  "contract_version": "cqa-eval/1",
+  "evaluation_id": "0123456789abcdef0123456789abcdef",
+  "conversation_id": "fx-ru-001",
+  "checklist_id": "fedcba9876543210fedcba9876543210",
+  "checklist_version": 1,
+  "model": {
+    "name": "example-model",
+    "version": "0.0"
+  },
+  "results": [
+    {
+      "criterion_id": "greeting",
+      "value": true,
+      "raw_score": 1,
+      "is_na": false,
+      "explanation": "The operator's first message opens with a greeting.",
+      "evidence": [
+        {
+          "message_id": "m5",
+          "quote": "Добрый день!"
+        }
+      ]
+    },
+    {
+      "criterion_id": "introduction",
+      "value": true,
+      "is_na": false,
+      "explanation": "The operator gives their name in the first message.",
+      "evidence": [
+        {
+          "message_id": "m5",
+          "quote": "Меня зовут Мария."
+        }
+      ]
+    },
+    {
+      "criterion_id": "need_identified",
+      "value": 4,
+      "is_na": false,
+      "explanation": "The request (withdrawal to a card) is clear from the client's first line; the operator acts on it without asking clarifying questions.",
+      "evidence": [
+        {
+          "message_id": "m1",
+          "quote": "как вывести деньги со счёта на карту?"
+        },
+        {
+          "message_id": "m5",
+          "quote": "Помогу с выводом средств."
+        }
+      ]
+    },
+    {
+      "criterion_id": "solution",
+      "value": "full",
+      "is_na": false,
+      "explanation": "The operator gives the exact steps and the expected timing; the client confirms success.",
+      "evidence": [
+        {
+          "message_id": "m6"
+        },
+        {
+          "message_id": "m7",
+          "quote": "Получилось, заявка создана."
+        }
+      ]
+    },
+    {
+      "criterion_id": "tone",
+      "value": 5,
+      "is_na": false,
+      "explanation": "Polite throughout.",
+      "evidence": [
+        {
+          "message_id": "m10",
+          "quote": "Спасибо за обращение! Хорошего дня."
+        }
+      ]
+    },
+    {
+      "criterion_id": "further_help",
+      "value": true,
+      "is_na": false,
+      "explanation": "The operator asks whether anything else is needed.",
+      "evidence": [
+        {
+          "message_id": "m8",
+          "quote": "Могу ещё чем-нибудь помочь?"
+        }
+      ]
+    },
+    {
+      "criterion_id": "farewell",
+      "value": true,
+      "is_na": false,
+      "explanation": "The operator closes politely.",
+      "evidence": [
+        {
+          "message_id": "m10"
+        }
+      ],
+      "inspected_spans": [
+        {
+          "start_message_id": "m8",
+          "end_message_id": "m10",
+          "note": "closing part of the conversation"
+        }
+      ]
+    }
+  ]
+}

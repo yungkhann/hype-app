@@ -1,0 +1,61 @@
+{
+  "_notice": "DEVELOPMENT SAMPLE CHECKLIST. Not the official eight-criterion checklist: criteria, weights, scales and rules here are placeholders that exercise every feature (answer types, sections, N/A, severe errors). Replace it with the official checklist once it is supplied.",
+  "name": "Development sample checklist (unofficial)",
+  "description": "Placeholder criteria for testing the product. Not the official checklist; do not present its scores as quality results.",
+  "origin": "dev_sample",
+  "config": {
+    "sections": [
+      {"id": "opening", "name": "Opening", "description": "Placeholder section."},
+      {"id": "resolution", "name": "Resolution", "description": "Placeholder section."},
+      {"id": "closing", "name": "Closing", "description": "Placeholder section."}
+    ],
+    "criteria": [
+      {
+        "id": "greeting", "name": "Greeting (sample)", "section_id": "opening", "weight": 10, "answer_type": "binary",
+        "description": "Sample criterion: the operator greets the client in their first message.",
+        "na_allowed": true, "na_rule": "Sample rule: no operator joined the conversation."
+      },
+      {
+        "id": "introduction", "name": "Introduces themselves (sample)", "section_id": "opening", "weight": 5, "answer_type": "binary",
+        "description": "Sample criterion: the operator gives their name.",
+        "na_allowed": true, "na_rule": "Sample rule: no operator joined the conversation."
+      },
+      {
+        "id": "need_identified", "name": "Identifies the need (sample)", "section_id": "resolution", "weight": 20, "answer_type": "scale",
+        "scale": {"min": 0, "max": 5, "step": 1, "labels": {"0": "Not at all", "5": "Fully"}},
+        "description": "Sample criterion: how well the operator establishes what the client needs, 0–5."
+      },
+      {
+        "id": "solution", "name": "Correct solution (sample)", "section_id": "resolution", "weight": 30, "answer_type": "options",
+        "options": [
+          {"id": "full", "label": "Fully resolved", "points": 2},
+          {"id": "partial", "label": "Partly resolved", "points": 1},
+          {"id": "none", "label": "Not resolved", "points": 0}
+        ],
+        "description": "Sample criterion: the information or action given solves the client's request.",
+        "severe_error_enabled": true, "severe_error_rule": "Sample rule: wrong information that could cause the client a financial loss."
+      },
+      {
+        "id": "tone", "name": "Polite tone (sample)", "section_id": "resolution", "weight": 15, "answer_type": "scale",
+        "scale": {"min": 1, "max": 5, "step": 1, "labels": {}},
+        "description": "Sample criterion: politeness and empathy, 1–5."
+      },
+      {
+        "id": "further_help", "name": "Offers further help (sample)", "section_id": "closing", "weight": 10, "answer_type": "binary",
+        "description": "Sample criterion: the operator asks whether anything else is needed.",
+        "na_allowed": true, "na_rule": "Sample rule: the client ended the conversation first."
+      },
+      {
+        "id": "farewell", "name": "Farewell (sample)", "section_id": "closing", "weight": 10, "answer_type": "binary",
+        "description": "Sample criterion: the operator closes politely.",
+        "na_allowed": true, "na_rule": "Sample rule: the client ended the conversation first."
+      }
+    ],
+    "scoring": {
+      "max_score": 100,
+      "rounding": {"mode": "half_up", "digits": 1},
+      "severe_error_policy": "flag_only",
+      "na_policy": "redistribute"
+    }
+  }
+}

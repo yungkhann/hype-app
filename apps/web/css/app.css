@@ -322,6 +322,53 @@ tr:hover td { background: var(--surface); }
 .notice-ok { background: #f0fdf4; }
 .audio { width: 100%; margin-top: 8px; }
 .appeal-form[hidden] { display: none !important; }
+.notice-error { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+.notice ul { margin: 8px 0 0; padding-left: 18px; }
+.notice .hint { margin-top: 4px; }
+.hint-warn { color: var(--warn); }
+.ui-btn:disabled, .btn:disabled { opacity: 0.6; cursor: progress; }
+
+/* Conversations list: count + import action above the table. */
+.list-head {
+  max-width: 880px; margin: 0 auto 12px; display: flex; justify-content: space-between; align-items: center; gap: 12px;
+}
+.list-notice { max-width: 880px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+/* Import conversations dialog (native <dialog>; same surface as the criterion sheet). */
+.dialog {
+  width: min(640px, calc(100% - 32px)); max-height: calc(100dvh - 32px); overflow: auto;
+  padding: 0; border: 1px solid #e5e5e5; border-radius: 16px; background: #fff; color: var(--body);
+  box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.22), 0 4px 12px -4px rgba(0, 0, 0, 0.12);
+}
+.dialog::backdrop { background: rgba(24, 24, 27, 0.4); }
+.dialog-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 22px 22px 0; }
+.dialog-head .hint { margin-top: 4px; }
+.dialog-close {
+  width: 32px; height: 32px; flex: 0 0 32px; border: 0; border-radius: 8px; background: transparent; color: var(--soft);
+  display: grid; place-items: center;
+}
+.dialog-close:hover { background: #f4f4f5; color: #171717; }
+.dialog-close:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(23, 23, 23, 0.12); }
+.dialog-close svg { width: 16px; height: 16px; flex: 0 0 16px; }
+.tabs { display: flex; gap: 4px; margin: 16px 22px 0; padding: 4px; border-radius: 10px; background: #f4f4f5; }
+.tab {
+  flex: 1; height: 32px; border: 0; border-radius: 7px; background: transparent; color: var(--soft);
+  font-size: 13px; font-weight: 500;
+}
+.tab:hover { color: #171717; }
+.tab[aria-selected="true"] { background: #fff; color: #171717; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+.tab:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(23, 23, 23, 0.12); }
+.dialog-panel { display: grid; gap: 12px; padding: 16px 22px 0; }
+.dialog-panel[hidden] { display: none; }
+.import-json {
+  min-height: 280px; font: 400 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre; overflow: auto;
+}
+.dialog-actions {
+  display: flex; justify-content: flex-end; gap: 8px;
+  position: sticky; bottom: 0; margin: 4px -22px 0; padding: 12px 22px 16px;
+  background: #fff; border-top: 1px solid #f4f4f5;
+}
 
 .chat-page {
   height: calc(100dvh - 88px); max-width: 1080px; margin: 0 auto; width: 100%;
@@ -422,6 +469,7 @@ tr:hover td { background: var(--surface); }
   .island-btn { height: 42px; min-width: 42px; padding: 0 12px; }
   .island-search { height: 42px; padding: 0 12px; }
   .sheet-grid { grid-template-columns: 1fr; }
+  .list-head, .list-notice { flex-direction: column; align-items: stretch; }
   .split { grid-template-columns: 1fr; }
   .chat-page { grid-template-columns: 1fr; grid-template-rows: 160px minmax(0, 1fr); }
   .chat-history { border-right: 0; border-bottom: 1px solid #e5e5e5; }

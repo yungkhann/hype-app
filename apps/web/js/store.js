@@ -1,17 +1,14 @@
-import { ensureChats, newThread } from "./chat.js?v=tape1";
-import { buildConversations, defaultChecklist } from "./data.js";
+import { ensureChats, newThread } from "./chat.js?v=tape2";
+import { defaultChecklist, fromRecord } from "./data.js?v=tape2";
 import { applyAppeal, evaluateConversation } from "./scoring.js";
 import { uid } from "./util.js";
 
 const KEY = "cqa-studio-v2";
 
+// Conversations live in the backend and are loaded on start (setConversations); they are never kept here.
 function fresh() {
-  const checklist = defaultChecklist();
-  const conversations = buildConversations();
-  const evaluations = {};
-  for (const conv of conversations) evaluations[conv.id] = evaluateConversation(conv, checklist);
   const thread = newThread();
-  return { checklist, conversations, evaluations, appeals: [], chats: [thread], chatId: thread.id, apiUrl: "" };
+  return { checklist: defaultChecklist(), conversations: [], evaluations: {}, appeals: [], chats: [thread], chatId: thread.id };
 }
 
 export function loadState() {
@@ -19,8 +16,19 @@ export function loadState() {
     const raw = localStorage.getItem(KEY);
     if (!raw) return fresh();
     const parsed = JSON.parse(raw);
-    if (!parsed.checklist || !parsed.conversations?.length) return fresh();
-    const needsSave = !Array.isArray(parsed.chats) || !parsed.chats.length;
+    if (!parsed.checklist) return fresh();
+    let needsSave = !Array.isArray(parsed.chats) || !parsed.chats.length;
+    if ("conversations" in parsed || "apiUrl" in parsed) {
+      // Saved by the earlier build, whose conversations were generated in the browser. Their evaluations and
+      // appeals belong to those generated cases, so they go too; checklist and chats are kept.
+      parsed.evaluations = {};
+      parsed.appeals = [];
+      delete parsed.apiUrl;
+      needsSave = true;
+    }
+    parsed.conversations = [];
+    parsed.evaluations ??= {};
+    parsed.appeals ??= [];
     const next = ensureChats(parsed);
     if (needsSave) saveState(next);
     return next;
@@ -30,7 +38,22 @@ export function loadState() {
 }
 
 export function saveState(state) {
-  localStorage.setItem(KEY, JSON.stringify(state));
+  const { conversations, ...kept } = state;
+  localStorage.setItem(KEY, JSON.stringify(kept));
+}
+
+function evaluate(conv, checklist) {
+  return { ...evaluateConversation(conv, checklist), transcriptHash: conv.hash };
+}
+
+/** Use the backend's stored records. Existing evaluations are kept unless that transcript changed. */
+export function setConversations(state, records) {
+  state.conversations = records.map(fromRecord);
+  for (const conv of state.conversations) {
+    const prev = state.evaluations[conv.id];
+    if (!prev || prev.transcriptHash !== conv.hash) state.evaluations[conv.id] = evaluate(conv, state.checklist);
+  }
+  return state;
 }
 
 export function resetState() {
@@ -42,7 +65,7 @@ export function resetState() {
 export function reevaluateAll(state) {
   for (const conv of state.conversations) {
     const prev = state.evaluations[conv.id];
-    const next = evaluateConversation(conv, state.checklist);
+    const next = evaluate(conv, state.checklist);
     if (prev?.originalTotal != null) next.originalTotal = prev.originalTotal;
     state.evaluations[conv.id] = next;
   }
