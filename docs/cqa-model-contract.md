@@ -111,7 +111,7 @@ Appeals are reassessed by GPT in both modes (section D). Each provider receives 
 ```bash
 # ATLAS_CQA_DEFAULT_MODE_TYPE=1                         # used when a request has no mode_type
 # ATLAS_CQA_GEMMA_BASE_URL=http://localhost:11434/v1    # loopback or https; in Docker the ollama-forward sidecar maps it to the host
-# ATLAS_CQA_GEMMA_MODEL=gemma3                          # the Ollama model tag that is pulled on the host
+# ATLAS_CQA_GEMMA_MODEL=gemma3:12b                      # the Ollama model tag that is pulled on the host
 # ATLAS_CQA_GEMMA_TIMEOUT_S=300
 ```
 

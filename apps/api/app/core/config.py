@@ -78,7 +78,7 @@ class Settings(BaseSettings):
     # Gemma through Ollama's OpenAI-compatible API on this machine. In Docker the ollama-forward sidecar makes the
     # host's Ollama reachable at localhost:11434 inside the api container. No key is needed or sent.
     cqa_gemma_base_url: str = "http://localhost:11434/v1"
-    cqa_gemma_model: str = "gemma3"
+    cqa_gemma_model: str = "gemma3:12b"
     cqa_gemma_timeout_s: float = 300.0
     # The http adapter POSTs the evaluation request here. Non-loopback hosts require the explicit opt-in
     # below, so transcripts are never sent off this machine by accident.
