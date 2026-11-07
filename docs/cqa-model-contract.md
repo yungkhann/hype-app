@@ -188,7 +188,7 @@ The failed evaluation shows each problem with its location, e.g. `results[3] (so
 
 1. Start ATLAS (`pnpm dev`).
 2. On **Conversations**, choose **Import… → Load FIXTURE** (synthetic, labelled), or import `DEV` once the source URL is configured.
-3. On **Checklists**, add the development sample or enter the official criteria.
+3. On **Checklists**, use **Freedom Broker — Official CQA Checklist**. ATLAS creates it at first start-up with the eight official criteria (version 1); edits are saved as new versions. You can also add the development sample.
 4. **Evaluate**, choosing your evaluator. Failures list every contract problem.
 
 In Python, `app.cqa.contract.validate_output(request, payload, messages)` raises `ContractViolation` with `.issues` for an invalid payload. `apps/api/tests/test_cqa_contract.py` shows how it is used.

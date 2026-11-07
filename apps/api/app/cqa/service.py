@@ -62,6 +62,7 @@ class CqaService:
         self.store = CqaStore(settings.data_dir)
         self.adapters = create_adapters(settings)
         self.checklists = ChecklistService(self.store)
+        self.checklists.ensure_official_checklist()
         self.evaluations = EvaluationService(self.store, self.checklists, self.adapters, settings)
         self.appeals = AppealService(self.store, self.evaluations)
         self.audio_resolver = AudioResolver(settings)

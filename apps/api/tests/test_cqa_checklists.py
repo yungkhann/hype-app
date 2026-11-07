@@ -2,10 +2,16 @@
 
 from __future__ import annotations
 
+import copy
+
 from fastapi.testclient import TestClient
 
+from app.cqa.checklists import OFFICIAL_CHECKLIST_ID
+from app.cqa.schemas import ChecklistConfig
+from app.cqa.scoring import compute_score
 from app.main import create_app
 from tests.cqa_helpers import API, dev_checklist, evaluate, import_fixtures
+from tests.test_cqa_scoring import APPENDIX_EXAMPLE
 
 BASE = {
     "name": "Team checklist",
@@ -180,8 +186,8 @@ def test_used_checklists_can_be_archived_but_not_deleted(client):
     assert client.delete(f"{API}/checklists/{unused['id']}").status_code == 200
     archived = client.put(f"{API}/checklists/{checklist['id']}", json={"base_version": 1, "archived": True}).json()
     assert archived["archived"]
-    assert client.get(f"{API}/checklists").json() == []
-    assert len(client.get(f"{API}/checklists", params={"include_archived": True}).json()) == 1
+    assert [s["id"] for s in client.get(f"{API}/checklists").json()] == [OFFICIAL_CHECKLIST_ID]
+    assert len(client.get(f"{API}/checklists", params={"include_archived": True}).json()) == 2
 
 
 # ---- Part 2: dynamic checklists ---------------------------------------------------------------------
@@ -312,7 +318,7 @@ def test_validate_reports_problems_without_saving(client):
                                                                        "allowed_scores": [3, 3]}]}).json()
     assert not broken["valid"] and broken["total_weight"] is None
     assert broken["issues"][0]["criterion_id"] == "n"
-    assert client.get(f"{API}/checklists").json() == []
+    assert [s["id"] for s in client.get(f"{API}/checklists").json()] == [OFFICIAL_CHECKLIST_ID]  # nothing saved
 
 
 def test_new_versions_preserve_old_versions_and_their_evaluations(client):
@@ -368,7 +374,7 @@ def test_official_template_is_a_reusable_reference(client, settings):
                                              "severe_error_policy": "flag_only", "na_policy": "redistribute"}
     assert client.get(f"{API}/checklist-templates/nope").status_code == 404
 
-    assert client.get(f"{API}/checklists").json() == []  # nothing is seeded
+    assert [s["id"] for s in client.get(f"{API}/checklists").json()] == [OFFICIAL_CHECKLIST_ID]  # only the seed
     made = client.post(f"{API}/checklists/from-template", json={"template_id": OFFICIAL}).json()
     assert made["origin"] == "official" and made["template_id"] == OFFICIAL and made["latest_version"] == 1
     assert made["versions"][0]["config"] == template["config"]
@@ -382,8 +388,8 @@ def test_official_template_is_a_reusable_reference(client, settings):
     custom = client.post(f"{API}/checklists/from-template", json={"template_id": OFFICIAL, "name": "Team copy"})
     assert custom.json()["name"] == "Team copy"
     with restarted(settings) as again:                                          # restart: no new copies
-        assert len(again.get(f"{API}/checklists").json()) == 2
-    assert len(client.get(f"{API}/checklists").json()) == 2
+        assert len(again.get(f"{API}/checklists").json()) == 3
+    assert len(client.get(f"{API}/checklists").json()) == 3
 
 
 def test_official_template_evaluates_with_the_mock_and_reports_the_critical_flag(client):
@@ -396,6 +402,55 @@ def test_official_template_evaluates_with_the_mock_and_reports_the_critical_flag
     assert [v["criterion"]["id"] for v in record["criteria"]] == list(OFFICIAL_TABLE)
     critical = next(c for c in record["evaluation"]["final_score"]["criteria"] if c["criterion_id"] == "critical")
     assert critical["weight"] == 0 and critical["points"] in (0, None)
+
+
+# ---- Part 3.1: the predefined official checklist ------------------------------------------------------
+
+def test_official_checklist_is_seeded_once_and_stays_editable(client, settings):
+    url = f"{API}/checklists/{OFFICIAL_CHECKLIST_ID}"
+    [summary] = client.get(f"{API}/checklists").json()                          # there before anyone creates it
+    assert (summary["id"], summary["name"], summary["origin"], summary["template_id"]) == \
+        (OFFICIAL_CHECKLIST_ID, "Freedom Broker — Official CQA Checklist", "official", OFFICIAL)
+    assert (summary["latest_version"], summary["criteria"], summary["enabled_criteria"], summary["total_weight"],
+            summary["weights_valid"], summary["official_format_compatible"]) == (1, 8, 8, 100, True, True)
+
+    official = client.get(url).json()
+    v1 = official["versions"][0]["config"]
+    assert v1 == client.get(f"{API}/checklist-templates/{OFFICIAL}").json()["config"]
+    criteria = {c["id"]: c for c in v1["criteria"]}
+    assert list(criteria) == list(OFFICIAL_TABLE)
+    for cid, (name, weight, answer_type, scores, na) in OFFICIAL_TABLE.items():
+        c = criteria[cid]
+        assert (c["name"], c["weight"], c["answer_type"], c["allowed_scores"], c["na_allowed"], c["enabled"]) == \
+            (name, weight, answer_type, scores, na, True), cid
+    assert sum(c["weight"] for c in v1["criteria"] if c["id"] != "critical") == 100
+    assert criteria["critical"]["weight"] == 0 and criteria["critical"]["severe_error_enabled"]
+    assert compute_score(ChecklistConfig.model_validate(v1), APPENDIX_EXAMPLE).total == 85.38
+
+    v2 = copy.deepcopy(v1)                                                      # the manager edits it
+    by_id = {c["id"]: c for c in v2["criteria"]}
+    by_id["contact"].update(name="Приветствие", description="Оператор здоровается и представляется.")
+    by_id["dialogue"]["allowed_scores"] = [0, 5, 10]
+    by_id["closure"]["na_allowed"] = False
+    by_id["consultation"]["weight"] = 15
+    v2["criteria"].append({"id": "compliance", "name": "Compliance", "weight": 5, "answer_type": "binary"})
+    saved = save(client, official, v2, note="Manager edits").json()
+    assert saved["latest_version"] == 2 and saved["versions"][0]["config"] == v1  # v1 untouched
+    latest = client.get(f"{url}/versions/2").json()
+    assert not latest["official_format_compatible"] and len(latest["official_format_issues"]) == 4
+    baseline = client.get(f"{url}/versions/1").json()
+    assert baseline["config"] == v1 and baseline["official_format_compatible"]
+    assert not client.get(f"{API}/checklists").json()[0]["official_format_compatible"]
+
+    for _ in range(2):                                                          # restarts: no copy, edits kept
+        with restarted(settings) as again:
+            [kept] = again.get(f"{API}/checklists").json()
+            assert kept["id"] == OFFICIAL_CHECKLIST_ID and kept["latest_version"] == 2
+            assert again.get(f"{url}/versions/1").json()["config"] == v1
+    client.put(url, json={"base_version": 2, "archived": True})                 # archived is not re-created
+    with restarted(settings) as again:
+        assert again.get(f"{API}/checklists").json() == []
+        assert len(again.get(f"{API}/checklists", params={"include_archived": True}).json()) == 1
 
 
 def test_disabled_criteria_are_not_sent_to_the_evaluator(client):

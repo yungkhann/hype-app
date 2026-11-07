@@ -189,6 +189,10 @@ AnswerType = Literal["binary", "numeric", "scale", "options"]
 RoundingMode = Literal["half_up", "half_even", "floor", "ceil", "none"]
 ChecklistOrigin = Literal["custom", "official", "dev_sample"]
 TEMPLATE_ID_PATTERN = r"^[a-z0-9][a-z0-9-]{0,63}$"
+OFFICIAL_FORMAT_DESCRIPTION = (
+    "The configuration has exactly the eight official criteria (enabled, with the official ids, weights, answer "
+    "types, allowed values and N/A settings) and the official scoring rules, so its results can be submitted in "
+    "the organizers' JSON 1.0 format. Titles and wording may differ.")
 MAX_ALLOWED_SCORES = 101
 MAX_SCORE_VALUE = 10_000
 
@@ -422,6 +426,7 @@ class ChecklistSummary(BaseModel):
     sections: int
     total_weight: float = Field(description="Sum of the enabled criteria's weights in the latest version.")
     weights_valid: bool = Field(default=True, description="The latest version's enabled weights total 100%.")
+    official_format_compatible: bool = Field(default=False, description=OFFICIAL_FORMAT_DESCRIPTION)
     template_id: str | None = None
     created_at: str
     updated_at: str
@@ -438,6 +443,7 @@ class ChecklistVersionSummary(BaseModel):
     enabled_criteria: int
     total_weight: float
     weights_valid: bool
+    official_format_compatible: bool = Field(default=False, description=OFFICIAL_FORMAT_DESCRIPTION)
     replacements: list[Replacement]
     evaluations: int = Field(description="Evaluations that used this version.")
 
@@ -456,6 +462,9 @@ class ChecklistVersionDetail(BaseModel):
     replacements: list[Replacement]
     config: ChecklistConfig
     active_criteria: list[str] = Field(description="Ids of the enabled criteria, in order.")
+    official_format_compatible: bool = Field(default=False, description=OFFICIAL_FORMAT_DESCRIPTION)
+    official_format_issues: list[str] = Field(default=[], description=(
+        "Why this version does not match the official results format, if it does not."))
 
 
 class ValidationIssue(BaseModel):

@@ -1,8 +1,8 @@
 {
-  "_notice": "Official Freedom Broker starter template. Criterion ids, names, weights and allowed values are copied from the CQA guide appendix (Формат JSON 1.0, стр. 3). Wording and N/A rules are left empty on purpose: they are in the separate checklist PDF, which is not in the repository. Do not invent them here.",
+  "_notice": "Official Freedom Broker checklist. Criterion ids, names, weights and allowed values are copied from the CQA guide appendix (Формат JSON 1.0, стр. 3). Wording and N/A rules are left empty on purpose: they are in the separate checklist PDF, which is not in the repository. Do not invent them here. At start-up ATLAS creates the checklist 'Freedom Broker — Official CQA Checklist' from this file once (version 1); editing this file later does not change that checklist.",
   "id": "freedom-broker-official",
-  "name": "Freedom Broker official checklist",
-  "description": "Starter template: the eight official criteria with their weights and allowed values. Add each criterion's wording and N/A rule from the official checklist PDF.",
+  "name": "Freedom Broker — Official CQA Checklist",
+  "description": "The eight official criteria with their weights, answer types and allowed values from the CQA guide appendix (JSON 1.0). Add each criterion's wording and N/A rule from the official checklist PDF.",
   "origin": "official",
   "source": "CQA Hackathon, приложение к студенческому гайду «Как сдать результаты», стр. 3 «Правила заполнения» (Формат JSON 1.0)",
   "notes": [
