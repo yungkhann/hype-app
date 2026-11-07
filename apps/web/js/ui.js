@@ -1,4 +1,4 @@
-import { t } from "./i18n.js?v=tape7";
+import { t } from "./i18n.js?v=tape37";
 import { esc } from "./util.js";
 
 export function Label(text) {

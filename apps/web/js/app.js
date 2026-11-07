@@ -23,8 +23,8 @@ import {
   resultsReport,
   startEvaluation,
   updateChecklist,
-} from "./api.js?v=tape7";
-import { activeChat, chatTitle, messageText, openChat, pushTurn, removeChat, startChat } from "./chat.js?v=tape7";
+} from "./api.js?v=tape22";
+import { activeChat, chatTitle, messageText, openChat, pushTurn, removeChat, startChat } from "./chat.js?v=tape22";
 import {
   adoptChecklist,
   appliedConfig,
@@ -36,14 +36,15 @@ import {
   scalePoints,
   sectionName,
   stageChange,
-} from "./checklist.js?v=tape7";
+} from "./checklist.js?v=tape22";
 import {
   closeCriterionEditor,
   isCriterionEditorDirty,
   isCriterionEditorOpen,
   openCriterionEditor,
-} from "./criterion-editor.js?v=tape7";
-import { applyStatic, getLang, hasKey, langCode, langName, locale, nextLang, setLang, t, tn } from "./i18n.js?v=tape7";
+} from "./criterion-editor.js?v=tape22";
+import { bindFileDrop, fileDropHtml, jsonFileError, readDropFile, resetFileDrop, setFileDropBusy, setFileDropError, showFileName } from "./file-drop.js?v=tape43";
+import { applyStatic, getLang, hasKey, langCode, langName, locale, nextLang, setLang, t, tn } from "./i18n.js?v=tape37";
 import {
   addOnboardCriterion,
   applyOfficialChecklist,
@@ -52,10 +53,10 @@ import {
   sampleTranscriptJson,
   viewCoach,
   viewOnboard,
-} from "./onboard.js?v=tape8";
-import { loadState, saveState, setConversations, setScores } from "./store.js?v=tape7";
+} from "./onboard.js?v=tape43";
+import { loadState, saveState, setConversations, setScores } from "./store.js?v=tape22";
 import { mountMessageScroller } from "./message-scroller.js?v=tape1";
-import { Bubble, Button, ChatPrompt, Field, Message, MessageScroller, MessageScrollerItem } from "./ui.js?v=tape7";
+import { Bubble, Button, ChatPrompt, Field, Message, MessageScroller, MessageScrollerItem } from "./ui.js?v=tape22";
 import { byId, esc } from "./util.js";
 
 const icon = {
@@ -66,6 +67,8 @@ const icon = {
   checks: '<svg viewBox="0 0 24 24"><path d="M13 5h8"/><path d="M13 12h8"/><path d="M13 19h8"/><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/></svg>',
   file: '<svg viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>',
   arrow: '<svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>',
+  plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg>',
+  check: '<svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>',
 };
 
 let state = loadState();
@@ -123,6 +126,7 @@ function bindOnboard() {
       const value = btn.getAttribute("data-choice");
       const d = draft();
       d[group] = value;
+      if (group === "lang") setLang(value);
       if (group === "pack" && value === "official") applyOfficialChecklist(state);
       if (group === "pack" && value === "custom" && !d.clearedCustom) {
         state.checklist.criteria = [];
@@ -155,51 +159,38 @@ function bindOnboard() {
     const go = document.querySelector("[data-onboard='continue']");
     if (go) go.disabled = !continueEnabled(state, step);
   });
-  const takeFile = async (file) => {
-    if (!file) return;
-    const text = await file.text();
-    draft().json = "file";
-    draft().payload = text;
-    persist();
-    render();
-  };
-  document.querySelector("[data-onboard-file]")?.addEventListener("change", (e) => takeFile(e.target.files?.[0]));
-  const drop = document.querySelector(".duo-drop");
-  if (drop) {
-    ["dragenter", "dragover"].forEach((name) => {
-      drop.addEventListener(name, (e) => {
-        e.preventDefault();
-        drop.classList.add("is-over");
-      });
-    });
-    ["dragleave", "drop"].forEach((name) => {
-      drop.addEventListener(name, (e) => {
-        e.preventDefault();
-        drop.classList.remove("is-over");
-      });
-    });
-    drop.addEventListener("drop", (e) => takeFile(e.dataTransfer.files?.[0]));
+  const zone = document.querySelector("[data-file-drop]");
+  if (zone) {
+    bindFileDrop(zone, { onFile: (file) => acceptDroppedFile(zone, file, async (text, file) => {
+      draft().json = "file";
+      draft().payload = text;
+      draft().fileName = file.name || "";
+      persist();
+      const box = document.querySelector('[data-field="payload"]');
+      if (box) box.value = text;
+      const go = document.querySelector("[data-onboard='continue']");
+      if (go) go.disabled = !continueEnabled(state, step);
+    }) });
   }
+  document.querySelector("[data-onboard='back']")?.addEventListener("click", () => {
+    if (step > 1) location.hash = `#/onboard/${step - 1}`;
+  });
   document.querySelector("[data-onboard='continue']")?.addEventListener("click", async () => {
-    if (step === 1) {
-      location.hash = "#/onboard/2";
-      return;
-    }
-    if (step === 2) {
-      location.hash = "#/onboard/3";
+    if (step < 4) {
+      location.hash = `#/onboard/${step + 1}`;
       return;
     }
     const d = draft();
     const raw = d.json === "sample" ? sampleTranscriptJson() : (payloadBox?.value || d.payload || "").trim();
     if (!raw) {
-      showOnboardError("Drop a file or paste JSON.");
+      showOnboardError(t("onboard.chats.needJson"));
       return;
     }
     let payload;
     try {
       payload = JSON.parse(raw);
     } catch {
-      showOnboardError("That JSON did not parse.");
+      showOnboardError(t("onboard.chats.badJson"));
       return;
     }
     await finishSetup(payload);
@@ -399,51 +390,85 @@ function viewList() {
   const all = state.conversations.length;
   const countText = conversationsStatus.loading && !all ? t("list.loading")
     : rows.length === all ? tn("list.count", all) : t("list.countOf", { shown: rows.length, all });
-  const chip = (key, value, label, href, ico) => {
-    const on = (key === "lang" && lang === value) || (key === "source" && source === value) || (!value && !lang && !source && key === "all");
-    return `<a class="tool ${on ? "is-on" : ""}" href="${href}"><span class="tool-ico">${ico}</span>${esc(label)}</a>`;
+  const hrefOf = ({ lang: nextLang = lang, source: nextSource = source } = {}) => {
+    const p = new URLSearchParams();
+    if (nextLang) p.set("lang", nextLang);
+    if (nextSource) p.set("source", nextSource);
+    const qs = p.toString();
+    return qs ? `#/?${qs}` : "#/";
   };
+  const chip = (on, label, href, ico) =>
+    `<a class="tool ${on ? "is-on" : ""}" href="${href}"><span class="tool-ico">${ico}</span>${esc(label)}</a>`;
+  const rule = `<span class="tool-rule" aria-hidden="true"></span>`;
   const empty = conversationsStatus.loading ? t("list.loading") : all ? t("list.noMatch") : t("list.empty");
   return `
     <section class="home">
       <div class="home-hero">
-        <img class="home-mascot" src="img/mascot-wave.gif" width="200" height="200" alt="" />
+        <img class="home-mascot" src="img/mascot-wave-slow.gif?v=3" width="280" height="280" alt="" />
         <h1>${esc(t("list.heroTitle"))}</h1>
-        <form class="hero-search" data-hero-search>
-          <input name="q" type="search" placeholder="${esc(t("list.heroPlaceholder"))}" value="${esc(search)}" />
-          <button class="hero-go" type="submit" aria-label="${esc(t("nav.search"))}">${icon.arrow}</button>
+        <form class="hero-search" data-hero-import>
+          <input class="hero-q" name="q" type="text" placeholder="${esc(t(heroMethod === "json" ? "list.heroPlaceholderJson" : "list.heroPlaceholderApi"))}" autocomplete="off" spellcheck="false" />
+          <div class="hero-bar">
+          <div class="hero-tools">
+            <button type="button" class="hero-plus" data-hero-file aria-label="${esc(t("list.attachJson"))}">${icon.plus}</button>
+            <div class="hero-method" role="switch" tabindex="0" aria-checked="${heroMethod === "json" ? "true" : "false"}" aria-label="${esc(t("list.methodLabel"))}">
+              <span class="hero-method-thumb" data-hero-method-thumb></span>
+              <input type="hidden" name="import_method" value="${heroMethod === "json" ? "json" : "api"}" />
+              <span class="hero-method-btn${heroMethod !== "json" ? " is-on" : ""}" data-hero-method="api">${esc(t("list.methodApi"))}</span>
+              <span class="hero-method-btn${heroMethod === "json" ? " is-on" : ""}" data-hero-method="json">${esc(t("list.methodJson"))}</span>
+            </div>
+          </div>
+          <div class="hero-end">
+          <div class="hero-model">
+            <input type="hidden" name="model" value="${evaluationUi.mode === 2 ? "openai" : "qwen"}" />
+            <button type="button" class="hero-model-btn" data-hero-model-btn aria-haspopup="listbox" aria-expanded="false" aria-label="${esc(t("list.modelLabel"))}">
+              <span data-hero-model-label>${esc(evaluationUi.mode === 2 ? t("list.modelOpenai") : t("list.modelQwen"))}</span>
+            </button>
+            <div class="hero-model-menu" data-hero-model-menu hidden role="listbox" aria-label="${esc(t("list.modelLabel"))}">
+              ${[
+                ["openai", t("list.modelOpenai"), evaluationUi.mode === 2],
+                ["qwen", t("list.modelQwen"), evaluationUi.mode === 1],
+              ].map(([value, label, on]) => `
+                <button type="button" class="hero-model-item${on ? " is-on" : ""}" role="option" data-model="${value}" aria-selected="${on}">
+                  <span class="hero-model-check" aria-hidden="true">${on ? icon.check : ""}</span>
+                  ${esc(label)}
+                </button>`).join("")}
+            </div>
+          </div>
+          <button class="hero-go" type="submit" aria-label="${esc(t("list.import"))}">${icon.arrow}</button>
+          </div>
+          </div>
         </form>
       </div>
       <div class="home-cards">
         <a class="home-card" href="#/checklist">
+          <span class="home-card-go" aria-hidden="true">${icon.arrow}</span>
           <span class="home-card-ico">${icon.checks}</span>
           <h3>${esc(t("nav.checklist"))}</h3>
           <p>${esc(t("list.cardChecklist"))}</p>
         </a>
         <a class="home-card" href="#/appeals">
+          <span class="home-card-go" aria-hidden="true">${icon.arrow}</span>
           <span class="home-card-ico">${icon.file}</span>
           <h3>${esc(t("nav.appeals"))}</h3>
           <p>${esc(t("list.cardAppeals"))}</p>
         </a>
       </div>
       <section class="home-history" id="home-history">
-        <div class="home-history-head">
-          <h2>${esc(t("list.history"))}</h2>
-          <p>${esc(countText)}</p>
-        </div>
       <div class="tool-row">
-        ${chip("all", "", t("list.all"), "#/", icon.grid)}
-        ${chip("lang", "kz", t("list.kazakh"), "#/?lang=kz", '<span class="tool-mark">kz</span>')}
-        ${chip("lang", "ru", t("list.russian"), "#/?lang=ru", '<span class="tool-mark">ru</span>')}
-        ${chip("lang", "en", t("list.english"), "#/?lang=en", '<span class="tool-mark">en</span>')}
-        ${chip("source", "call", t("list.calls"), "#/?source=call", icon.phone)}
-        ${chip("source", "chat", t("list.chats"), "#/?source=chat", icon.messages)}
+        ${chip(!lang && !source, t("list.all"), hrefOf({ lang: "", source: "" }), icon.grid)}
+        ${rule}
+        ${chip(source === "chat", t("list.chats"), hrefOf({ source: source === "chat" ? "" : "chat" }), icon.messages)}
+        ${chip(source === "call", t("list.calls"), hrefOf({ source: source === "call" ? "" : "call" }), icon.phone)}
+        ${rule}
+        ${chip(lang === "kz", t("list.kazakh"), hrefOf({ lang: lang === "kz" ? "" : "kz" }), '<span class="tool-mark">kz</span>')}
+        ${chip(lang === "ru", t("list.russian"), hrefOf({ lang: lang === "ru" ? "" : "ru" }), '<span class="tool-mark">ru</span>')}
+        ${chip(lang === "en", t("list.english"), hrefOf({ lang: lang === "en" ? "" : "en" }), '<span class="tool-mark">en</span>')}
       </div>
       <div class="list-head">
         <p class="hint" role="status">${esc(countText)}</p>
         <span class="ui-btn-row">
           ${Button(esc(t("list.export")), { attrs: 'data-action="open-export"' })}
-          ${Button(esc(t("list.import")), { variant: "primary", attrs: 'data-action="open-import"' })}
         </span>
       </div>
       ${conversationsStatus.error ? `<div class="notice notice-error list-notice" role="alert">${esc(t("list.loadError", { error: conversationsStatus.error }))} ${Button(esc(t("common.retry")), { attrs: 'data-action="reload-conversations"' })}</div>` : ""}
@@ -551,6 +576,7 @@ function viewDetail(id) {
 const OFFICIAL_TEMPLATE = "freedom-broker-official";
 const POLL_MS = 1500;
 const MODE_KEY = "cqa-eval-mode";
+let heroMethod = "api";
 const evaluationUi = {
   checklists: null, // ChecklistSummary[] (not archived), null until loaded
   checklistsError: "",
@@ -1679,7 +1705,11 @@ function forgetChecklists(savedId) {
   if (savedId && evaluationUi.selection?.checklistId === savedId) evaluationUi.selection.version = null;
 }
 
+let heroLinkClose;
+
 function bind() {
+  heroLinkClose?.abort();
+  heroLinkClose = null;
   try {
     mountMessageScroller(document.querySelector('[data-slot="message-scroller-provider"]'));
   } catch (err) {
@@ -1701,11 +1731,87 @@ function bind() {
     render();
     document.querySelector("[data-chat-form] input")?.focus();
   });
-  document.querySelector("[data-hero-search]")?.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const q = e.currentTarget.q.value.trim();
-    location.hash = q ? `/?q=${encodeURIComponent(q)}` : "/";
-  });
+  const heroImport = document.querySelector("[data-hero-import]");
+  if (heroImport) {
+    const rememberModel = () => chooseMode(heroImport.model?.value === "openai" ? 2 : 1);
+    heroImport.addEventListener("submit", (e) => {
+      e.preventDefault();
+      rememberModel();
+      importFromHero(heroImport.q.value, heroImport.elements.namedItem("import_method")?.value);
+    });
+    const layoutMethodThumb = (animate) => {
+      const track = heroImport.querySelector(".hero-method");
+      const thumb = heroImport.querySelector("[data-hero-method-thumb]");
+      const on = heroImport.querySelector("[data-hero-method].is-on");
+      if (!track || !thumb || !on) return;
+      const tr = track.getBoundingClientRect();
+      const br = on.getBoundingClientRect();
+      const pad = parseFloat(getComputedStyle(track).paddingLeft) || 0;
+      thumb.style.transition = animate ? "" : "none";
+      thumb.style.width = `${br.width}px`;
+      thumb.style.transform = `translateX(${br.left - tr.left - pad}px)`;
+      if (!animate) requestAnimationFrame(() => { thumb.style.transition = ""; });
+    };
+    const setHeroMethod = (method) => {
+      heroMethod = method === "json" ? "json" : "api";
+      const methodField = heroImport.elements.namedItem("import_method");
+      if (methodField) methodField.value = heroMethod;
+      heroImport.querySelectorAll("[data-hero-method]").forEach((btn) => {
+        btn.classList.toggle("is-on", btn.dataset.heroMethod === heroMethod);
+      });
+      const track = heroImport.querySelector(".hero-method");
+      track?.setAttribute("aria-checked", heroMethod === "json" ? "true" : "false");
+      heroImport.q.placeholder = t(heroMethod === "json" ? "list.heroPlaceholderJson" : "list.heroPlaceholderApi");
+      layoutMethodThumb(true);
+    };
+    const methodTrack = heroImport.querySelector(".hero-method");
+    const flipMethod = () => setHeroMethod(heroMethod === "json" ? "api" : "json");
+    methodTrack?.addEventListener("click", flipMethod);
+    methodTrack?.addEventListener("keydown", (e) => {
+      if (e.key !== " " && e.key !== "Enter") return;
+      e.preventDefault();
+      flipMethod();
+    });
+    layoutMethodThumb(false);
+    const modelBtn = heroImport.querySelector("[data-hero-model-btn]");
+    const modelMenu = heroImport.querySelector("[data-hero-model-menu]");
+    const setModelMenu = (on) => {
+      if (!modelMenu) return;
+      modelMenu.hidden = !on;
+      modelBtn?.setAttribute("aria-expanded", String(on));
+    };
+    const pickModel = (value) => {
+      const openai = value === "openai";
+      heroImport.model.value = openai ? "openai" : "qwen";
+      const label = openai ? t("list.modelOpenai") : t("list.modelQwen");
+      heroImport.querySelector("[data-hero-model-label]").textContent = label;
+      modelMenu.querySelectorAll("[data-model]").forEach((item) => {
+        const on = item.dataset.model === heroImport.model.value;
+        item.classList.toggle("is-on", on);
+        item.setAttribute("aria-selected", String(on));
+        item.querySelector(".hero-model-check").innerHTML = on ? icon.check : "";
+      });
+      rememberModel();
+      setModelMenu(false);
+    };
+    modelBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      setModelMenu(modelMenu.hidden);
+    });
+    modelMenu?.addEventListener("click", (e) => {
+      const item = e.target.closest("[data-model]");
+      if (item) pickModel(item.dataset.model);
+    });
+    heroImport.querySelector("[data-hero-file]")?.addEventListener("click", () => {
+      rememberModel();
+      setModelMenu(false);
+      openUploadPanel();
+    });
+    heroLinkClose = new AbortController();
+    document.addEventListener("pointerdown", (e) => {
+      if (!modelMenu?.hidden && !heroImport.querySelector(".hero-model")?.contains(e.target)) setModelMenu(false);
+    }, { signal: heroLinkClose.signal });
+  }
   document.querySelector("[data-action='add-criterion']")?.addEventListener("click", () => openEditor(null));
   document.querySelector("[data-action='apply-checklist']")?.addEventListener("click", () => saveChecklist());
   document.querySelector("[data-action='reload-checklist']")?.addEventListener("click", () => reloadChecklist());
@@ -1984,7 +2090,113 @@ function bindImportDialog(dialog) {
   });
 }
 
-function openImport() {
+let uploadDialog = null;
+
+async function acceptDroppedFile(root, file, onText) {
+  if (!file || !root) return;
+  const err = jsonFileError(file);
+  if (err) {
+    setFileDropError(root, err);
+    return;
+  }
+  setFileDropError(root, "");
+  setFileDropBusy(root, file.name, 0, file.size);
+  let text;
+  try {
+    text = await readDropFile(root, file, (loaded, total) => setFileDropBusy(root, file.name, loaded, total));
+  } catch (err) {
+    if (err?.message === "aborted") return;
+    setFileDropError(root, t("list.dropReadError"));
+    return;
+  }
+  setFileDropBusy(root, file.name, file.size, file.size);
+  await onText(text, file);
+  showFileName(root, file.name);
+}
+
+function uploadPanelHtml() {
+  return `
+    <div class="dialog-head">
+      <div>
+        <h2 id="upload-title" class="sheet-title">${esc(t("list.attachJson"))}</h2>
+      </div>
+      <button type="button" class="dialog-close" data-upload-close aria-label="${esc(t("common.close"))}">
+        <svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    ${fileDropHtml({
+      title: t("list.dropTitle"),
+      hint: t("list.dropHint"),
+      choose: t("list.dropChoose"),
+    })}`;
+}
+
+async function takeJsonFile(file) {
+  const root = uploadDialog?.querySelector("[data-file-drop]");
+  await acceptDroppedFile(root, file, async (text) => {
+    if (!uploadDialog?.open) return;
+    uploadDialog.close();
+    openImport(text, "json");
+  });
+}
+
+function bindUploadDialog(dialog) {
+  const root = dialog.querySelector("[data-file-drop]");
+  bindFileDrop(root, { onFile: (file) => takeJsonFile(file) });
+  dialog.addEventListener("click", (e) => {
+    if (e.target.closest("[data-upload-close]")) dialog.close();
+  });
+  dialog.addEventListener("close", () => resetFileDrop(root));
+}
+
+function openUploadPanel() {
+  if (!uploadDialog) {
+    uploadDialog = document.createElement("dialog");
+    uploadDialog.className = "dialog dialog-upload";
+    uploadDialog.setAttribute("aria-labelledby", "upload-title");
+    uploadDialog.innerHTML = uploadPanelHtml();
+    document.body.append(uploadDialog);
+    bindUploadDialog(uploadDialog);
+  } else {
+    resetFileDrop(uploadDialog.querySelector("[data-file-drop]"));
+  }
+  if (!uploadDialog.open) uploadDialog.showModal();
+}
+
+function looksJson(text) {
+  const s = String(text || "").trim();
+  return s.startsWith("{") || s.startsWith("[");
+}
+
+async function importFromHero(raw, method = heroMethod) {
+  const text = String(raw || "").trim();
+  const asJson = method === "json";
+  if (!text) {
+    openImport("", asJson ? "json" : "api");
+    return;
+  }
+  if (asJson || looksJson(text)) {
+    openImport(text, "json");
+    return;
+  }
+  if (/^https?:\/\//i.test(text)) {
+    try {
+      const res = await fetch(text, { signal: AbortSignal.timeout(8000) });
+      const body = await res.text();
+      if (res.ok && looksJson(body)) {
+        openImport(body, "json");
+        return;
+      }
+    } catch {
+      // The file is opened in the dialog so the paste can be fixed by hand.
+    }
+    openImport(text, asJson ? "json" : "api");
+    return;
+  }
+  openImport(text, asJson ? "json" : "api");
+}
+
+function openImport(seed = "", tab = "") {
   if (!importDialog) {
     importDialog = document.createElement("dialog");
     importDialog.className = "dialog";
@@ -1992,6 +2204,17 @@ function openImport() {
     importDialog.innerHTML = importDialogHtml();
     document.body.append(importDialog);
     bindImportDialog(importDialog);
+  }
+  const text = String(seed || "").trim();
+  const jsonTab = tab === "json" || (tab !== "api" && looksJson(text));
+  if (jsonTab) {
+    selectImportTab("json");
+    const json = importDialog.querySelector('[data-import-form="json"] textarea');
+    if (json) json.value = text;
+  } else if (text) {
+    selectImportTab("api");
+    const group = importDialog.querySelector('[data-import-form="api"] [name="group_id"]');
+    if (group) group.value = text;
   }
   if (!importDialog.open) importDialog.showModal();
   activeImportField()?.focus();
