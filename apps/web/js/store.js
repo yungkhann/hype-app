@@ -13,6 +13,7 @@ function fresh() {
   return {
     checklist: defaultChecklist(), checklistConfig: null, checklistDraft: null,
     conversations: [], scores: {}, appeals: [], chats: [thread], chatId: thread.id,
+    onboarded: false, onboardVersion: 2, coachDone: false,
   };
 }
 
@@ -41,6 +42,8 @@ export function loadState() {
     parsed.appeals = [];
     parsed.checklistConfig ??= null;
     parsed.checklistDraft ??= null;
+    parsed.onboarded = parsed.onboarded === true && parsed.onboardVersion === 2;
+    parsed.coachDone = parsed.coachDone === true;
     const next = ensureChats(parsed);
     if (needsSave) saveState(next);
     return next;

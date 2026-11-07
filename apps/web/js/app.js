@@ -44,6 +44,15 @@ import {
   openCriterionEditor,
 } from "./criterion-editor.js?v=tape7";
 import { applyStatic, getLang, hasKey, langCode, langName, locale, nextLang, setLang, t, tn } from "./i18n.js?v=tape7";
+import {
+  addOnboardCriterion,
+  applyOfficialChecklist,
+  continueEnabled,
+  onboardStep,
+  sampleTranscriptJson,
+  viewCoach,
+  viewOnboard,
+} from "./onboard.js?v=tape8";
 import { loadState, saveState, setConversations, setScores } from "./store.js?v=tape7";
 import { mountMessageScroller } from "./message-scroller.js?v=tape1";
 import { Bubble, Button, ChatPrompt, Field, Message, MessageScroller, MessageScrollerItem } from "./ui.js?v=tape7";
@@ -71,6 +80,130 @@ let evaluationStatus = {};
 
 function persist() {
   saveState(state);
+}
+
+function draft() {
+  if (!state.onboardDraft) state.onboardDraft = { pack: "", json: "", payload: "" };
+  return state.onboardDraft;
+}
+
+function showOnboardError(msg) {
+  const err = document.querySelector("[data-onboard-error]");
+  if (!err) return;
+  err.hidden = !msg;
+  err.textContent = msg || "";
+}
+
+async function finishSetup(payload) {
+  state.onboarded = true;
+  state.onboardVersion = 2;
+  persist();
+  if (payload) {
+    try {
+      await importJson(payload);
+      setConversations(state, await listConversationRecords());
+    } catch (err) {
+      conversationsStatus.error = errorText(err);
+    }
+  }
+  const id = state.conversations[0]?.id;
+  const next = id ? convHref(id) : "#/";
+  if (location.hash === next || location.hash === next.slice(1)) render();
+  else location.hash = next;
+}
+
+function bindOnboard() {
+  const root = document.querySelector("[data-onboard-step]");
+  if (!root) return;
+  const step = Number(root.getAttribute("data-onboard-step") || 1);
+  document.querySelector("[data-onboard='skip']")?.addEventListener("click", () => finishSetup());
+  document.querySelectorAll("[data-choice]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const group = btn.getAttribute("data-choice-group");
+      const value = btn.getAttribute("data-choice");
+      const d = draft();
+      d[group] = value;
+      if (group === "pack" && value === "official") applyOfficialChecklist(state);
+      if (group === "pack" && value === "custom" && !d.clearedCustom) {
+        state.checklist.criteria = [];
+        d.clearedCustom = true;
+      }
+      persist();
+      render();
+    });
+  });
+  document.querySelector("[data-onboard-add]")?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const result = addOnboardCriterion(state, e.currentTarget);
+    if (!result.ok) {
+      showOnboardError(result.error);
+      return;
+    }
+    persist();
+    render();
+  });
+  document.querySelectorAll("[data-onboard-remove]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.checklist.criteria = state.checklist.criteria.filter((c) => c.id !== btn.getAttribute("data-onboard-remove"));
+      persist();
+      render();
+    });
+  });
+  const payloadBox = document.querySelector('[data-field="payload"]');
+  payloadBox?.addEventListener("input", () => {
+    draft().payload = payloadBox.value;
+    const go = document.querySelector("[data-onboard='continue']");
+    if (go) go.disabled = !continueEnabled(state, step);
+  });
+  const takeFile = async (file) => {
+    if (!file) return;
+    const text = await file.text();
+    draft().json = "file";
+    draft().payload = text;
+    persist();
+    render();
+  };
+  document.querySelector("[data-onboard-file]")?.addEventListener("change", (e) => takeFile(e.target.files?.[0]));
+  const drop = document.querySelector(".duo-drop");
+  if (drop) {
+    ["dragenter", "dragover"].forEach((name) => {
+      drop.addEventListener(name, (e) => {
+        e.preventDefault();
+        drop.classList.add("is-over");
+      });
+    });
+    ["dragleave", "drop"].forEach((name) => {
+      drop.addEventListener(name, (e) => {
+        e.preventDefault();
+        drop.classList.remove("is-over");
+      });
+    });
+    drop.addEventListener("drop", (e) => takeFile(e.dataTransfer.files?.[0]));
+  }
+  document.querySelector("[data-onboard='continue']")?.addEventListener("click", async () => {
+    if (step === 1) {
+      location.hash = "#/onboard/2";
+      return;
+    }
+    if (step === 2) {
+      location.hash = "#/onboard/3";
+      return;
+    }
+    const d = draft();
+    const raw = d.json === "sample" ? sampleTranscriptJson() : (payloadBox?.value || d.payload || "").trim();
+    if (!raw) {
+      showOnboardError("Drop a file or paste JSON.");
+      return;
+    }
+    let payload;
+    try {
+      payload = JSON.parse(raw);
+    } catch {
+      showOnboardError("That JSON did not parse.");
+      return;
+    }
+    await finishSetup(payload);
+  });
 }
 
 async function reloadConversations() {
@@ -115,6 +248,7 @@ function decodeId(text) {
 function route() {
   const path = (location.hash.slice(1) || "/").split("?")[0];
   let match;
+  if (path.startsWith("/onboard")) return { name: "onboard", step: onboardStep(path) };
   if (path.startsWith("/checklist")) return { name: "checklist" };
   if ((match = path.match(/^\/appeals\/([^/]+)/))) return { name: "appeal", id: decodeId(match[1]) };
   if (path.startsWith("/appeals") || path.startsWith("/review")) return { name: "appeals" };
@@ -153,11 +287,17 @@ function setNav() {
 }
 
 function render() {
+  let current = route();
+  if (!state.onboarded && current.name !== "onboard") {
+    history.replaceState(null, "", "#/onboard/1");
+    current = { name: "onboard", step: 1 };
+  }
+  document.querySelector(".app")?.classList.toggle("is-onboard", current.name === "onboard");
   setNav();
   const view = byId("view");
-  const current = route();
   if (current.name === "chat" && current.id) openChat(state, current.id);
-  if (current.name === "checklist") view.innerHTML = viewChecklist();
+  if (current.name === "onboard") view.innerHTML = viewOnboard(state, current.step || 1);
+  else if (current.name === "checklist") view.innerHTML = viewChecklist();
   else if (current.name === "appeals") view.innerHTML = viewAppeals();
   else if (current.name === "appeal") view.innerHTML = viewAppeal(current.id);
   else if (current.name === "chat") view.innerHTML = viewChat();
@@ -257,7 +397,6 @@ function viewList() {
     return true;
   });
   const all = state.conversations.length;
-  const first = state.conversations[0];
   const countText = conversationsStatus.loading && !all ? t("list.loading")
     : rows.length === all ? tn("list.count", all) : t("list.countOf", { shown: rows.length, all });
   const chip = (key, value, label, href, ico) => {
@@ -268,12 +407,30 @@ function viewList() {
   return `
     <section class="home">
       <div class="home-hero">
+        <img class="home-mascot" src="img/mascot-wave.gif" width="200" height="200" alt="" />
         <h1>${esc(t("list.heroTitle"))}</h1>
         <form class="hero-search" data-hero-search>
           <input name="q" type="search" placeholder="${esc(t("list.heroPlaceholder"))}" value="${esc(search)}" />
           <button class="hero-go" type="submit" aria-label="${esc(t("nav.search"))}">${icon.arrow}</button>
         </form>
       </div>
+      <div class="home-cards">
+        <a class="home-card" href="#/checklist">
+          <span class="home-card-ico">${icon.checks}</span>
+          <h3>${esc(t("nav.checklist"))}</h3>
+          <p>${esc(t("list.cardChecklist"))}</p>
+        </a>
+        <a class="home-card" href="#/appeals">
+          <span class="home-card-ico">${icon.file}</span>
+          <h3>${esc(t("nav.appeals"))}</h3>
+          <p>${esc(t("list.cardAppeals"))}</p>
+        </a>
+      </div>
+      <section class="home-history" id="home-history">
+        <div class="home-history-head">
+          <h2>${esc(t("list.history"))}</h2>
+          <p>${esc(countText)}</p>
+        </div>
       <div class="tool-row">
         ${chip("all", "", t("list.all"), "#/", icon.grid)}
         ${chip("lang", "kz", t("list.kazakh"), "#/?lang=kz", '<span class="tool-mark">kz</span>')}
@@ -281,14 +438,7 @@ function viewList() {
         ${chip("lang", "en", t("list.english"), "#/?lang=en", '<span class="tool-mark">en</span>')}
         ${chip("source", "call", t("list.calls"), "#/?source=call", icon.phone)}
         ${chip("source", "chat", t("list.chats"), "#/?source=chat", icon.messages)}
-        <a class="tool" href="#/checklist"><span class="tool-ico">${icon.checks}</span>${esc(t("nav.checklist"))}</a>
-        <a class="tool" href="#/appeals"><span class="tool-ico">${icon.file}</span>${esc(t("nav.appeals"))}</a>
       </div>
-      <article class="promo">
-        <h2>${esc(t("list.promoTitle"))}</h2>
-        <p>${esc(t("list.promoText"))}</p>
-        ${first ? `<a class="btn btn-primary" href="${esc(convHref(first.id))}">${esc(t("list.try"))}</a>` : ""}
-      </article>
       <div class="list-head">
         <p class="hint" role="status">${esc(countText)}</p>
         <span class="ui-btn-row">
@@ -318,6 +468,7 @@ function viewList() {
           </tbody>
         </table>
       </div>
+      </section>
     </section>`;
 }
 
@@ -369,7 +520,9 @@ function viewDetail(id) {
     });
   }
   const shown = shownEvaluation(id);
+  const coach = state.coachDone ? "" : viewCoach(t("detail.coach"));
   return `
+    ${coach}
     <section class="page-wide">
       <div class="pane-head">
         <div>
@@ -1532,6 +1685,12 @@ function bind() {
   } catch (err) {
     console.error(err);
   }
+  bindOnboard();
+  document.querySelector("[data-onboard='dismiss-coach']")?.addEventListener("click", () => {
+    state.coachDone = true;
+    persist();
+    render();
+  });
   document.querySelector("[data-chat-form]")?.addEventListener("submit", (e) => {
     e.preventDefault();
     const input = e.currentTarget.q;

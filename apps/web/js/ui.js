@@ -26,8 +26,8 @@ export function Select({ field, value, options }) {
   </span>`;
 }
 
-export function Textarea({ field, value = "", placeholder = "" }) {
-  return `<textarea class="ui-textarea" data-field="${esc(field)}" placeholder="${esc(placeholder)}" rows="3">${esc(value)}</textarea>`;
+export function Textarea({ field, value = "", placeholder = "", rows = 3 }) {
+  return `<textarea class="ui-textarea" data-field="${esc(field)}" placeholder="${esc(placeholder)}" rows="${esc(rows)}">${esc(value)}</textarea>`;
 }
 
 export function Checkbox({ field, checked, label }) {
