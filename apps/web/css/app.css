@@ -296,26 +296,7 @@ tr:hover td { background: var(--surface); }
 .sections { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px 12px; }
 .section-chip { background: #fff; border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; font-size: 12px; }
 
-.sheet-root {
-  position: fixed; inset: 0; z-index: 50; display: grid; place-items: center;
-  padding: 88px 16px 16px;
-}
-.sheet-dim { position: absolute; inset: 0; border: 0; padding: 0; background: rgba(24, 24, 27, 0.4); }
-.sheet {
-  position: relative; width: min(560px, 100%); max-height: 100%; overflow: auto;
-  display: flex; flex-direction: column;
-  background: #fff; border: 1px solid #e5e5e5; border-radius: 16px; padding: 0;
-  box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.22), 0 4px 12px -4px rgba(0, 0, 0, 0.12);
-}
-.sheet form { display: flex; flex-direction: column; min-height: 0; padding: 22px 22px 0; }
-.sheet-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
 .sheet-title { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -0.2px; }
-.sheet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-.sheet-actions {
-  display: flex; justify-content: space-between; align-items: center; gap: 12px;
-  position: sticky; bottom: 0; margin: 18px -22px 0; padding: 12px 22px 16px;
-  background: #fff; border-top: 1px solid #f4f4f5;
-}
 .form-grid { display: grid; gap: 12px; margin-top: 12px; }
 .notice { border-radius: var(--radius); padding: 12px 16px; font-weight: 400; border: 1px solid var(--border); }
 .notice-warn { background: #fffbeb; }
@@ -368,6 +349,73 @@ tr:hover td { background: var(--surface); }
   display: flex; justify-content: flex-end; gap: 8px;
   position: sticky; bottom: 0; margin: 4px -22px 0; padding: 12px 22px 16px;
   background: #fff; border-top: 1px solid #f4f4f5;
+}
+
+/* Add / Edit criterion dialog. Built on the shared .dialog surface; every rule below is scoped to it. */
+.ce-dialog { width: min(600px, calc(100% - 32px)); }
+.ce-dialog [hidden] { display: none !important; }
+.ce-form { display: flex; flex-direction: column; }
+.ce-head {
+  position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+  padding: 20px 22px 14px; background: #fff; border-bottom: 1px solid #f4f4f5;
+}
+.ce-head .hint { margin-top: 4px; max-width: 52ch; font-weight: 400; }
+.ce-group { display: grid; gap: 14px; padding: 18px 22px 20px; }
+.ce-group + .ce-group { border-top: 1px solid #f4f4f5; }
+.ce-group-title {
+  margin: 0; font-size: 11px; font-weight: 500; color: #71717a; letter-spacing: 0.04em; text-transform: uppercase;
+}
+.ce-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.ce-field { display: grid; gap: 6px; min-width: 0; align-content: start; }
+.ce-field .ui-label { margin: 0; }
+.ce-fieldset { margin: 0; padding: 0; border: 0; min-width: 0; display: grid; gap: 6px; }
+.ce-fieldset legend { padding: 0; margin: 0 0 6px; }
+.ce-dialog .ui-input:disabled { background: #f4f4f5; color: var(--soft); box-shadow: none; cursor: not-allowed; }
+.ce-dialog [aria-invalid="true"] { border-color: #fca5a5; }
+.ce-dialog [aria-invalid="true"]:focus { border-color: var(--bad); box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12); }
+.ce-dialog .ui-textarea { min-height: 0; }
+.ce-error { margin: 0; font-size: 12px; font-weight: 500; color: var(--bad); }
+.ce-total { margin: 0; font-size: 12px; font-weight: 500; color: var(--soft); }
+.ce-total.is-ok { color: #15803d; }
+.ce-total.is-warn { color: var(--warn); }
+
+.ce-seg { display: flex; gap: 4px; padding: 4px; border-radius: 10px; background: #f4f4f5; }
+.ce-seg-item { position: relative; flex: 1; min-width: 0; }
+.ce-seg-item input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.ce-seg-item span {
+  display: flex; align-items: center; justify-content: center; min-height: 32px; padding: 4px 8px; border-radius: 7px;
+  color: var(--soft); font-size: 13px; font-weight: 500; line-height: 1.2; text-align: center;
+}
+.ce-seg-item:hover span { color: #171717; }
+.ce-seg-item input:checked + span { background: #fff; color: #171717; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+.ce-seg-item input:focus-visible + span { box-shadow: 0 0 0 3px rgba(23, 23, 23, 0.12); }
+.ce-seg-item input:disabled { cursor: not-allowed; }
+.ce-seg-item input:disabled + span { opacity: 0.4; }
+
+.ce-suffix { position: relative; max-width: 180px; }
+.ce-suffix .ui-input { padding-right: 32px; font-variant-numeric: tabular-nums; }
+.ce-suffix > span { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--soft); pointer-events: none; }
+.ce-check { align-items: flex-start; gap: 10px; }
+.ce-check input { margin-top: 2px; }
+.ce-check-text { display: grid; gap: 2px; }
+.ce-check-text .hint { font-weight: 400; }
+.ce-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ce-chips .badge { font-variant-numeric: tabular-nums; }
+
+.ce-actions {
+  position: sticky; bottom: 0; z-index: 2; padding: 12px 22px 16px; background: #fff; border-top: 1px solid #f4f4f5;
+}
+.ce-actions-row, .ce-confirm { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.ce-confirm { flex-wrap: wrap; }
+.ce-confirm p { margin: 0; flex: 1 1 260px; font-size: 13px; font-weight: 500; color: #171717; }
+
+@media (max-width: 560px) {
+  .ce-dialog { width: calc(100% - 16px); max-width: calc(100% - 16px); max-height: calc(100dvh - 16px); }
+  .ce-head, .ce-group, .ce-actions { padding-left: 16px; padding-right: 16px; }
+  .ce-head { position: static; }
+  .ce-row { grid-template-columns: 1fr; }
+  .ce-suffix { max-width: none; }
+  .ce-confirm .ui-btn-row { margin-left: auto; }
 }
 
 .chat-page {
@@ -468,7 +516,6 @@ tr:hover td { background: var(--surface); }
   .island { width: calc(100% - 16px); height: 54px; }
   .island-btn { height: 42px; min-width: 42px; padding: 0 12px; }
   .island-search { height: 42px; padding: 0 12px; }
-  .sheet-grid { grid-template-columns: 1fr; }
   .list-head, .list-notice { flex-direction: column; align-items: stretch; }
   .split { grid-template-columns: 1fr; }
   .chat-page { grid-template-columns: 1fr; grid-template-rows: 160px minmax(0, 1fr); }

@@ -1,14 +1,19 @@
 import { ensureChats, newThread } from "./chat.js?v=tape2";
 import { defaultChecklist, fromRecord } from "./data.js?v=tape2";
-import { applyAppeal, evaluateConversation } from "./scoring.js";
+import { applyAppeal, evaluateConversation } from "./scoring.js?v=tape3";
 import { uid } from "./util.js";
 
 const KEY = "cqa-studio-v2";
 
 // Conversations live in the backend and are loaded on start (setConversations); they are never kept here.
+// checklist: the applied checklist in the views' shape. checklistConfig: the same version in the backend's
+// shape (null until the checklist is saved in ATLAS). checklistDraft: unsaved edits from the checklist page.
 function fresh() {
   const thread = newThread();
-  return { checklist: defaultChecklist(), conversations: [], evaluations: {}, appeals: [], chats: [thread], chatId: thread.id };
+  return {
+    checklist: defaultChecklist(), checklistConfig: null, checklistDraft: null,
+    conversations: [], evaluations: {}, appeals: [], chats: [thread], chatId: thread.id,
+  };
 }
 
 export function loadState() {
@@ -27,6 +32,8 @@ export function loadState() {
       needsSave = true;
     }
     parsed.conversations = [];
+    parsed.checklistConfig ??= null;
+    parsed.checklistDraft ??= null;
     parsed.evaluations ??= {};
     parsed.appeals ??= [];
     const next = ensureChats(parsed);
@@ -46,12 +53,16 @@ function evaluate(conv, checklist) {
   return { ...evaluateConversation(conv, checklist), transcriptHash: conv.hash };
 }
 
-/** Use the backend's stored records. Existing evaluations are kept unless that transcript changed. */
+/** Use the backend's stored records. Existing evaluations are kept unless the transcript or the checklist changed. */
 export function setConversations(state, records) {
   state.conversations = records.map(fromRecord);
   for (const conv of state.conversations) {
     const prev = state.evaluations[conv.id];
-    if (!prev || prev.transcriptHash !== conv.hash) state.evaluations[conv.id] = evaluate(conv, state.checklist);
+    if (!prev || prev.transcriptHash !== conv.hash || prev.checklistId !== state.checklist.id) {
+      const next = evaluate(conv, state.checklist);
+      if (prev?.originalTotal != null && prev.transcriptHash === conv.hash) next.originalTotal = prev.originalTotal;
+      state.evaluations[conv.id] = next;
+    }
   }
   return state;
 }

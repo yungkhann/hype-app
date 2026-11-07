@@ -53,6 +53,21 @@ async function request(path, { method = "GET", body } = {}) {
   return data;
 }
 
+/** The API's message; for a rejected request body, the first field errors instead of "Request validation failed." */
+export function errorText(err) {
+  if (err?.code === "invalid_request" && Array.isArray(err.details)) {
+    const messages = err.details.slice(0, 3).map((d) => String(d?.msg ?? "").replace(/^Value error, /, "")).filter(Boolean);
+    if (messages.length) return messages.join(" ");
+  }
+  return err?.message || "Something went wrong.";
+}
+
+export const listChecklists = () => request("/cqa/checklists");
+export const getChecklist = (id) => request(`/cqa/checklists/${encodeURIComponent(id)}`);
+export const createChecklist = (body) => request("/cqa/checklists", { method: "POST", body });
+/** Saves a changed configuration as a new version; base_version guards against overwriting someone else's save. */
+export const updateChecklist = (id, body) => request(`/cqa/checklists/${encodeURIComponent(id)}`, { method: "PUT", body });
+
 export const cqaInfo = () => request("/cqa/info");
 export const listConversationRecords = () => request("/cqa/conversation-records");
 export const importGroup = (groupId) => request("/cqa/imports", { method: "POST", body: { group_id: groupId } });

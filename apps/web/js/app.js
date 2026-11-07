@@ -1,21 +1,37 @@
-import { GROUP_ID_RE, cqaInfo, importGroup, importJson, listConversationRecords } from "./api.js?v=tape2";
-import { activeChat, openChat, pushTurn, removeChat, startChat } from "./chat.js?v=tape2";
-import { decideAppeal, loadState, reevaluateAll, saveState, setConversations, submitAppeal } from "./store.js?v=tape2";
-import { mountMessageScroller } from "./message-scroller.js?v=tape1";
 import {
-  Bubble,
-  Button,
-  ChatPrompt,
-  Checkbox,
-  Field,
-  Input,
-  Message,
-  MessageScroller,
-  MessageScrollerItem,
-  Select,
-  Textarea,
-} from "./ui.js?v=tape1";
-import { byId, esc, uid } from "./util.js";
+  GROUP_ID_RE,
+  cqaInfo,
+  createChecklist,
+  errorText,
+  getChecklist,
+  importGroup,
+  importJson,
+  listChecklists,
+  listConversationRecords,
+  updateChecklist,
+} from "./api.js?v=tape3";
+import { activeChat, openChat, pushTurn, removeChat, startChat } from "./chat.js?v=tape2";
+import {
+  adoptChecklist,
+  appliedConfig,
+  changeNote,
+  dropCriterion,
+  editingConfig,
+  fmt,
+  putCriterion,
+  sectionName,
+  stageChange,
+} from "./checklist.js?v=tape3";
+import {
+  closeCriterionEditor,
+  isCriterionEditorDirty,
+  isCriterionEditorOpen,
+  openCriterionEditor,
+} from "./criterion-editor.js?v=tape3";
+import { decideAppeal, loadState, reevaluateAll, saveState, setConversations, submitAppeal } from "./store.js?v=tape3";
+import { mountMessageScroller } from "./message-scroller.js?v=tape1";
+import { Bubble, Button, ChatPrompt, Field, Message, MessageScroller, MessageScrollerItem } from "./ui.js?v=tape1";
+import { byId, esc } from "./util.js";
 
 const icon = {
   grid: '<svg viewBox="0 0 24 24"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>',
@@ -30,6 +46,8 @@ const icon = {
 let state = loadState();
 // Conversations come from the backend; until the first answer the list shows that it is loading.
 const conversationsStatus = { loading: true, error: "" };
+// Saving the checklist as a version; conflictVersion is set when someone else saved a newer version first.
+const checklistStatus = { saving: false, error: "", conflictVersion: null };
 
 function persist() {
   saveState(state);
@@ -95,6 +113,12 @@ function render() {
   else if (detail) view.innerHTML = viewDetail(detail[1]);
   else view.innerHTML = viewList();
   bind();
+  // Older links open the editor with #/checklist?edit=<id>.
+  const editId = h.startsWith("/checklist") ? new URLSearchParams(h.split("?")[1] || "").get("edit") : null;
+  if (editId) {
+    history.replaceState(null, "", "#/checklist");
+    openEditor(editId);
+  }
 }
 
 function viewChat() {
@@ -252,19 +276,20 @@ function viewDetail(id) {
           </div>
         </div>
         <div class="pane">
-          <div class="pane-head"><h2>Evaluation</h2><span class="hint">checklist ${esc(state.checklist.id)}</span></div>
+          <div class="pane-head"><h2>Evaluation</h2><span class="hint">checklist ${esc(state.checklist.label ?? state.checklist.id)}</span></div>
           <div class="sections">
             ${Object.entries(ev.sectionTotals).map(([name, v]) => `<span class="section-chip">${esc(name)} ${v.score}/${v.weight}</span>`).join("")}
           </div>
           ${ev.rows.map((row) => {
             const c = criterion(row.criterionId);
+            if (!c) return "";
             const appeal = openAppeals.find((a) => a.criterionId === row.criterionId);
             return `<article class="crit-card ${ev.severe.includes(row.criterionId) ? "severe" : ""}" id="crit-${esc(row.criterionId)}">
               <div class="crit-top">
                 <h3>${esc(c.title)}</h3>
                 <span class="badge ${row.answer === "na" ? "badge-info" : row.answer === "no" || Number(row.score) === 0 ? "badge-crit" : "badge-good"}">${esc(row.answer)} · ${esc(row.score)}/${esc(row.max)}</span>
               </div>
-              <p class="crit-meta">weight ${esc(c.weight)} → applied ${esc(row.weightApplied)} · ${esc(c.section)}</p>
+              <p class="crit-meta">weight ${esc(c.weight)} → applied ${esc(row.weightApplied)}${c.section ? ` · ${esc(c.section)}` : ""}</p>
               <p>${esc(row.explanation)}</p>
               ${row.naReason ? `<p class="hint">${esc(row.naReason)}</p>` : ""}
               ${row.examinedSpan ? `<p class="hint">Checked span: ${esc(row.examinedSpan.from)} → ${esc(row.examinedSpan.to)}</p>` : ""}
@@ -299,86 +324,184 @@ function answerControl(c, current) {
   }
   const min = c.scale.min ?? 0;
   const max = c.scale.max ?? 2;
+  const values = c.allowedScores?.length ? c.allowedScores : Array.from({ length: max - min + 1 }, (_, i) => min + i);
   const extras = c.naAllowed ? `<option value="na" ${current === "na" ? "selected" : ""}>na</option>` : "";
-  return `<select class="input" name="answer">${extras}${Array.from({ length: max - min + 1 }, (_, i) => min + i).map((n) => `<option ${String(n) === String(current) ? "selected" : ""}>${n}</option>`).join("")}</select>`;
+  return `<select class="input" name="answer">${extras}${values.map((n) => `<option ${String(n) === String(current) ? "selected" : ""}>${n}</option>`).join("")}</select>`;
 }
 
-function checklistEditId() {
-  const h = location.hash.slice(1) || "/";
-  if (!h.startsWith("/checklist")) return "";
-  const q = h.includes("?") ? h.slice(h.indexOf("?") + 1) : "";
-  return new URLSearchParams(q).get("edit") || "";
+// ---- Checklist -----------------------------------------------------------------------------------------
+// The page shows the unsaved draft when there is one, else the applied version. The criterion dialog changes
+// the draft; "Save & re-evaluate" stores it in ATLAS as the next checklist version (or creates the checklist).
+
+function checklistSubtitle() {
+  const source = state.checklist.source;
+  const parts = [source ? `${source.name} · version ${source.version}` : String(state.checklist.note ?? "").replace(/\.$/, "")];
+  if (state.checklistDraft) parts.push("unsaved changes");
+  return parts.join(" · ");
 }
 
-function criterionSheet(c) {
-  return `
-    <div class="sheet-root">
-      <button type="button" class="sheet-dim" data-action="close-edit" aria-label="Close"></button>
-      <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" data-sheet>
-        <form data-edit="${esc(c.id)}" data-edit-form>
-          <div class="sheet-head">
-            <div>
-              <h2 id="sheet-title" class="sheet-title">${esc(c.title)}</h2>
-              <p class="hint">${esc(c.id)}</p>
-            </div>
-            ${Checkbox({ field: "enabled", checked: c.enabled, label: "enabled" })}
-          </div>
-          <div class="sheet-grid">
-            ${Field("ID", Input({ field: "id", value: c.id }))}
-            ${Field("Title", Input({ field: "title", value: c.title }))}
-            ${Field("Section", Input({ field: "section", value: c.section }))}
-            ${Field("Weight", Input({ field: "weight", value: c.weight, type: "number" }))}
-            ${Field("Type", Select({ field: "answerType", value: c.answerType, options: [
-              { value: "yes_no", label: "yes/no" },
-              { value: "scale", label: "scale" },
-            ] }))}
-            ${Field("N/A", Select({ field: "naAllowed", value: String(c.naAllowed), options: [
-              { value: "true", label: "allowed" },
-              { value: "false", label: "off" },
-            ] }))}
-            ${Field("Severe", Select({ field: "severe", value: String(c.severe), options: [
-              { value: "true", label: "yes" },
-              { value: "false", label: "no" },
-            ] }))}
-          </div>
-          ${Field("Wording", Textarea({ field: "wording", value: c.wording }))}
-          <div class="sheet-actions">
-            ${Button("Remove", { variant: "destructive", attrs: `data-action="remove-criterion" data-id="${esc(c.id)}"` })}
-            <div class="ui-btn-row">
-              ${Button("Cancel", { attrs: 'data-action="close-edit"' })}
-              ${Button("Save", { variant: "primary", type: "submit" })}
-            </div>
-          </div>
-        </form>
-      </div>
+function checklistNotice() {
+  if (!checklistStatus.error) return "";
+  const reload = checklistStatus.conflictVersion
+    ? Button(`Discard my changes and load version ${esc(checklistStatus.conflictVersion)}`, { attrs: 'data-action="reload-checklist"' })
+    : "";
+  return `<div class="notice notice-error" role="alert" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+      <span>${esc(checklistStatus.error)}</span>${reload}
     </div>`;
 }
 
 function viewChecklist() {
-  const cs = state.checklist.criteria;
-  const editing = cs.find((c) => c.id === checklistEditId());
+  const config = editingConfig(state);
   return `
     <section class="library library-wide">
       <div class="page-head">
         <div>
           <h1 class="studio-title">Checklist</h1>
-          <p>${esc(state.checklist.note.replace(/\.$/, ""))}</p>
+          <p>${esc(checklistSubtitle())}</p>
         </div>
         <div class="ui-btn-row">
           ${Button("Add criterion", { attrs: 'data-action="add-criterion"' })}
-          ${Button("Save & re-evaluate", { variant: "primary", attrs: 'data-action="apply-checklist"' })}
+          ${Button(checklistStatus.saving ? "Saving…" : "Save & re-evaluate", { variant: "primary", attrs: `data-action="apply-checklist"${checklistStatus.saving ? " disabled" : ""}` })}
         </div>
       </div>
+      ${checklistNotice()}
       <div class="card-grid">
-        ${cs.map((c) => `
-          <button type="button" class="lib-card ${c.enabled ? "" : "is-off"} ${c.id === editing?.id ? "is-on" : ""}" data-open-edit="${esc(c.id)}">
-            <h3>${esc(c.title)}</h3>
-            <p>${esc(c.wording)}</p>
-            <span class="hint">${esc(c.section)} · weight ${esc(c.weight)}${c.naAllowed ? " · N/A" : ""}${c.severe ? " · severe" : ""}</span>
-          </button>`).join("")}
+        ${config.criteria.map((c) => {
+          const section = sectionName(config, c.section_id);
+          return `
+          <button type="button" class="lib-card ${c.enabled !== false ? "" : "is-off"}" data-open-edit="${esc(c.id)}">
+            <h3>${esc(c.name)}</h3>
+            <p>${esc(c.description)}</p>
+            <span class="hint">${section ? `${esc(section)} · ` : ""}weight ${esc(fmt(c.weight))}${c.na_allowed ? " · N/A" : ""}${c.severe_error_enabled ? " · severe" : ""}</span>
+          </button>`;
+        }).join("")}
       </div>
-      ${editing ? criterionSheet(editing) : ""}
     </section>`;
+}
+
+function focusCard(id) {
+  const card = [...document.querySelectorAll("[data-open-edit]")].find((el) => el.dataset.openEdit === id);
+  (card ?? document.querySelector("[data-action='add-criterion']"))?.focus();
+}
+
+/** Open the criterion dialog for one criterion of the draft (or the applied version), or for a new one (id null). */
+function openEditor(id) {
+  const config = editingConfig(state);
+  const criterion = id ? config.criteria.find((c) => c.id === id) : null;
+  if (id && !criterion) return;
+  const linked = state.checklistDraft ? !!state.checklistDraft.baseId : !!state.checklist.source;
+  const baseVersion = state.checklistDraft ? state.checklistDraft.baseVersion : state.checklist.source?.version;
+  const saveHint = linked
+    ? `Changes stay on the checklist page until you choose Save & re-evaluate, which saves “${state.checklist.title}” as version ${(baseVersion ?? 0) + 1}.`
+    : "Changes stay on the checklist page until you choose Save & re-evaluate, which saves this checklist in ATLAS as version 1.";
+  const changed = () => {
+    if (!checklistStatus.conflictVersion) checklistStatus.error = "";
+    persist();
+    render();
+  };
+  openCriterionEditor({
+    criterion,
+    config,
+    saveHint,
+    policy: config.scoring?.severe_error_policy ?? "flag_only",
+    onSave: ({ criterion: next, section, originalId }) => {
+      stageChange(state, (draft) => putCriterion(draft, originalId, next, section));
+      changed();
+      focusCard(next.id);
+    },
+    onRemove: (removedId) => {
+      stageChange(state, (draft) => dropCriterion(draft, removedId));
+      changed();
+      focusCard(null);
+    },
+  });
+}
+
+/** Save the draft as the next version (or create the checklist in ATLAS), then re-evaluate as before. */
+async function saveChecklist() {
+  if (checklistStatus.saving) return;
+  Object.assign(checklistStatus, { saving: true, error: "", conflictVersion: null });
+  render();
+  try {
+    const draft = state.checklistDraft;
+    let saved = null;
+    if (draft?.baseId) {
+      saved = await updateChecklist(draft.baseId, {
+        base_version: draft.baseVersion,
+        config: draft.config,
+        note: changeNote(appliedConfig(state), draft.config),
+      });
+    } else if (draft || !state.checklist.source) {
+      saved = await createChecklist({
+        name: state.checklist.title || "Checklist",
+        description: state.checklist.note ?? "",
+        origin: "custom",
+        config: editingConfig(state),
+        note: "Created in the checklist editor",
+      });
+    }
+    if (saved) adoptChecklist(state, saved);
+    state.checklistDraft = null;
+    checklistStatus.saving = false;
+    reevaluateAll(state);
+    persist();
+    location.hash = "#/";
+    render();
+  } catch (err) {
+    checklistStatus.saving = false;
+    checklistStatus.error = `The checklist was not saved. ${errorText(err)}`;
+    if (err.code === "stale_checklist") checklistStatus.conflictVersion = err.details?.latest_version ?? null;
+    render();
+  }
+}
+
+/** After a conflict: drop the draft and use the latest saved version. */
+async function reloadChecklist() {
+  const id = state.checklistDraft?.baseId ?? state.checklist.source?.id;
+  if (!id) return;
+  try {
+    adoptChecklist(state, await getChecklist(id));
+    state.checklistDraft = null;
+    Object.assign(checklistStatus, { error: "", conflictVersion: null });
+    reevaluateAll(state);
+    persist();
+  } catch (err) {
+    checklistStatus.error = `Could not load the checklist. ${errorText(err)}`;
+  }
+  render();
+}
+
+/**
+ * On start, use the checklist stored in ATLAS: the one used last, else the most recently updated one. Without
+ * any, the browser's checklist stays and the first "Save & re-evaluate" creates it. An unsaved draft is kept.
+ */
+async function syncChecklist() {
+  let list;
+  try {
+    list = await listChecklists();
+  } catch {
+    return; // The page keeps the applied checklist; saving reports an unreachable API.
+  }
+  const current = state.checklist.source?.id;
+  if (current && !list.some((s) => s.id === current)) {
+    // Deleted in ATLAS: keep its criteria unlinked, so the next save creates it again.
+    state.checklist.source = null;
+    if (state.checklistDraft?.baseId === current) state.checklistDraft.baseId = null;
+  }
+  const pick = list.find((s) => s.id === state.checklist.source?.id) ?? list.find((s) => !s.archived);
+  const source = state.checklist.source;
+  if (!pick || (source?.id === pick.id && source.version === pick.latest_version && state.checklistConfig)) {
+    persist();
+    return;
+  }
+  try {
+    adoptChecklist(state, await getChecklist(pick.id));
+  } catch {
+    return;
+  }
+  reevaluateAll(state);
+  persist();
+  render();
 }
 
 function viewReview() {
@@ -410,27 +533,6 @@ function viewReview() {
     </section>`;
 }
 
-function collectChecklist() {
-  document.querySelectorAll("[data-edit]").forEach((card) => {
-    const id = card.getAttribute("data-edit");
-    const c = criterion(id);
-    if (!c) return;
-    const val = (field) => card.querySelector(`[data-field="${field}"]`);
-    c.id = val("id").value.trim() || c.id;
-    c.title = val("title").value.trim();
-    c.section = val("section").value.trim();
-    c.weight = Number(val("weight").value);
-    c.answerType = val("answerType").value;
-    c.naAllowed = val("naAllowed").value === "true";
-    c.severe = val("severe").value === "true";
-    c.enabled = val("enabled").checked;
-    c.wording = val("wording").value;
-    if (c.answerType === "yes_no") c.scale = { yes: 1, no: 0 };
-    else c.scale = { min: 0, max: 2, step: 1 };
-    card.setAttribute("data-edit", c.id);
-  });
-}
-
 function bind() {
   try {
     mountMessageScroller(document.querySelector('[data-slot="message-scroller-provider"]'));
@@ -452,43 +554,9 @@ function bind() {
     const q = e.currentTarget.q.value.trim();
     location.hash = q ? `/?q=${encodeURIComponent(q)}` : "/";
   });
-  document.querySelector("[data-action='add-criterion']")?.addEventListener("click", () => {
-    const id = uid("c");
-    state.checklist.criteria.push({
-      id,
-      section: "Custom",
-      title: "New criterion",
-      wording: "Replace this wording from the organizer checklist.",
-      weight: 5,
-      answerType: "yes_no",
-      scale: { yes: 1, no: 0 },
-      naAllowed: true,
-      enabled: true,
-      severe: false,
-      signals: { positive: [], negative: [] },
-    });
-    persist();
-    location.hash = `#/checklist?edit=${id}`;
-    render();
-  });
-  document.querySelector("[data-action='apply-checklist']")?.addEventListener("click", () => {
-    state.checklist.id = `cqa-${Date.now().toString(36)}`;
-    reevaluateAll(state);
-    persist();
-    location.hash = "#/";
-    render();
-  });
-  document.querySelector("[data-edit-form]")?.addEventListener("submit", (e) => {
-    e.preventDefault();
-    collectChecklist();
-    persist();
-    location.hash = "#/checklist";
-    render();
-  });
-  const titleField = document.querySelector("[data-edit] [data-field='title']");
-  titleField?.focus();
-  if (titleField) titleField.select();
-  document.body.style.overflow = document.querySelector(".sheet-root") ? "hidden" : "";
+  document.querySelector("[data-action='add-criterion']")?.addEventListener("click", () => openEditor(null));
+  document.querySelector("[data-action='apply-checklist']")?.addEventListener("click", () => saveChecklist());
+  document.querySelector("[data-action='reload-checklist']")?.addEventListener("click", () => reloadChecklist());
   document.querySelectorAll("[data-jump]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const node = document.getElementById(`msg-${btn.dataset.jump}`);
@@ -777,31 +845,30 @@ document.addEventListener(
       return;
     }
     const openEdit = e.target.closest("[data-open-edit]");
-    if (openEdit && !e.target.closest("[data-sheet]")) {
-      location.hash = `#/checklist?edit=${openEdit.getAttribute("data-open-edit")}`;
-      return;
-    }
-    if (e.target.closest("[data-action='close-edit']")) {
-      location.hash = "#/checklist";
-      return;
-    }
-    const removeCrit = e.target.closest("[data-action='remove-criterion']");
-    if (removeCrit) {
-      e.preventDefault();
-      state.checklist.criteria = state.checklist.criteria.filter((c) => c.id !== removeCrit.dataset.id);
-      persist();
-      location.hash = "#/checklist";
-      if (!location.hash.includes("edit=")) render();
+    if (openEdit) {
+      openEditor(openEdit.getAttribute("data-open-edit"));
     }
   },
   true
 );
 
-document.addEventListener("keydown", (e) => {
-  if (e.key !== "Escape" || !checklistEditId()) return;
-  location.hash = "#/checklist";
+window.addEventListener("hashchange", () => {
+  // Back/forward while the criterion dialog is open: it closes, unless that would drop unsaved changes.
+  if (isCriterionEditorOpen() && navKey() !== "checklist") {
+    const dirty = isCriterionEditorDirty();
+    closeCriterionEditor();
+    if (dirty) {
+      location.hash = "#/checklist";
+      return;
+    }
+  }
+  render();
 });
-
-window.addEventListener("hashchange", render);
+window.addEventListener("beforeunload", (e) => {
+  if (!isCriterionEditorDirty()) return;
+  e.preventDefault();
+  e.returnValue = "";
+});
 render();
 reloadConversations();
+syncChecklist();

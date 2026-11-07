@@ -1,18 +1,28 @@
 import { round } from "./util.js";
 
+/** An unweighted critical-error indicator: answered yes/no ("yes" = critical error found), never scored. */
+export function isIndicator(criterion) {
+  return criterion.answerType === "yes_no" && !!criterion.severe && Number(criterion.weight) === 0;
+}
+
+function scoreRange(criterion) {
+  const scores = criterion.allowedScores;
+  if (scores?.length) return { min: Number(scores[0]), max: Number(scores.at(-1)) };
+  return { min: Number(criterion.scale?.min ?? 0), max: Number(criterion.scale?.max ?? 1) };
+}
+
 export function maxScore(criterion) {
-  if (criterion.answerType === "yes_no") return Number(criterion.scale.yes ?? 1);
-  return Number(criterion.scale.max ?? 1);
+  if (criterion.answerType === "yes_no") return Number(criterion.scale?.yes ?? 1);
+  return scoreRange(criterion).max;
 }
 
 export function scoreFromAnswer(criterion, answer) {
   if (answer === "na") return 0;
   if (criterion.answerType === "yes_no") {
-    return answer === "yes" ? Number(criterion.scale.yes ?? 1) : Number(criterion.scale.no ?? 0);
+    return answer === "yes" ? Number(criterion.scale?.yes ?? 1) : Number(criterion.scale?.no ?? 0);
   }
   const n = Number(answer);
-  const min = Number(criterion.scale.min ?? 0);
-  const max = Number(criterion.scale.max ?? 1);
+  const { min, max } = scoreRange(criterion);
   if (Number.isNaN(n)) return min;
   return Math.min(max, Math.max(min, n));
 }
@@ -44,10 +54,12 @@ export function computeResult(checklist, rows) {
     const weight = applied[c.id] ?? 0;
     const weighted = max ? (raw / max) * weight : 0;
     total += weighted;
-    if (!sections[c.section]) sections[c.section] = { score: 0, weight: 0 };
-    sections[c.section].score += weighted;
-    sections[c.section].weight += weight;
-    if (c.severe && row.answer === "no") severe.push(c.id);
+    if (c.section) {
+      if (!sections[c.section]) sections[c.section] = { score: 0, weight: 0 };
+      sections[c.section].score += weighted;
+      sections[c.section].weight += weight;
+    }
+    if (c.severe && row.answer === (isIndicator(c) ? "yes" : "no")) severe.push(c.id);
     return { ...row, score: round(raw), max, weightApplied: round(weight), weighted: round(weighted) };
   });
   const rounding = checklist.rounding ?? 2;
@@ -82,8 +94,12 @@ export function seedAnswers(conversation, checklist) {
       answers[c.id] = "na";
       continue;
     }
-    if (c.answerType === "yes_no") answers[c.id] = hit && !miss ? "yes" : "no";
-    else answers[c.id] = hit && !miss ? String(c.scale.max) : miss ? String(c.scale.min) : String(Math.ceil(((c.scale.min ?? 0) + (c.scale.max ?? 2)) / 2));
+    if (isIndicator(c)) answers[c.id] = miss ? "yes" : "no";
+    else if (c.answerType === "yes_no") answers[c.id] = hit && !miss ? "yes" : "no";
+    else if (c.allowedScores?.length) {
+      const s = c.allowedScores;
+      answers[c.id] = String(hit && !miss ? s.at(-1) : miss ? s[0] : s[Math.floor((s.length - 1) / 2)]);
+    } else answers[c.id] = hit && !miss ? String(c.scale.max) : miss ? String(c.scale.min) : String(Math.ceil(((c.scale.min ?? 0) + (c.scale.max ?? 2)) / 2));
   }
   return { answers, findMsg };
 }
@@ -115,6 +131,11 @@ export function evaluateConversation(conversation, checklist) {
 
 function explanationFor(criterion, answer, language) {
   if (answer === "na") return "Not applicable: the situation required by this criterion did not occur.";
+  if (isIndicator(criterion)) {
+    return answer === "yes"
+      ? `Critical error found: “${criterion.title}”. Evidence is the cited utterance (${language}).`
+      : `No critical error found for “${criterion.title}”.`;
+  }
   if (answer === "yes" || Number(answer) === Number(criterion.scale?.max)) {
     return `Operator met “${criterion.title}”. Evidence is the cited utterance (${language}).`;
   }
