@@ -74,6 +74,10 @@ const icon = {
 let state = loadState();
 // Conversations come from the backend; until the first answer the list shows that it is loading.
 const conversationsStatus = { loading: true, error: "" };
+// Set while an import is on its way and the transcript is not known yet.
+let pendingOpen = null;
+// Transcripts built from a JSON file, kept if the API has not stored them yet.
+const localPreview = new Map();
 // Saving the checklist as a version; conflictVersion is set when someone else saved a newer version first.
 const checklistStatus = { saving: false, error: "", conflictVersion: null };
 // Appeals come from the backend (state.appeals); while GPT reassesses one, the list is reloaded every few seconds.
@@ -102,12 +106,8 @@ async function finishSetup(payload) {
   state.onboardVersion = 2;
   persist();
   if (payload) {
-    try {
-      await importJson(payload);
-      setConversations(state, await listConversationRecords());
-    } catch (err) {
-      conversationsStatus.error = errorText(err);
-    }
+    await loadIntoDialog(() => importJson(payload), payloadConversationId(payload), payload);
+    return;
   }
   const id = state.conversations[0]?.id;
   const next = id ? convHref(id) : "#/";
@@ -208,7 +208,24 @@ async function reloadConversations() {
   } finally {
     conversationsStatus.loading = false;
   }
+  keepLocalPreviews();
   render();
+}
+
+function stageLocalConversations(list) {
+  for (const conv of list) {
+    if (!conv?.id) continue;
+    localPreview.set(conv.id, conv);
+    const index = state.conversations.findIndex((item) => item.id === conv.id);
+    if (index >= 0) state.conversations[index] = conv;
+    else state.conversations.unshift(conv);
+  }
+}
+
+function keepLocalPreviews() {
+  for (const conv of localPreview.values()) {
+    if (!state.conversations.some((item) => item.id === conv.id)) state.conversations.unshift(conv);
+  }
 }
 
 /** Show a timestamp as the source wrote it: MM:SS as is, ISO 8601 by its own clock time (no time-zone shift). */
@@ -502,7 +519,7 @@ function transcriptHtml(messages) {
   return `<div class="transcript">
             ${messages.map((m, i) => {
               const align = m.speaker === "operator" ? "end" : m.speaker === "client" ? "start" : "center";
-              const variant = m.speaker === "operator" ? "brand" : m.speaker === "client" ? "secondary" : "muted";
+              const variant = m.speaker === "operator" ? "default" : m.speaker === "client" ? "paper" : "muted";
               const bubbleAlign = align === "center" ? "start" : align;
               return `
               <article class="msg" id="msg-${esc(m.id)}" data-msg="${esc(m.id)}" data-align="${align}">
@@ -536,9 +553,76 @@ function audioHtml(conv) {
   return wrap(`${link}${note ? `<p class="hint">${esc(note)}</p>` : ""}`);
 }
 
+function waitingForConversation(id) {
+  if (conversationsStatus.loading) return true;
+  if (!pendingOpen) return false;
+  return pendingOpen.id ? pendingOpen.id === id : id === "_loading";
+}
+
+/** Placeholders until a transcript exists. The JSON chat itself is drawn as soon as the file is read. */
+function transcriptSkeleton() {
+  const sides = ["start", "end", "start", "end", "start"];
+  return `<div class="transcript transcript-wait" role="status" aria-busy="true" aria-label="${esc(t("detail.loading"))}">
+    ${sides.map((side) => `<div class="sk-row${side === "end" ? " is-end" : ""}"><span class="sk-bubble"></span></div>`).join("")}
+  </div>`;
+}
+
+function evaluationPending(id) {
+  if (evaluationUi.syncing.has(id)) return true;
+  if (evaluationUi.checklists === null || !evaluationUi.history[id]) return true;
+  // A failed fetch is not a finished score pane: keep the skeleton until the data arrives.
+  return !!(evaluationUi.checklistsError || evaluationUi.errors[id]);
+}
+
+/** Thinking mascot and card placeholders in the score pane, while that pane's data is still on the way. */
+function evalSkeleton() {
+  return `
+    <div class="pane-head"><h2>${esc(t("eval.title"))}</h2></div>
+    <div class="eval-wait" role="status" aria-busy="true" aria-label="${esc(t("eval.loadingHistory"))}">
+      <div class="sk-stack" aria-hidden="true">
+        <span class="sk-card"></span>
+        <span class="sk-card sk-card-short"></span>
+        <span class="sk-card sk-card-mid"></span>
+        <span class="sk-card"></span>
+        <span class="sk-card sk-card-short"></span>
+      </div>
+      <img class="think-mascot" src="img/mascot-think.gif?v=3" alt="" />
+    </div>`;
+}
+
+/** Dialog shell used only before any transcript is known. The score side stays a skeleton. */
+function viewDetailShell(id) {
+  const real = id && id !== "_loading";
+  if (real && needsEvaluationSync(id)) {
+    syncEvaluationPane(id).then(() => {
+      if (currentDetailId() === id) render();
+    });
+  }
+  const title = real ? esc(id) : esc(t("detail.loading"));
+  return `
+    <section class="page-wide">
+      <div class="pane-head">
+        <div>
+          <a href="#/">${esc(t("nav.home"))}</a>
+          <h2 style="margin-top:4px">${title}</h2>
+        </div>
+        ${heroHtml("—", t("detail.loading"), "")}
+      </div>
+      <div class="split">
+        <div class="pane">
+          <div class="pane-head"><h2>${esc(t("detail.transcript"))}</h2></div>
+          ${transcriptSkeleton()}
+        </div>
+        <div class="pane is-eval-wait">
+          ${evalSkeleton()}
+        </div>
+      </div>
+    </section>`;
+}
+
 function viewDetail(id) {
   const conv = state.conversations.find((c) => c.id === id);
-  if (!conv) return `<section class="page"><p>${esc(t(conversationsStatus.loading ? "detail.loading" : "detail.notFound"))}</p></section>`;
+  if (!conv) return waitingForConversation(id) ? viewDetailShell(id) : `<section class="page"><p>${esc(t("detail.notFound"))}</p></section>`;
   if (needsEvaluationSync(id)) {
     syncEvaluationPane(id).then(() => {
       if (currentDetailId() === id) render();
@@ -562,8 +646,8 @@ function viewDetail(id) {
           ${audioHtml(conv)}
           ${transcriptHtml(conv.messages)}
         </div>
-        <div class="pane">
-          ${evaluationPane(id, shown)}
+        <div class="pane${evaluationPending(id) ? " is-eval-wait" : ""}">
+          ${evaluationPending(id) ? evalSkeleton() : evaluationPane(id, shown)}
         </div>
       </div>
     </section>`;
@@ -2005,44 +2089,112 @@ function jsonError(err, text) {
   return t("imp.lineCol", { message, line: before.split("\n").length, column: before.length - before.lastIndexOf("\n") });
 }
 
+const RAW_SPEAKERS = {
+  client: "client", customer: "client", клиент: "client",
+  operator: "operator", agent: "operator", оператор: "operator",
+  bot: "bot", бот: "bot",
+  system: "system", система: "system",
+};
+
+function conversationFromRaw(record) {
+  let transcript = record.transcript ?? record.messages;
+  if (typeof transcript === "string") {
+    try { transcript = JSON.parse(transcript); } catch { transcript = []; }
+  }
+  const lines = Array.isArray(transcript) ? transcript : [];
+  const channel = String(record.channel || "");
+  return {
+    id: String(record.conversation_id || record.id || ""),
+    groupIds: [],
+    language: String(record.language || "").toLowerCase(),
+    source: /voice|call|звон/i.test(channel) ? "call" : "chat",
+    channel,
+    operator: "",
+    audioUrl: record.audio_url ?? null,
+    messages: lines.map((line, index) => ({
+      id: String(line?.id || `m${index + 1}`),
+      ts: line?.timestamp ?? line?.ts ?? "",
+      speaker: RAW_SPEAKERS[String(line?.speaker || "").trim().toLowerCase()] || "unknown",
+      text: line?.text == null ? "" : String(line.text),
+    })),
+  };
+}
+
+function payloadRecords(payload) {
+  if (!payload || typeof payload !== "object") return [];
+  if (Array.isArray(payload)) return payload;
+  const records = payload?.data?.records ?? payload?.records;
+  if (Array.isArray(records)) return records;
+  if (payload.transcript || payload.messages || payload.conversation_id) return [payload];
+  return [];
+}
+
+function conversationsFromPayload(payload) {
+  return payloadRecords(payload).filter((record) => record && typeof record === "object").map(conversationFromRaw).filter((conv) => conv.id);
+}
+
+function payloadConversationId(payload) {
+  return conversationsFromPayload(payload)[0]?.id || "";
+}
+
+/** Show the JSON as a chat at once, then import and score it behind that dialog. */
+async function loadIntoDialog(task, hintedId, payload = null) {
+  const locals = conversationsFromPayload(payload);
+  if (locals.length) stageLocalConversations(locals);
+  const id = hintedId || locals[0]?.id || "";
+  pendingOpen = locals.length ? null : { id, error: "" };
+  const href = id ? convHref(id) : "#/conversations/_loading";
+  importDialog?.close();
+  uploadDialog?.close();
+  if (location.hash !== href) location.hash = href;
+  else render();
+  try {
+    const run = await task();
+    await reloadConversations();
+    const here = currentDetailId();
+    const stillHere = here === id || here === "_loading";
+    if (!stillHere) {
+      pendingOpen = null;
+      return;
+    }
+    const landed = (id && state.conversations.find((c) => c.id === id)) || locals[0] || state.conversations[0];
+    if (!landed) {
+      pendingOpen = { id, error: run?.issues?.[0]?.message || t("detail.notFound") };
+      render();
+      return;
+    }
+    pendingOpen = null;
+    const next = convHref(landed.id);
+    if (location.hash !== next) location.hash = next;
+    else render();
+  } catch (err) {
+    if (!locals.length) pendingOpen = { id, error: errorText(err) };
+    if (currentDetailId() === id || currentDetailId() === "_loading") render();
+  }
+}
+
 async function runImport(form) {
   const status = form.querySelector("[data-import-status]");
-  const submit = form.querySelector('button[type="submit"]');
   let call;
-  let pending;
+  let hinted = "";
+  let payload = null;
   if (form.dataset.importForm === "api") {
     const groupId = form.group_id.value.trim();
     if (!groupId) return setImportStatus(status, "error", esc(t("imp.needGroup")));
     if (!GROUP_ID_RE.test(groupId)) return setImportStatus(status, "error", esc(t("imp.badGroup")));
     call = () => importGroup(groupId);
-    pending = t("imp.requesting", { group: groupId });
   } else {
     const text = form.json.value;
     if (!text.trim()) return setImportStatus(status, "error", esc(t("imp.needJson")));
-    let payload;
     try {
       payload = JSON.parse(text);
     } catch (err) {
       return setImportStatus(status, "error", esc(t("imp.notJson", { error: jsonError(err, text) })));
     }
+    hinted = payloadConversationId(payload);
     call = () => importJson(payload);
-    pending = t("imp.validating");
   }
-  const label = submit.textContent;
-  submit.disabled = true;
-  submit.textContent = t("imp.importing");
-  setImportStatus(status, "info", esc(pending));
-  try {
-    const run = await call();
-    setImportStatus(status, run.status === "failed" ? "error" : run.status === "partial" ? "warn" : "ok", importSummary(run));
-    if (navKey() !== "list") location.hash = "#/";
-    await reloadConversations();
-  } catch (err) {
-    setImportStatus(status, "error", esc(errorText(err)));
-  } finally {
-    submit.disabled = false;
-    submit.textContent = label;
-  }
+  await loadIntoDialog(call, hinted, payload);
 }
 
 async function refreshSourceHint() {
@@ -2135,8 +2287,15 @@ async function takeJsonFile(file) {
   const root = uploadDialog?.querySelector("[data-file-drop]");
   await acceptDroppedFile(root, file, async (text) => {
     if (!uploadDialog?.open) return;
-    uploadDialog.close();
-    openImport(text, "json");
+    let payload;
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      uploadDialog.close();
+      openImport(text, "json");
+      return;
+    }
+    await loadIntoDialog(() => importJson(payload), payloadConversationId(payload), payload);
   });
 }
 
