@@ -1,6 +1,8 @@
 // ATLAS backend client. Conversations are imported and stored by the backend (/api/v1/cqa); the browser never
 // calls the organizers' API itself, so its signed URL stays on the server.
 
+import { hasKey, t } from "./i18n.js?v=tape5";
+
 export const GROUP_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 
 /** Where the API lives: <meta name="cqa-api"> when set, else :8000 on localhost, else api.<this domain>. */
@@ -33,7 +35,7 @@ async function request(path, { method = "GET", body } = {}) {
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
-    throw new ApiError(`Cannot reach the ATLAS API at ${base}. Check that the API is running.`, { code: "api_unreachable" });
+    throw new ApiError(t("error.api_unreachable", { base }), { code: "api_unreachable" });
   }
   const text = await response.text();
   let data = null;
@@ -44,7 +46,7 @@ async function request(path, { method = "GET", body } = {}) {
   }
   if (!response.ok) {
     const error = data?.error;
-    throw new ApiError(error?.message || `The ATLAS API answered HTTP ${response.status}.`, {
+    throw new ApiError(error?.message || t("error.http", { status: response.status }), {
       status: response.status,
       code: error?.code || "",
       details: error?.details ?? null,
@@ -53,13 +55,17 @@ async function request(path, { method = "GET", body } = {}) {
   return data;
 }
 
-/** The API's message; for a rejected request body, the first field errors instead of "Request validation failed." */
+/**
+ * A readable message: a translation for the error codes people act on, else the API's own message; for a rejected
+ * request body, the first field errors instead of "Request validation failed."
+ */
 export function errorText(err) {
+  if (err?.code && hasKey(`error.${err.code}`)) return t(`error.${err.code}`, { base: apiBase() });
   if (err?.code === "invalid_request" && Array.isArray(err.details)) {
     const messages = err.details.slice(0, 3).map((d) => String(d?.msg ?? "").replace(/^Value error, /, "")).filter(Boolean);
     if (messages.length) return messages.join(" ");
   }
-  return err?.message || "Something went wrong.";
+  return err?.message || t("error.generic");
 }
 
 export const listChecklists = () => request("/cqa/checklists");
@@ -74,6 +80,18 @@ export const listChecklistVersions = (id) => request(`/cqa/checklists/${encodeUR
 export const startEvaluation = (body) => request("/cqa/evaluations", { method: "POST", body });
 export const getEvaluation = (id) => request(`/cqa/evaluations/${encodeURIComponent(id)}`);
 export const listEvaluations = (params) => request(`/cqa/evaluations?${new URLSearchParams(params)}`);
+
+/** Playable source for a call recording (the stored audio_url is the organizers' player page, not an audio file). */
+export const getAudio = (conversationId) => request(`/cqa/conversations/${encodeURIComponent(conversationId)}/audio`);
+
+// Appeals: submitting one makes the backend ask GPT for a separate reassessment; the manager then decides.
+export const listAppeals = (params = {}) => request(`/cqa/appeals?${new URLSearchParams(params)}`);
+export const getAppeal = (id) => request(`/cqa/appeals/${encodeURIComponent(id)}`);
+export const createAppeal = (body) => request("/cqa/appeals", { method: "POST", body });
+/** Retry GPT's reassessment after it failed (the backend limits the number of attempts). */
+export const reassessAppeal = (id) => request(`/cqa/appeals/${encodeURIComponent(id)}/reassess`, { method: "POST" });
+/** {decision: "confirm" | "accept" | "override", explanation, reviewer, override?: {value, is_na, severe_error}} */
+export const decideAppeal = (id, body) => request(`/cqa/appeals/${encodeURIComponent(id)}/decision`, { method: "POST", body });
 
 export const cqaInfo = () => request("/cqa/info");
 export const listConversationRecords = () => request("/cqa/conversation-records");

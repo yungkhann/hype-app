@@ -68,6 +68,9 @@ class Settings(BaseSettings):
     cqa_openai_max_attempts: int = Field(default=2, ge=1, le=3)
     # Sent when the model accepts it; reasoning models that reject it are retried without it automatically.
     cqa_openai_temperature: float | None = 0.0
+    # Adapter that reassesses an appealed criterion (a separate GPT call per appeal; it only recommends, the
+    # manager decides). Only adapters that implement `reassess` qualify; the development mock does not.
+    cqa_reassessor: str = "openai"
     # The http adapter POSTs the evaluation request here. Non-loopback hosts require the explicit opt-in
     # below, so transcripts are never sent off this machine by accident.
     cqa_evaluator_url: str | None = None

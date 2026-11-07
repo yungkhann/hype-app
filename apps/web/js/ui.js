@@ -1,3 +1,4 @@
+import { t } from "./i18n.js?v=tape5";
 import { esc } from "./util.js";
 
 export function Label(text) {
@@ -78,7 +79,7 @@ export function MessageScroller(itemsHtml) {
         <div class="ms-content" data-slot="message-scroller-content" aria-live="polite">${itemsHtml}</div>
       </div>
       <button type="button" class="ms-jump" data-slot="message-scroller-button" hidden>
-        ${chevronDown}<span>Jump to latest</span>
+        ${chevronDown}<span>${esc(t("chat.jumpLatest"))}</span>
       </button>
     </div>
   </div>`;
@@ -103,10 +104,10 @@ export function InputGroupButton({ label, icon = sendIcon, variant = "default", 
 export function ChatPrompt() {
   return InputGroup({
     children:
-      InputGroupInput({ placeholder: "Ask about a score, case, or appeal…" }) +
+      InputGroupInput({ placeholder: t("chat.placeholder") }) +
       InputGroupAddon({
         align: "inline-end",
-        children: InputGroupButton({ label: "Send" }),
+        children: InputGroupButton({ label: t("chat.send") }),
       }),
   });
 }

@@ -309,10 +309,13 @@ def create_appeal(body: AppealCreate, cqa: Cqa) -> Appeal:
 def list_appeals(
     cqa: Cqa,
     status_: Annotated[Literal["pending", "confirmed", "overridden"] | None, Query(alias="status")] = None,
+    stage: Annotated[Literal["reassessing", "ready_for_review", "reassessment_failed", "decided"] | None,
+                     Query()] = None,
     evaluation_id: Annotated[str | None, Query(pattern=ID_PATTERN)] = None,
     conversation_id: Annotated[str | None, Query(max_length=128)] = None,
 ) -> list[Appeal]:
-    return cqa.appeals.list(status=status_, evaluation_id=evaluation_id, conversation_id=conversation_id)
+    return cqa.appeals.list(status=status_, stage=stage, evaluation_id=evaluation_id,
+                            conversation_id=conversation_id)
 
 
 @router.get("/appeals/{appeal_id}", response_model=AppealDetail)
@@ -320,6 +323,13 @@ def get_appeal(appeal_id: HexId, cqa: Cqa) -> AppealDetail:
     return cqa.appeals.detail(appeal_id)
 
 
+@router.post("/appeals/{appeal_id}/reassess", response_model=Appeal, status_code=status.HTTP_202_ACCEPTED)
+def reassess_appeal(appeal_id: HexId, cqa: Cqa) -> Appeal:
+    """Retry GPT's reassessment after a failure (a limited number of times). Poll the appeal for the result."""
+    return cqa.appeals.reassess(appeal_id)
+
+
 @router.post("/appeals/{appeal_id}/decision", response_model=Appeal)
 def decide_appeal(appeal_id: HexId, body: AppealDecisionIn, cqa: Cqa) -> Appeal:
+    """The manager's decision: confirm, accept GPT's recommendation, or override with another allowed answer."""
     return cqa.appeals.decide(appeal_id, body)

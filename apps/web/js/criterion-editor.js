@@ -3,7 +3,8 @@
 // caller (onSave / onRemove); the caller keeps it in the checklist draft, and "Save checklist" stores the
 // draft as a new checklist version.
 
-import { Button } from "./ui.js?v=tape1";
+import { t } from "./i18n.js?v=tape5";
+import { Button } from "./ui.js?v=tape5";
 import { esc } from "./util.js";
 import {
   CRITERION_ID_RE,
@@ -15,10 +16,10 @@ import {
   scalePoints,
   sectionName,
   weightSum,
-} from "./checklist.js?v=tape3";
+} from "./checklist.js?v=tape5";
 
 const closeIcon = '<svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
-const TYPE_LABELS = { binary: "Yes / No", numeric: "Numeric", scale: "Scale", options: "Options" };
+const typeLabel = (type) => t(`ce.type.${type}`);
 const FIELDS = ["title", "id", "section", "scores", "weight", "wording", "naRule", "criticalRule"];
 
 let dialog = null;
@@ -64,13 +65,13 @@ function newForm(config) {
 
 function parseWeight(text) {
   const raw = String(text ?? "").trim().replace(",", ".");
-  if (!raw) return { error: "Enter the weight as a percentage, for example 20." };
-  if (raw.startsWith("-")) return { error: "The weight can't be negative." };
-  if (!/^\d+(\.\d+)?$/.test(raw)) return { error: "Enter a number, for example 20 or 12.5." };
+  if (!raw) return { error: t("ce.weight.empty") };
+  if (raw.startsWith("-")) return { error: t("ce.weight.negative") };
+  if (!/^\d+(\.\d+)?$/.test(raw)) return { error: t("ce.weight.nan") };
   const value = Number(raw);
-  if (value > 100) return { error: "The weight is a share of 100%, so it can't be above 100." };
+  if (value > 100) return { error: t("ce.weight.over") };
   if (value === 0) {
-    return { error: "Weight 0 is only for an unweighted critical-error indicator. Enter a weight above 0, or set Critical error to Indicator." };
+    return { error: t("ce.weight.zero") };
   }
   return { value };
 }
@@ -78,16 +79,16 @@ function parseWeight(text) {
 function errorsFor(form) {
   const errors = {};
   const title = form.title.trim();
-  if (!title) errors.title = "Enter a title.";
-  else if (title.length > 200) errors.title = "Use at most 200 characters.";
+  if (!title) errors.title = t("ce.err.title");
+  else if (title.length > 200) errors.title = t("ce.err.max", { max: 200 });
   const id = form.id.trim();
-  if (!id) errors.id = "Enter an ID.";
+  if (!id) errors.id = t("ce.err.id");
   else if (!CRITERION_ID_RE.test(id)) {
-    errors.id = "Use lowercase letters, digits, “-” or “_”, starting with a letter or digit (at most 48 characters).";
+    errors.id = t("ce.err.idFormat");
   } else if (ed.config.criteria.some((c) => c.id === id && c.id !== ed.original?.id)) {
-    errors.id = "Another criterion already uses this ID.";
+    errors.id = t("ce.err.idTaken");
   }
-  if (form.section.trim().length > 200) errors.section = "Use at most 200 characters.";
+  if (form.section.trim().length > 200) errors.section = t("ce.err.max", { max: 200 });
   if (form.critical !== "indicator") {
     const weight = parseWeight(form.weight);
     if (weight.error) errors.weight = weight.error;
@@ -96,9 +97,9 @@ function errorsFor(form) {
     const scores = parseAllowedScores(form.scores);
     if (scores.error) errors.scores = scores.error;
   }
-  if (form.wording.length > 4000) errors.wording = "Use at most 4000 characters.";
-  if (form.naRule.length > 2000) errors.naRule = "Use at most 2000 characters.";
-  if (form.criticalRule.length > 2000) errors.criticalRule = "Use at most 2000 characters.";
+  if (form.wording.length > 4000) errors.wording = t("ce.err.max", { max: 4000 });
+  if (form.naRule.length > 2000) errors.naRule = t("ce.err.max", { max: 2000 });
+  if (form.criticalRule.length > 2000) errors.criticalRule = t("ce.err.max", { max: 2000 });
   return errors;
 }
 
@@ -173,51 +174,51 @@ function html() {
   <form class="ce-form" data-ce-form novalidate>
     <header class="ce-head">
       <div>
-        <h2 id="ce-dialog-title" class="sheet-title">${ed.isNew ? "Add criterion" : "Edit criterion"}</h2>
+        <h2 id="ce-dialog-title" class="sheet-title">${esc(t(ed.isNew ? "ce.add" : "ce.edit"))}</h2>
         <p class="hint">${esc(ed.ctx.saveHint)}</p>
       </div>
-      <button type="button" class="dialog-close" data-ce-close aria-label="Close">${closeIcon}</button>
+      <button type="button" class="dialog-close" data-ce-close aria-label="${esc(t("common.close"))}">${closeIcon}</button>
     </header>
 
     <div class="ce-body">
       <section class="ce-group" aria-labelledby="ce-g-basic">
-        <h3 class="ce-group-title" id="ce-g-basic">Basic information</h3>
-        ${textField("title", "Title", f.title, { attrs: 'maxlength="200"' })}
+        <h3 class="ce-group-title" id="ce-g-basic">${esc(t("ce.basic"))}</h3>
+        ${textField("title", esc(t("ce.title")), f.title, { attrs: 'maxlength="200"' })}
         <div class="ce-row">
-          ${textField("id", "ID", f.id, {
-            hint: "Lowercase letters, digits, - or _. Evaluations and appeals refer to it.",
+          ${textField("id", esc(t("ce.id")), f.id, {
+            hint: esc(t("ce.idHint")),
             attrs: 'maxlength="48" spellcheck="false" autocapitalize="off"',
           })}
-          ${textField("section", "Section", f.section, {
-            hint: "Optional. Groups criteria in results.",
-            placeholder: "No section",
+          ${textField("section", esc(t("ce.section")), f.section, {
+            hint: esc(t("ce.sectionHint")),
+            placeholder: t("ce.noSection"),
             attrs: 'maxlength="200" list="ce-sections"',
           })}
         </div>
         <datalist id="ce-sections">${sections.map((n) => `<option value="${esc(n)}"></option>`).join("")}</datalist>
-        ${checkRow("enabled", "Enabled", "Disabled criteria stay in the checklist but are not evaluated or scored.", f.enabled)}
+        ${checkRow("enabled", esc(t("ce.enabled")), esc(t("ce.enabledHint")), f.enabled)}
       </section>
 
       <section class="ce-group" aria-labelledby="ce-g-eval">
-        <h3 class="ce-group-title" id="ce-g-eval">Evaluation settings</h3>
+        <h3 class="ce-group-title" id="ce-g-eval">${esc(t("ce.evalSettings"))}</h3>
         <fieldset class="ce-fieldset" aria-describedby="ce-type-hint">
-          <legend class="ui-label">Answer type</legend>
+          <legend class="ui-label">${esc(t("ce.answerType"))}</legend>
           <div class="ce-seg">
-            ${segment("type", "binary", TYPE_LABELS.binary, f.type === "binary")}
-            ${segment("type", "numeric", TYPE_LABELS.numeric, f.type === "numeric")}
-            ${kept ? segment("type", kept, TYPE_LABELS[kept], true) : ""}
+            ${segment("type", "binary", esc(typeLabel("binary")), f.type === "binary")}
+            ${segment("type", "numeric", esc(typeLabel("numeric")), f.type === "numeric")}
+            ${kept ? segment("type", kept, esc(typeLabel(kept)), true) : ""}
           </div>
           <p class="hint" id="ce-type-hint" data-ce-text="type"></p>
         </fieldset>
         <div class="ce-field" data-ce-when="numeric">
-          <label class="ui-label" for="ce-scores">Allowed scores</label>
+          <label class="ui-label" for="ce-scores">${esc(t("ce.allowedScores"))}</label>
           <input class="ui-input" id="ce-scores" data-f="scores" type="text" inputmode="decimal" value="${esc(f.scores)}"
             placeholder="0, 5, 10, 15, 20" autocomplete="off" spellcheck="false" />
           <p class="ce-error" id="ce-scores-error" hidden></p>
           <p class="hint" id="ce-scores-hint" data-ce-text="scores"></p>
         </div>
         <div class="ce-field">
-          <label class="ui-label" for="ce-weight">Weight (%)</label>
+          <label class="ui-label" for="ce-weight">${esc(t("ce.weight"))}</label>
           <div class="ce-suffix">
             <input class="ui-input" id="ce-weight" data-f="weight" type="text" inputmode="decimal" maxlength="12"
               value="${esc(f.weight)}" autocomplete="off" />
@@ -228,40 +229,40 @@ function html() {
           <p class="ce-total" data-ce-total aria-live="polite"></p>
         </div>
         <div class="ce-field">
-          ${checkRow("naAllowed", "Allow N/A", "The evaluator may answer N/A (null) when the situation did not happen. N/A is not 0: the criterion is left out and its weight is shared by the others.", f.naAllowed)}
+          ${checkRow("naAllowed", esc(t("ce.allowNa")), esc(t("ce.allowNaHint")), f.naAllowed)}
         </div>
         <div class="ce-field">
-          <span class="ui-label" id="ce-answers-label">Allowed answers</span>
+          <span class="ui-label" id="ce-answers-label">${esc(t("ce.allowedAnswers"))}</span>
           <div class="ce-chips" role="list" aria-labelledby="ce-answers-label" data-ce-answers></div>
         </div>
         <fieldset class="ce-fieldset" aria-describedby="ce-critical-hint">
-          <legend class="ui-label">Critical error</legend>
+          <legend class="ui-label">${esc(t("ce.critical"))}</legend>
           <div class="ce-seg">
-            ${segment("critical", "off", "Off", f.critical === "off")}
-            ${segment("critical", "flag", "Can flag", f.critical === "flag")}
-            ${segment("critical", "indicator", "Indicator", f.critical === "indicator")}
+            ${segment("critical", "off", esc(t("ce.crit.off")), f.critical === "off")}
+            ${segment("critical", "flag", esc(t("ce.crit.flag")), f.critical === "flag")}
+            ${segment("critical", "indicator", esc(t("ce.crit.indicator")), f.critical === "indicator")}
           </div>
           <p class="hint" id="ce-critical-hint" data-ce-text="critical"></p>
         </fieldset>
       </section>
 
       <section class="ce-group" aria-labelledby="ce-g-ai">
-        <h3 class="ce-group-title" id="ce-g-ai">AI evaluation instructions</h3>
-        ${areaField("wording", "Wording", f.wording, {
+        <h3 class="ce-group-title" id="ce-g-ai">${esc(t("ce.aiInstructions"))}</h3>
+        ${areaField("wording", esc(t("ce.wording")), f.wording, {
           rows: 4,
-          hint: "What the evaluator checks in the transcript. Copy it from the official checklist; when it is empty, the evaluator sees only the title.",
+          hint: esc(t("ce.wordingHint")),
         })}
-        ${areaField("naRule", "When N/A applies", f.naRule, { rows: 2, hint: "Optional.", when: "na" })}
-        ${areaField("criticalRule", "What counts as a critical error", f.criticalRule, { rows: 2, hint: "Optional.", when: "critical" })}
+        ${areaField("naRule", esc(t("ce.naRule")), f.naRule, { rows: 2, hint: esc(t("ce.optional")), when: "na" })}
+        ${areaField("criticalRule", esc(t("ce.criticalRule")), f.criticalRule, { rows: 2, hint: esc(t("ce.optional")), when: "critical" })}
       </section>
     </div>
 
     <footer class="ce-actions">
       <div class="ce-actions-row" data-ce-main>
-        ${ed.isNew ? "<span></span>" : Button("Remove", { variant: "destructive", attrs: "data-ce-remove" })}
+        ${ed.isNew ? "<span></span>" : Button(esc(t("ce.remove")), { variant: "destructive", attrs: "data-ce-remove" })}
         <div class="ui-btn-row">
-          ${Button("Cancel", { attrs: "data-ce-cancel" })}
-          ${Button("Save", { variant: "primary", type: "submit" })}
+          ${Button(esc(t("common.cancel")), { attrs: "data-ce-cancel" })}
+          ${Button(esc(t("common.save")), { variant: "primary", type: "submit" })}
         </div>
       </div>
       <div class="ce-confirm" data-ce-confirm hidden></div>
@@ -286,71 +287,71 @@ function readForm() {
 }
 
 function typeHint(f) {
-  if (f.critical === "indicator") return "Indicators are always Yes / No.";
-  if (f.type === "binary") return "Boolean. Yes earns the full weight, No earns 0.";
-  if (f.type === "numeric") return "The evaluator gives one of the allowed scores.";
+  if (f.critical === "indicator") return t("ce.typeHint.indicator");
+  if (f.type === "binary") return t("ce.typeHint.binary");
+  if (f.type === "numeric") return t("ce.typeHint.numeric");
   if (f.type === "scale") {
     const s = ed.original.scale;
-    return `Scale ${fmt(s.min)}–${fmt(s.max)} (step ${fmt(s.step)}), kept as configured. Choose Yes / No or Numeric to replace it.`;
+    return t("ce.typeHint.scale", { min: fmt(s.min), max: fmt(s.max), step: fmt(s.step) });
   }
-  return `${ed.original.options.length} labelled options, kept as configured. Choose Yes / No or Numeric to replace them.`;
+  return t("ce.typeHint.options", { count: ed.original.options.length });
 }
 
 function scoresHint(f) {
-  const base = "Separate with commas, from lowest to highest.";
+  const base = t("ce.scoresHint");
   const parsed = parseAllowedScores(f.scores);
   if (parsed.error) return base;
   const max = parsed.scores.at(-1);
   const example = parsed.scores.filter((s) => s > 0).at(-2) ?? parsed.scores[0];
   const weight = parseWeight(f.weight).value;
   const share = weight ? ` = ${fmt(Math.round((example / max) * weight * 100) / 100)}%` : "";
-  return `${base} ${fmt(max)} earns the full weight; ${fmt(example)} earns ${fmt(example)} ÷ ${fmt(max)} of it${share}.`;
+  return `${base} ${t("ce.scoresShare", { max: fmt(max), example: fmt(example), share })}`;
 }
 
 function weightHint(f) {
-  if (f.critical === "indicator") return "Indicators are not scored, so their weight is 0.";
+  if (f.critical === "indicator") return t("ce.weightHint.indicator");
   const weight = parseWeight(f.weight).value;
   return weight
-    ? `This criterion is worth ${fmt(weight)}% of the overall score.`
-    : "A share of the overall score: 20 means 20%.";
+    ? t("ce.weightHint.value", { weight: fmt(weight) })
+    : t("ce.weightHint.empty");
 }
 
 function totalLine(f) {
   const others = weightSum(ed.config.criteria.filter((c) => c.id !== ed.original?.id && c.enabled !== false).map((c) => c.weight));
-  if (!f.enabled) return { text: `Disabled criteria don't count. The other enabled criteria add up to ${fmt(others)}%.`, tone: "" };
+  if (!f.enabled) return { text: t("ce.total.disabled", { others: fmt(others) }), tone: "" };
   const weight = f.critical === "indicator" ? 0 : parseWeight(f.weight).value;
-  if (weight === undefined) return { text: `The other enabled criteria add up to ${fmt(others)}%.`, tone: "" };
+  if (weight === undefined) return { text: t("ce.total.others", { others: fmt(others) }), tone: "" };
   const total = weightSum([others, weight]);
-  if (total === 100) return { text: "Enabled criteria add up to 100%.", tone: "ok" };
-  return { text: `Enabled criteria would add up to ${fmt(total)}%. A checklist version needs exactly 100%.`, tone: "warn" };
+  if (total === 100) return { text: t("ce.total.ok"), tone: "ok" };
+  return { text: t("ce.total.warn", { total: fmt(total) }), tone: "warn" };
 }
 
 function answerChips(f) {
   let values = null;
-  if (f.critical === "indicator" || f.type === "binary") values = ["Yes (true)", "No (false)"];
+  if (f.critical === "indicator" || f.type === "binary") values = [t("ce.answers.yes"), t("ce.answers.no")];
   else if (f.type === "numeric") {
     const parsed = parseAllowedScores(f.scores);
     if (!parsed.error) values = parsed.scores.map(fmt);
   } else if (f.type === "scale") {
     const s = ed.original.scale;
     const points = scalePoints(s);
-    values = points && points.length <= 12 ? points.map(fmt) : [`${fmt(s.min)} to ${fmt(s.max)}, step ${fmt(s.step)}`];
+    values = points && points.length <= 12 ? points.map(fmt) : [t("ce.answers.range", { min: fmt(s.min), max: fmt(s.max), step: fmt(s.step) })];
   } else if (f.type === "options") {
     values = ed.original.options.map((o) => `${o.label} (${fmt(o.points)})`);
   }
-  if (!values) return '<span class="hint">Enter valid allowed scores to see the answers.</span>';
+  if (!values) return `<span class="hint">${esc(t("ce.answers.invalid"))}</span>`;
   const chips = values.map((v) => `<span class="badge" role="listitem">${esc(v)}</span>`);
-  if (f.naAllowed) chips.push('<span class="badge badge-info" role="listitem">N/A (null)</span>');
+  if (f.naAllowed) chips.push(`<span class="badge badge-info" role="listitem">${esc(t("ce.answers.na"))}</span>`);
   return chips.join("");
 }
 
 function criticalHint(f) {
   const policy = ed.ctx.policy === "zero_total"
-    ? "This checklist's scoring rules set the total to 0 when a critical error is found."
-    : "A critical error is reported next to the score; it does not change the total.";
-  if (f.critical === "flag") return `Scored as usual; the evaluator can also flag a critical error on it. ${policy}`;
-  if (f.critical === "indicator") return `Not scored (weight 0). The evaluator answers Yes when a critical error was found. ${policy}`;
-  return "This criterion never reports a critical error.";
+    ? t("ce.policy.zero")
+    : t("ce.policy.flag");
+  if (f.critical === "flag") return t("ce.critHint.flag", { policy });
+  if (f.critical === "indicator") return t("ce.critHint.indicator", { policy });
+  return t("ce.critHint.off");
 }
 
 function refresh() {
@@ -394,14 +395,14 @@ function showConfirm(kind) {
   let text;
   let buttons;
   if (kind === "discard") {
-    text = ed.isNew ? "Discard this new criterion?" : "Discard your changes to this criterion?";
-    buttons = Button("Keep editing", { attrs: "data-ce-keep" }) + Button("Discard", { variant: "destructive", attrs: "data-ce-discard" });
+    text = t(ed.isNew ? "ce.discardNew" : "ce.discardChanges");
+    buttons = Button(esc(t("ce.keepEditing")), { attrs: "data-ce-keep" }) + Button(esc(t("ce.discard")), { variant: "destructive", attrs: "data-ce-discard" });
   } else if (ed.config.criteria.length <= 1) {
-    text = "A checklist needs at least one criterion, so this one can't be removed.";
-    buttons = Button("OK", { attrs: "data-ce-keep" });
+    text = t("ce.lastOne");
+    buttons = Button(esc(t("ce.ok")), { attrs: "data-ce-keep" });
   } else {
-    text = `Remove “${title}” from the checklist? Earlier versions keep it. To leave it out of scoring instead, turn off Enabled.`;
-    buttons = Button("Keep", { attrs: "data-ce-keep" }) + Button("Remove", { variant: "destructive", attrs: "data-ce-confirm-remove" });
+    text = t("ce.removeConfirm", { title });
+    buttons = Button(esc(t("ce.keep")), { attrs: "data-ce-keep" }) + Button(esc(t("ce.remove")), { variant: "destructive", attrs: "data-ce-confirm-remove" });
   }
   box.innerHTML = `<p role="alert">${esc(text)}</p><div class="ui-btn-row">${buttons}</div>`;
   box.hidden = false;

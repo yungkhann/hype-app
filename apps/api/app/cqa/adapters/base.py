@@ -58,6 +58,15 @@ class EvaluatorAdapter:
     def evaluate(self, request: EvaluationRequest) -> ModelOutput | dict[str, Any]:
         raise NotImplementedError
 
+    # Appeal reassessment (see app/cqa/reassessment.py). Only adapters backed by a real model implement it; the
+    # development mock deliberately does not, so an appeal never gets a placeholder recommendation.
+    supports_reassessment: bool = False
+
+    def reassess(self, request: Any) -> dict[str, Any]:
+        """ReassessmentRequest → {recommendation, original_value, recommended_value, rationale, evidence_turns,
+        [critical_error], meta}. Raise EvaluatorError when no valid answer could be obtained."""
+        raise NotImplementedError
+
     def info(self) -> EvaluatorInfo:
         ready, reason = self.availability()
         description = self.description if ready else f"{self.description} Not available: {reason}".strip()

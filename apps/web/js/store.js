@@ -1,12 +1,13 @@
-import { ensureChats, newThread } from "./chat.js?v=tape4";
+import { ensureChats, newThread } from "./chat.js?v=tape5";
 import { defaultChecklist, fromRecord } from "./data.js?v=tape2";
 
 const KEY = "cqa-studio-v2";
 
-// Conversations and evaluation scores live in the backend and are loaded on start (setConversations, setScores);
-// they are never kept here. Evaluations are run by the backend (GPT); the browser never scores.
-// checklist: the applied checklist in the views' shape. checklistConfig: the same version in the backend's
-// shape (null until the checklist is saved in ATLAS). checklistDraft: unsaved edits from the checklist page.
+// Conversations, evaluation scores and appeals live in the backend and are loaded on start (setConversations,
+// setScores, state.appeals); they are never kept here. Evaluations and appeal reassessments are run by the backend
+// (GPT); the browser never scores. checklist: the applied checklist in the views' shape. checklistConfig: the same
+// version in the backend's shape (null until the checklist is saved in ATLAS). checklistDraft: unsaved edits from
+// the checklist page.
 function fresh() {
   const thread = newThread();
   return {
@@ -23,9 +24,6 @@ export function loadState() {
     if (!parsed.checklist) return fresh();
     let needsSave = !Array.isArray(parsed.chats) || !parsed.chats.length;
     if ("conversations" in parsed || "apiUrl" in parsed) {
-      // Saved by the earlier build, whose conversations were generated in the browser. Their appeals belong to
-      // those generated cases, so they go too; checklist and chats are kept.
-      parsed.appeals = [];
       delete parsed.apiUrl;
       needsSave = true;
     }
@@ -34,11 +32,15 @@ export function loadState() {
       delete parsed.evaluations;
       needsSave = true;
     }
+    if ("appeals" in parsed) {
+      // Appeals decided in the browser by earlier builds: they never reached ATLAS, so they are dropped.
+      needsSave = true;
+    }
     parsed.conversations = [];
     parsed.scores = {};
+    parsed.appeals = [];
     parsed.checklistConfig ??= null;
     parsed.checklistDraft ??= null;
-    parsed.appeals ??= [];
     const next = ensureChats(parsed);
     if (needsSave) saveState(next);
     return next;
@@ -48,7 +50,7 @@ export function loadState() {
 }
 
 export function saveState(state) {
-  const { conversations, scores, ...kept } = state;
+  const { conversations, scores, appeals, ...kept } = state;
   localStorage.setItem(KEY, JSON.stringify(kept));
 }
 
@@ -61,7 +63,9 @@ export function setConversations(state, records) {
 /** The latest completed evaluation per conversation (backend summaries, newest first). */
 export function setScores(state, summaries) {
   const scores = {};
-  for (const summary of summaries) scores[summary.conversation_id] ??= summary;
+  for (const summary of summaries) {
+    if (summary.status === "completed") scores[summary.conversation_id] ??= summary;
+  }
   state.scores = scores;
   return state;
 }

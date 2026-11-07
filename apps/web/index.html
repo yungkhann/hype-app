@@ -10,42 +10,46 @@
   </head>
   <body>
     <div class="app">
-      <header class="island" aria-label="Primary">
+      <header class="island" aria-label="Primary" data-i18n-aria="nav.primary">
         <nav class="island-side">
           <a class="island-btn" data-nav="list" href="#/">
             <svg viewBox="0 0 24 24"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-            <span class="island-name">Home</span>
+            <span class="island-name" data-i18n="nav.home">Home</span>
           </a>
           <a class="island-btn" data-nav="checklist" href="#/checklist">
             <svg viewBox="0 0 24 24"><path d="M13 5h8"/><path d="M13 12h8"/><path d="M13 19h8"/><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/></svg>
-            <span class="island-name">Checklist</span>
+            <span class="island-name" data-i18n="nav.checklist">Checklist</span>
           </a>
-          <a class="island-btn" data-nav="review" href="#/review">
+          <a class="island-btn" data-nav="review" href="#/appeals">
             <svg viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
-            <span class="island-name">Appeals</span>
+            <span class="island-name" data-i18n="nav.appeals">Appeals</span>
           </a>
         </nav>
         <label class="island-search">
           <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          <input data-filter="q" type="search" placeholder="Search" />
+          <input data-filter="q" type="search" placeholder="Search" data-i18n-placeholder="nav.search" />
         </label>
         <div class="island-side">
           <a class="island-btn" data-demo-link href="#/">
             <svg viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-            <span class="island-name">Demo</span>
+            <span class="island-name" data-i18n="nav.demo">Demo</span>
           </a>
           <a class="island-btn" data-nav="chat" href="#/chat">
             <svg viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
-            <span class="island-name">Chat</span>
+            <span class="island-name" data-i18n="nav.chat">Chat</span>
           </a>
           <button type="button" class="island-btn" data-action="open-import">
             <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
-            <span class="island-name">Import</span>
+            <span class="island-name" data-i18n="nav.import">Import</span>
+          </button>
+          <button type="button" class="island-btn" data-action="switch-lang">
+            <svg viewBox="0 0 24 24"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
+            <span class="island-name" data-lang-code>EN</span>
           </button>
         </div>
       </header>
       <main id="view" class="view"></main>
     </div>
-    <script type="module" src="js/app.js?v=tape4"></script>
+    <script type="module" src="js/app.js?v=tape5"></script>
   </body>
 </html>

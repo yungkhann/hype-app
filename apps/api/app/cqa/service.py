@@ -64,11 +64,12 @@ class CqaService:
         self.checklists = ChecklistService(self.store)
         self.checklists.ensure_official_checklist()
         self.evaluations = EvaluationService(self.store, self.checklists, self.adapters, settings)
-        self.appeals = AppealService(self.store, self.evaluations)
+        self.appeals = AppealService(self.store, self.evaluations, self.adapters, settings)
         self.audio_resolver = AudioResolver(settings)
 
     def shutdown(self) -> None:
         self.evaluations.shutdown()
+        self.appeals.shutdown()
 
     # ---- info ---------------------------------------------------------------------------------
     def info(self) -> CqaInfo:

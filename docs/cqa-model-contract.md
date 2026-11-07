@@ -97,6 +97,15 @@ API failures (bad key, quota, rate limit, 5xx, timeout, refusal, cut-off answer)
 
 **Percentages.** Every score breakdown carries `percent`: the total as 0–100 with two decimals, computed from the exact total (`100 × Σ(weight × normalized) / Σ applicable weights`). The UI shows it with `%`. A failed evaluation has no score (`null`), never 0.
 
+### D. Appeal reassessment (GPT recommends, the manager decides)
+
+Submitting an appeal (`POST /cqa/appeals`) stores it and queues one separate GPT call for the disputed criterion, with the reassessor `ATLAS_CQA_REASSESSOR` (default `openai`: same key, model and base URL as above).
+
+- **Prompt.** The criterion exactly as configured in the evaluated checklist version (a snapshot is stored on the appeal: wording, allowed values, N/A rule, critical-error setting), the evaluation id, the original value, rationale and evidence turns, the appeal text, and the whole transcript with 1-based turns. All of it is marked as data, not instructions. The rationale is written in the appeal's `explanation_language` (the interface language).
+- **Answer.** Strict schema `cqa_appeal_reassessment`: `{recommendation: "uphold" | "change", original_value, recommended_value, rationale, evidence_turns}`, plus `critical_error` when the criterion may carry the flag. The backend rejects an answer whose `original_value` differs from the disputed value, whose recommended value is not allowed (or N/A where N/A is not allowed), whose evidence turns are missing or outside the transcript, or whose rationale is missing or copies the original one. A rejected answer is sent back once; then the reassessment fails with `invalid_model_answer`. Nothing is filled in.
+- **Failures** (no key, timeout, 5xx, invalid answer) never reject the appeal: it stays pending with stage `reassessment_failed`, and `POST /cqa/appeals/{id}/reassess` retries. At most 3 reassessments per appeal reach the model; failures before any call (no key) do not count.
+- **Decision** (`POST /cqa/appeals/{id}/decision`, mandatory `explanation`): `confirm` keeps the original, `accept` applies the stored recommendation, `override` sets the manager's own value within the allowed values. One decision per appeal. The scoring engine recalculates with the evaluated version's weights, N/A redistribution and critical flags. The original result, every reassessment (with model, request ids and timestamps) and the decision with `percent_before` and `percent_after` are all kept.
+
 ## Request
 
 ```jsonc

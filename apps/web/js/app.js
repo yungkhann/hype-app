@@ -1,20 +1,26 @@
 import {
   GROUP_ID_RE,
   cqaInfo,
+  createAppeal,
   createChecklist,
+  decideAppeal,
   errorText,
+  getAppeal,
+  getAudio,
   getChecklist,
   getEvaluation,
   importGroup,
   importJson,
+  listAppeals,
   listChecklistVersions,
   listChecklists,
   listConversationRecords,
   listEvaluations,
+  reassessAppeal,
   startEvaluation,
   updateChecklist,
-} from "./api.js?v=tape4";
-import { activeChat, openChat, pushTurn, removeChat, startChat } from "./chat.js?v=tape4";
+} from "./api.js?v=tape5";
+import { activeChat, chatTitle, messageText, openChat, pushTurn, removeChat, startChat } from "./chat.js?v=tape5";
 import {
   adoptChecklist,
   appliedConfig,
@@ -23,18 +29,20 @@ import {
   editingConfig,
   fmt,
   putCriterion,
+  scalePoints,
   sectionName,
   stageChange,
-} from "./checklist.js?v=tape3";
+} from "./checklist.js?v=tape5";
 import {
   closeCriterionEditor,
   isCriterionEditorDirty,
   isCriterionEditorOpen,
   openCriterionEditor,
-} from "./criterion-editor.js?v=tape3";
-import { loadState, saveState, setConversations, setScores } from "./store.js?v=tape4";
+} from "./criterion-editor.js?v=tape5";
+import { applyStatic, getLang, hasKey, langCode, langName, locale, nextLang, setLang, t, tn } from "./i18n.js?v=tape5";
+import { loadState, saveState, setConversations, setScores } from "./store.js?v=tape5";
 import { mountMessageScroller } from "./message-scroller.js?v=tape1";
-import { Bubble, Button, ChatPrompt, Field, Message, MessageScroller, MessageScrollerItem } from "./ui.js?v=tape1";
+import { Bubble, Button, ChatPrompt, Field, Message, MessageScroller, MessageScrollerItem } from "./ui.js?v=tape5";
 import { byId, esc } from "./util.js";
 
 const icon = {
@@ -52,6 +60,10 @@ let state = loadState();
 const conversationsStatus = { loading: true, error: "" };
 // Saving the checklist as a version; conflictVersion is set when someone else saved a newer version first.
 const checklistStatus = { saving: false, error: "", conflictVersion: null };
+// Appeals come from the backend (state.appeals); while GPT reassesses one, the list is reloaded every few seconds.
+const appealsStatus = { loading: true, error: "" };
+// The newest evaluation status per conversation (any checklist), for the list's Status column.
+let evaluationStatus = {};
 
 function persist() {
   saveState(state);
@@ -64,7 +76,7 @@ async function reloadConversations() {
     setConversations(state, await listConversationRecords());
     persist();
   } catch (err) {
-    conversationsStatus.error = err.message;
+    conversationsStatus.error = errorText(err);
   } finally {
     conversationsStatus.loading = false;
   }
@@ -77,52 +89,94 @@ function clock(ts) {
   return text.match(/T(\d{2}:\d{2}:\d{2})/)?.[1] ?? text;
 }
 
-function navKey() {
-  const h = location.hash.slice(1) || "/";
-  if (h.startsWith("/checklist")) return "checklist";
-  if (h.startsWith("/review")) return "review";
-  if (h.startsWith("/chat")) return "chat";
-  if (h.startsWith("/c/")) return "";
-  return "list";
+/** A stored instant in the interface language. */
+function when(iso) {
+  if (!iso) return "";
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? String(iso) : date.toLocaleString(locale());
 }
 
+// ---- Routes ------------------------------------------------------------------------------------------------
+// #/conversations (also #/), #/conversations/:id (also #/c/:id), #/appeals (also #/review), #/appeals/:id,
+// #/checklist, #/chat.
+
+function decodeId(text) {
+  try {
+    return decodeURIComponent(text);
+  } catch {
+    return text;
+  }
+}
+
+function route() {
+  const path = (location.hash.slice(1) || "/").split("?")[0];
+  let match;
+  if (path.startsWith("/checklist")) return { name: "checklist" };
+  if ((match = path.match(/^\/appeals\/([^/]+)/))) return { name: "appeal", id: decodeId(match[1]) };
+  if (path.startsWith("/appeals") || path.startsWith("/review")) return { name: "appeals" };
+  if (path.startsWith("/chat")) return { name: "chat", id: path.match(/^\/chat\/([^/]+)/)?.[1] ?? null };
+  if ((match = path.match(/^\/(?:c|conversations)\/([^/]+)/))) return { name: "detail", id: decodeId(match[1]) };
+  return { name: "list" };
+}
+
+function navKey() {
+  return { list: "list", checklist: "checklist", appeals: "review", appeal: "review", chat: "chat" }[route().name] ?? "";
+}
+
+const convHref = (id) => `#/conversations/${encodeURIComponent(id)}`;
+const appealHref = (id) => `#/appeals/${encodeURIComponent(id)}`;
+
 function setNav() {
+  applyStatic();
   const key = navKey();
   document.querySelectorAll("[data-nav]").forEach((el) => {
     el.classList.toggle("is-active", el.dataset.nav === key);
   });
   const demo = document.querySelector("[data-demo-link]");
-  if (demo) demo.setAttribute("href", state.conversations[0] ? `#/c/${encodeURIComponent(state.conversations[0].id)}` : "#/");
+  if (demo) demo.setAttribute("href", state.conversations[0] ? convHref(state.conversations[0].id) : "#/");
   const search = document.querySelector('[data-filter="q"]');
   if (search && document.activeElement !== search) {
     const q = new URLSearchParams(location.hash.split("?")[1] || "");
     search.value = q.get("q") || "";
   }
-}
-
-function criterion(id) {
-  return state.checklist.criteria.find((c) => c.id === id);
+  const switcher = document.querySelector("[data-action='switch-lang']");
+  if (switcher) {
+    const label = t("lang.switch", { name: langName(), next: langName(nextLang()) });
+    switcher.querySelector("[data-lang-code]").textContent = langCode();
+    switcher.setAttribute("aria-label", label);
+    switcher.title = label;
+  }
 }
 
 function render() {
   setNav();
   const view = byId("view");
-  const h = location.hash.slice(1) || "/";
-  const chatMatch = h.match(/^\/chat\/([^/]+)/);
-  if (chatMatch) openChat(state, chatMatch[1]);
-  const detail = h.match(/^\/c\/([^/]+)/);
-  if (h.startsWith("/checklist")) view.innerHTML = viewChecklist();
-  else if (h.startsWith("/review")) view.innerHTML = viewReview();
-  else if (h.startsWith("/chat")) view.innerHTML = viewChat();
-  else if (detail) view.innerHTML = viewDetail(detail[1]);
+  const current = route();
+  if (current.name === "chat" && current.id) openChat(state, current.id);
+  if (current.name === "checklist") view.innerHTML = viewChecklist();
+  else if (current.name === "appeals") view.innerHTML = viewAppeals();
+  else if (current.name === "appeal") view.innerHTML = viewAppeal(current.id);
+  else if (current.name === "chat") view.innerHTML = viewChat();
+  else if (current.name === "detail") view.innerHTML = viewDetail(current.id);
   else view.innerHTML = viewList();
   bind();
   // Older links open the editor with #/checklist?edit=<id>.
-  const editId = h.startsWith("/checklist") ? new URLSearchParams(h.split("?")[1] || "").get("edit") : null;
+  const h = location.hash.slice(1) || "/";
+  const editId = current.name === "checklist" ? new URLSearchParams(h.split("?")[1] || "").get("edit") : null;
   if (editId) {
     history.replaceState(null, "", "#/checklist");
     openEditor(editId);
   }
+}
+
+/** Switch the interface language. Stored text (transcripts, rationales, comments) is shown as written. */
+function switchLanguage() {
+  setLang(nextLang());
+  if (importDialog && !importDialog.open) {
+    importDialog.remove();
+    importDialog = null;
+  }
+  render();
 }
 
 function viewChat() {
@@ -131,7 +185,7 @@ function viewChat() {
   const items = thread.messages
     .map((m) => {
       const user = m.role === "user";
-      const body = esc(m.text).replace(/\n/g, "<br>");
+      const body = esc(messageText(m)).replace(/\n/g, "<br>");
       return MessageScrollerItem({
         id: m.id,
         scrollAnchor: user,
@@ -148,17 +202,17 @@ function viewChat() {
     .join("");
   return `
     <section class="chat-page">
-      <aside class="chat-history" aria-label="Chat history">
+      <aside class="chat-history" aria-label="${esc(t("chat.historyLabel"))}">
         <button type="button" class="chat-new" data-action="new-chat">
           <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-          New chat
+          ${esc(t("chat.new"))}
         </button>
-        <p class="chat-history-label">Chats</p>
+        <p class="chat-history-label">${esc(t("chat.history"))}</p>
         <nav class="chat-history-list">
           ${history.map((c) => `
             <div class="chat-history-row ${c.id === thread.id ? "is-on" : ""}">
-              <a class="chat-history-item" href="#/chat/${esc(c.id)}" data-chat-id="${esc(c.id)}">${esc(c.title)}</a>
-              <button type="button" class="chat-history-del" data-action="delete-chat" data-chat-id="${esc(c.id)}" aria-label="Delete chat">
+              <a class="chat-history-item" href="#/chat/${esc(c.id)}" data-chat-id="${esc(c.id)}">${esc(chatTitle(c))}</a>
+              <button type="button" class="chat-history-del" data-action="delete-chat" data-chat-id="${esc(c.id)}" aria-label="${esc(t("chat.delete"))}">
                 <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
               </button>
             </div>`).join("")}
@@ -169,6 +223,18 @@ function viewChat() {
         <form class="chat-prompt" data-chat-form>${ChatPrompt()}</form>
       </div>
     </section>`;
+}
+
+// ---- Conversations ---------------------------------------------------------------------------------------
+
+const STATUS_TONE = { completed: "badge-good", running: "badge-info", pending: "badge-info", failed: "badge-crit" };
+
+function statusBadge(status) {
+  return `<span class="badge ${STATUS_TONE[status] ?? "badge-muted"}">${esc(t(`status.${status ?? "none"}`))}</span>`;
+}
+
+function speakerLabel(speaker) {
+  return hasKey(`speaker.${speaker}`) ? t(`speaker.${speaker}`) : String(speaker ?? "");
 }
 
 function viewList() {
@@ -184,56 +250,58 @@ function viewList() {
   });
   const all = state.conversations.length;
   const first = state.conversations[0];
-  const countText = conversationsStatus.loading && !all ? "Loading conversations…"
-    : rows.length === all ? `${all} conversation${all === 1 ? "" : "s"}` : `${rows.length} of ${all} conversations`;
+  const countText = conversationsStatus.loading && !all ? t("list.loading")
+    : rows.length === all ? tn("list.count", all) : t("list.countOf", { shown: rows.length, all });
   const chip = (key, value, label, href, ico) => {
     const on = (key === "lang" && lang === value) || (key === "source" && source === value) || (!value && !lang && !source && key === "all");
-    return `<a class="tool ${on ? "is-on" : ""}" href="${href}"><span class="tool-ico">${ico}</span>${label}</a>`;
+    return `<a class="tool ${on ? "is-on" : ""}" href="${href}"><span class="tool-ico">${ico}</span>${esc(label)}</a>`;
   };
+  const empty = conversationsStatus.loading ? t("list.loading") : all ? t("list.noMatch") : t("list.empty");
   return `
     <section class="home">
       <div class="home-hero">
-        <h1>What would you like to score?</h1>
+        <h1>${esc(t("list.heroTitle"))}</h1>
         <form class="hero-search" data-hero-search>
-          <input name="q" type="search" placeholder="Create a quality review from a transcript…" value="${esc(search)}" />
-          <button class="hero-go" type="submit" aria-label="Search">${icon.arrow}</button>
+          <input name="q" type="search" placeholder="${esc(t("list.heroPlaceholder"))}" value="${esc(search)}" />
+          <button class="hero-go" type="submit" aria-label="${esc(t("nav.search"))}">${icon.arrow}</button>
         </form>
       </div>
       <div class="tool-row">
-        ${chip("all", "", "All", "#/", icon.grid)}
-        ${chip("lang", "kz", "Kazakh", "#/?lang=kz", '<span class="tool-mark">kz</span>')}
-        ${chip("lang", "ru", "Russian", "#/?lang=ru", '<span class="tool-mark">ru</span>')}
-        ${chip("lang", "en", "English", "#/?lang=en", '<span class="tool-mark">en</span>')}
-        ${chip("source", "call", "Calls", "#/?source=call", icon.phone)}
-        ${chip("source", "chat", "Chats", "#/?source=chat", icon.messages)}
-        <a class="tool" href="#/checklist"><span class="tool-ico">${icon.checks}</span>Checklist</a>
-        <a class="tool" href="#/review"><span class="tool-ico">${icon.file}</span>Appeals</a>
+        ${chip("all", "", t("list.all"), "#/", icon.grid)}
+        ${chip("lang", "kz", t("list.kazakh"), "#/?lang=kz", '<span class="tool-mark">kz</span>')}
+        ${chip("lang", "ru", t("list.russian"), "#/?lang=ru", '<span class="tool-mark">ru</span>')}
+        ${chip("lang", "en", t("list.english"), "#/?lang=en", '<span class="tool-mark">en</span>')}
+        ${chip("source", "call", t("list.calls"), "#/?source=call", icon.phone)}
+        ${chip("source", "chat", t("list.chats"), "#/?source=chat", icon.messages)}
+        <a class="tool" href="#/checklist"><span class="tool-ico">${icon.checks}</span>${esc(t("nav.checklist"))}</a>
+        <a class="tool" href="#/appeals"><span class="tool-ico">${icon.file}</span>${esc(t("nav.appeals"))}</a>
       </div>
       <article class="promo">
-        <h2>Introducing operator scoring</h2>
-        <p>Configure a checklist, inspect a transcript, jump to the supporting utterance, then appeal and recalculate.</p>
-        ${first ? `<a class="btn btn-primary" href="#/c/${esc(encodeURIComponent(first.id))}">Try v1</a>` : ""}
+        <h2>${esc(t("list.promoTitle"))}</h2>
+        <p>${esc(t("list.promoText"))}</p>
+        ${first ? `<a class="btn btn-primary" href="${esc(convHref(first.id))}">${esc(t("list.try"))}</a>` : ""}
       </article>
       <div class="list-head">
         <p class="hint" role="status">${esc(countText)}</p>
-        ${Button("Import conversations", { variant: "primary", attrs: 'data-action="open-import"' })}
+        ${Button(esc(t("list.import")), { variant: "primary", attrs: 'data-action="open-import"' })}
       </div>
-      ${conversationsStatus.error ? `<div class="notice notice-error list-notice" role="alert">Could not load conversations: ${esc(conversationsStatus.error)} ${Button("Retry", { attrs: 'data-action="reload-conversations"' })}</div>` : ""}
+      ${conversationsStatus.error ? `<div class="notice notice-error list-notice" role="alert">${esc(t("list.loadError", { error: conversationsStatus.error }))} ${Button(esc(t("common.retry")), { attrs: 'data-action="reload-conversations"' })}</div>` : ""}
       <div class="table-wrap">
         <table>
-          <thead><tr><th>ID</th><th>Lang</th><th>Source</th><th>Operator</th><th>Score</th><th>Flags</th></tr></thead>
+          <thead><tr><th>${esc(t("list.th.id"))}</th><th>${esc(t("list.th.lang"))}</th><th>${esc(t("list.th.source"))}</th><th>${esc(t("list.th.operator"))}</th><th>${esc(t("list.th.status"))}</th><th>${esc(t("list.th.score"))}</th><th>${esc(t("list.th.flags"))}</th></tr></thead>
           <tbody>
-            ${!rows.length ? `<tr><td colspan="6" class="hint">${conversationsStatus.loading ? "Loading conversations…" : all ? "No conversations match these filters." : "No conversations yet. Choose Import conversations to load a group from the organizers' API or paste its JSON."}</td></tr>` : ""}
+            ${!rows.length ? `<tr><td colspan="7" class="hint">${esc(empty)}</td></tr>` : ""}
             ${rows.map((c) => {
               const ev = state.scores[c.id];
-              const open = state.appeals.filter((a) => a.conversationId === c.id && a.status === "open").length;
+              const open = state.appeals.filter((a) => a.conversation_id === c.id && a.status === "pending").length;
               return `<tr>
-                <td><a class="linkish" href="#/c/${esc(c.id)}">${esc(c.id)}</a></td>
+                <td><a class="linkish" href="${esc(convHref(c.id))}">${esc(c.id)}</a></td>
                 <td>${esc(c.language.toUpperCase())}</td>
-                <td>${c.source === "call" ? `<span class="badge badge-info">call</span>` : `<span class="badge badge-muted">chat</span>`}</td>
+                <td>${c.source === "call" ? `<span class="badge badge-info">${esc(t("channel.call"))}</span>` : `<span class="badge badge-muted">${esc(t("channel.chat"))}</span>`}</td>
                 <td>${esc(c.operator || "—")}</td>
+                <td>${statusBadge(evaluationStatus[c.id] ?? null)}</td>
                 <td class="num">${esc(pct(ev?.final_percent))}</td>
-                <td>${ev?.severe_errors ? `<span class="badge badge-crit">critical</span>` : ""} ${open ? `<span class="badge badge-warn">${open} appeal</span>` : ""}</td>
+                <td>${ev?.severe_errors ? `<span class="badge badge-crit">${esc(t("list.critical"))}</span>` : ""} ${open ? `<span class="badge badge-warn">${esc(tn("list.appeals", open))}</span>` : ""}</td>
               </tr>`;
             }).join("")}
           </tbody>
@@ -242,9 +310,48 @@ function viewList() {
     </section>`;
 }
 
+/** The transcript in its original order; turn numbers are 1-based positions in the source array. */
+function transcriptHtml(messages) {
+  return `<div class="transcript">
+            ${messages.map((m, i) => {
+              const align = m.speaker === "operator" ? "end" : m.speaker === "client" ? "start" : "center";
+              const variant = m.speaker === "operator" ? "brand" : m.speaker === "client" ? "secondary" : "muted";
+              const bubbleAlign = align === "center" ? "start" : align;
+              return `
+              <article class="msg" id="msg-${esc(m.id)}" data-msg="${esc(m.id)}" data-align="${align}">
+                <div class="msg-meta"><span class="tape">#${i + 1}</span><span class="role role-${esc(m.speaker)}">${esc(speakerLabel(m.speaker))}</span><span class="tape" title="${esc(m.ts)}">${esc(clock(m.ts))}</span></div>
+                ${Bubble({ align: bubbleAlign, variant, children: esc(m.text) })}
+              </article>`;
+            }).join("")}
+          </div>`;
+}
+
+// The stored audio_url is the organizers' player page; the backend resolves a playable source when it can.
+const audioUi = {}; // conversation id → { loading } | { info } | { error }
+const isHttp = (url) => /^https?:\/\//i.test(String(url ?? ""));
+
+function audioHtml(conv) {
+  if (!conv.audioUrl) return "";
+  let entry = audioUi[conv.id];
+  if (!entry) {
+    entry = audioUi[conv.id] = { loading: true };
+    getAudio(conv.id)
+      .then((info) => { audioUi[conv.id] = { info }; }, (err) => { audioUi[conv.id] = { error: errorText(err) }; })
+      .finally(() => { if (currentDetailId() === conv.id) render(); });
+  }
+  const wrap = (html) => `<div style="padding:12px 16px 0">${html}</div>`;
+  if (entry.loading) return wrap(`<p class="hint">${esc(t("audio.loading"))}</p>`);
+  const info = entry.info;
+  if (isHttp(info?.stream_url)) return wrap(`<audio class="audio" controls preload="metadata" src="${esc(info.stream_url)}"></audio>`);
+  const player = info?.player_url ?? conv.audioUrl;
+  const note = entry.error ?? info?.message ?? "";
+  const link = isHttp(player) ? `<a class="linkish" href="${esc(player)}" target="_blank" rel="noopener noreferrer">${esc(t("audio.open"))}</a>` : esc(t("audio.unavailable"));
+  return wrap(`${link}${note ? `<p class="hint">${esc(note)}</p>` : ""}`);
+}
+
 function viewDetail(id) {
   const conv = state.conversations.find((c) => c.id === id);
-  if (!conv) return `<section class="page"><p>${conversationsStatus.loading ? "Loading conversation…" : "Conversation not found."}</p></section>`;
+  if (!conv) return `<section class="page"><p>${esc(t(conversationsStatus.loading ? "detail.loading" : "detail.notFound"))}</p></section>`;
   if (needsEvaluationSync(id)) {
     syncEvaluationPane(id).then(() => {
       if (currentDetailId() === id) render();
@@ -255,27 +362,16 @@ function viewDetail(id) {
     <section class="page-wide">
       <div class="pane-head">
         <div>
-          <a href="#/">Home</a>
-          <h2 style="margin-top:4px">${esc(conv.id)} · ${esc(conv.language.toUpperCase())} · ${esc(conv.source)}</h2>
+          <a href="#/">${esc(t("nav.home"))}</a>
+          <h2 style="margin-top:4px">${esc(conv.id)} · ${esc(conv.language.toUpperCase())} · ${esc(t(`channel.${conv.source}`))}</h2>
         </div>
         ${scoreHero(id, shown)}
       </div>
       <div class="split">
         <div class="pane">
-          <div class="pane-head"><h2>Transcript</h2><span class="badge badge-muted">${conv.messages.length} turns</span></div>
-          ${conv.audioUrl ? `<div style="padding:12px 16px 0"><audio class="audio" controls src="${esc(conv.audioUrl)}"></audio></div>` : ""}
-          <div class="transcript">
-            ${conv.messages.map((m) => {
-              const align = m.speaker === "operator" ? "end" : m.speaker === "client" ? "start" : "center";
-              const variant = m.speaker === "operator" ? "brand" : m.speaker === "client" ? "secondary" : "muted";
-              const bubbleAlign = align === "center" ? "start" : align;
-              return `
-              <article class="msg" id="msg-${esc(m.id)}" data-msg="${esc(m.id)}" data-align="${align}">
-                <div class="msg-meta"><span class="role role-${esc(m.speaker)}">${esc(m.speaker)}</span><span class="tape" title="${esc(m.ts)}">${esc(clock(m.ts))}</span></div>
-                ${Bubble({ align: bubbleAlign, variant, children: esc(m.text) })}
-              </article>`;
-            }).join("")}
-          </div>
+          <div class="pane-head"><h2>${esc(t("detail.transcript"))}</h2><span class="badge badge-muted">${esc(tn("detail.turns", conv.messages.length))}</span></div>
+          ${audioHtml(conv)}
+          ${transcriptHtml(conv.messages)}
         </div>
         <div class="pane">
           ${evaluationPane(id, shown)}
@@ -312,13 +408,17 @@ function num(value) {
 }
 
 function currentDetailId() {
-  return (location.hash.slice(1) || "/").match(/^\/c\/([^/]+)/)?.[1] ?? null;
+  const current = route();
+  return current.name === "detail" ? current.id : null;
 }
 
-/** Explanations follow the interface language (RU, KZ or EN); transcripts are never translated. */
+/** GPT writes its explanations in the interface language (RU, KZ or EN); transcripts are never translated. */
 function uiLanguage() {
-  const lang = (document.documentElement.lang || "en").toLowerCase().slice(0, 2);
-  return lang === "ru" ? "ru" : lang === "kk" || lang === "kz" ? "kz" : "en";
+  return getLang();
+}
+
+function noticeBox(tone, html, role = "status") {
+  return `<div class="notice ${tone}" role="${role}" style="margin:0 16px 12px">${html}</div>`;
 }
 
 function checklistSummary(id) {
@@ -368,7 +468,7 @@ async function syncEvaluationPane(convId) {
         evaluationUi.checklistsError = "";
       } catch (err) {
         evaluationUi.checklists = [];
-        evaluationUi.checklistsError = `Could not load checklists. ${errorText(err)}`;
+        evaluationUi.checklistsError = t("eval.checklistsError", { error: errorText(err) });
       }
     }
     const selection = currentSelection();
@@ -382,7 +482,7 @@ async function syncEvaluationPane(convId) {
         (page) => { evaluationUi.history[convId] = page.items; },
         (err) => {
           evaluationUi.history[convId] = [];
-          evaluationUi.errors[convId] = `Could not load evaluations. ${errorText(err)}`;
+          evaluationUi.errors[convId] = t("eval.historyError", { error: errorText(err) });
         },
       ));
     }
@@ -414,7 +514,7 @@ async function pollEvaluation(evaluationId, convId) {
       try {
         detail = await getEvaluation(evaluationId);
       } catch (err) {
-        evaluationUi.errors[convId] = `Could not follow the evaluation. ${errorText(err)}`;
+        evaluationUi.errors[convId] = t("eval.followError", { error: errorText(err) });
         break;
       }
       evaluationUi.details[evaluationId] = detail;
@@ -451,46 +551,36 @@ async function runEvaluation(convId) {
     evaluationUi.history[convId] = [queued, ...(evaluationUi.history[convId] ?? [])];
     pollEvaluation(queued.id, convId);
   } catch (err) {
-    evaluationUi.errors[convId] = `The evaluation was not started. ${errorText(err)}`;
+    evaluationUi.errors[convId] = t("eval.startError", { error: errorText(err) });
   } finally {
     evaluationUi.starting[convId] = false;
     if (currentDetailId() === convId) render();
   }
 }
 
-/** The latest completed evaluation per conversation, for the list's Score column and the chat. */
+/**
+ * Every evaluation summary (newest first): the latest completed one per conversation feeds the list's Score column
+ * and the chat, the latest of any status feeds the Status column.
+ */
 async function loadScores() {
   try {
     const items = [];
     for (let page = 1; page <= 25; page += 1) {
-      const data = await listEvaluations({ status: "completed", page, page_size: 200 });
+      const data = await listEvaluations({ page, page_size: 200 });
       items.push(...data.items);
       if (page * data.page_size >= data.total) break;
     }
     setScores(state, items);
+    const latest = {};
+    for (const item of items) latest[item.conversation_id] ??= item.status;
+    evaluationStatus = latest;
   } catch {
     return; // The list keeps showing "—"; the detail page reports API errors itself.
   }
   if (navKey() === "list") render();
 }
 
-function scoreHero(convId, shown) {
-  const { record, status } = shown;
-  const score = record?.status === "completed" ? record.final_score : null;
-  let big = "—";
-  let sub = "Not evaluated";
-  let badge = "";
-  if (score) {
-    big = pct(score.percent);
-    const original = record.original_score?.percent;
-    sub = score.percent == null ? "No score: every criterion is N/A"
-      : original != null && original !== score.percent ? `Original ${pct(original)} → final ${pct(score.percent)}` : "";
-    badge = score.severe_errors.length ? `<span class="badge badge-crit">critical error</span>` : `<span class="badge badge-good">no critical flag</span>`;
-  } else if (evaluationUi.starting[convId] || status === "pending" || status === "running") {
-    sub = "Evaluating…";
-  } else if (status === "failed") {
-    sub = "Evaluation failed";
-  }
+function heroHtml(big, sub, badge) {
   return `
         <div class="score-hero">
           <div>
@@ -501,15 +591,37 @@ function scoreHero(convId, shown) {
         </div>`;
 }
 
+function scoreHero(convId, shown) {
+  const { record, status } = shown;
+  const score = record?.status === "completed" ? record.final_score : null;
+  let big = "—";
+  let sub = t("eval.notEvaluated");
+  let badge = "";
+  if (score) {
+    big = pct(score.percent);
+    const original = record.original_score?.percent;
+    sub = score.percent == null ? t("eval.allNa")
+      : original != null && original !== score.percent ? t("eval.originalFinal", { original: pct(original), final: pct(score.percent) }) : "";
+    badge = score.severe_errors.length
+      ? `<span class="badge badge-crit">${esc(t("eval.criticalBadge"))}</span>`
+      : `<span class="badge badge-good">${esc(t("eval.noCriticalBadge"))}</span>`;
+  } else if (evaluationUi.starting[convId] || status === "pending" || status === "running") {
+    sub = t("eval.evaluating");
+  } else if (status === "failed") {
+    sub = t("eval.failedShort");
+  }
+  return heroHtml(big, sub, badge);
+}
+
 function evaluationMeta(shown) {
   const { record, selection, version } = shown;
   if (record) {
     const model = record.model_info?.name || record.evaluator.version;
-    const when = record.completed_at ? ` · ${new Date(record.completed_at).toLocaleString()}` : "";
-    return `${record.evaluator.label}${model ? ` · ${model}` : ""} · ${record.checklist_name} v${record.checklist_version}${when}`;
+    const at = record.completed_at ? ` · ${when(record.completed_at)}` : "";
+    return `${record.evaluator.label}${model ? ` · ${model}` : ""} · ${record.checklist_name} v${record.checklist_version}${at}`;
   }
   const checklist = checklistSummary(selection?.checklistId);
-  return checklist ? `checklist ${checklist.name} v${version}` : "";
+  return checklist ? t("eval.metaChecklist", { name: checklist.name, version }) : "";
 }
 
 function evaluationControls(convId, shown) {
@@ -517,25 +629,26 @@ function evaluationControls(convId, shown) {
   const { selection, version, status } = shown;
   const versions = selection ? evaluationUi.versions[selection.checklistId] ?? [] : [];
   const checklistOptions = (list ?? []).map((c) => `<option value="${esc(c.id)}" ${c.id === selection?.checklistId ? "selected" : ""}>${esc(c.name)}</option>`).join("")
-    || `<option>${list === null ? "Loading checklists…" : "No checklist saved in ATLAS"}</option>`;
+    || `<option>${esc(t(list === null ? "eval.loadingChecklists" : "eval.noChecklist"))}</option>`;
+  const versionLabel = (v, latest) => `${t("eval.versionN", { n: v })}${latest ? ` ${t("eval.latest")}` : ""}`;
   const versionOptions = versions.length
-    ? versions.map((v) => `<option value="${v.version}" ${v.version === version ? "selected" : ""}>Version ${v.version}${v.is_latest ? " (latest)" : ""}</option>`).join("")
-    : version ? `<option value="${version}">Version ${version}</option>` : "";
+    ? versions.map((v) => `<option value="${v.version}" ${v.version === version ? "selected" : ""}>${esc(versionLabel(v.version, v.is_latest))}</option>`).join("")
+    : version ? `<option value="${version}">${esc(versionLabel(version, false))}</option>` : "";
   const busy = evaluationUi.starting[convId] || status === "pending" || status === "running";
-  const progress = evaluationUi.starting[convId] ? "Starting…" : status === "pending" ? "Queued…" : status === "running" ? "GPT is evaluating every criterion…" : "";
-  const label = busy ? "Evaluating…" : shown.summary ? "Evaluate again" : "Evaluate";
+  const progress = evaluationUi.starting[convId] ? t("eval.starting") : status === "pending" ? t("eval.queued") : status === "running" ? t("eval.running") : "";
+  const label = busy ? t("eval.evaluating") : shown.summary ? t("eval.again") : t("eval.run");
   return `
           <form class="crit-card form-grid" data-evaluate-form novalidate>
             <div>
-              <label class="field-label" for="eval-checklist">Checklist</label>
+              <label class="field-label" for="eval-checklist">${esc(t("eval.checklist"))}</label>
               <select class="input" id="eval-checklist" name="checklist" ${list?.length ? "" : "disabled"}>${checklistOptions}</select>
             </div>
             <div>
-              <label class="field-label" for="eval-version">Version</label>
+              <label class="field-label" for="eval-version">${esc(t("eval.version"))}</label>
               <select class="input" id="eval-version" name="version" ${versionOptions ? "" : "disabled"}>${versionOptions}</select>
             </div>
             <div class="ui-btn-row">
-              ${Button(label, { variant: "primary", type: "submit", attrs: busy || !version ? "disabled" : "" })}
+              ${Button(esc(label), { variant: "primary", type: "submit", attrs: busy || !version ? "disabled" : "" })}
               <span class="hint" role="status" aria-live="polite">${esc(progress)}</span>
             </div>
           </form>`;
@@ -543,30 +656,29 @@ function evaluationControls(convId, shown) {
 
 function evaluationNotices(convId, shown) {
   const { record, detail, summary, selection } = shown;
-  const notice = (tone, html, role = "status") => `<div class="notice ${tone}" role="${role}" style="margin:0 16px 12px">${html}</div>`;
   const parts = [];
-  if (evaluationUi.checklistsError) parts.push(notice("notice-error", esc(evaluationUi.checklistsError), "alert"));
-  if (evaluationUi.errors[convId]) parts.push(notice("notice-error", esc(evaluationUi.errors[convId]), "alert"));
-  if (detail?.error) parts.push(notice("notice-error", esc(`Could not load the evaluation. ${detail.error}`), "alert"));
+  if (evaluationUi.checklistsError) parts.push(noticeBox("notice-error", esc(evaluationUi.checklistsError), "alert"));
+  if (evaluationUi.errors[convId]) parts.push(noticeBox("notice-error", esc(evaluationUi.errors[convId]), "alert"));
+  if (detail?.error) parts.push(noticeBox("notice-error", esc(t("eval.detailError", { error: detail.error })), "alert"));
   if (record?.status === "failed") {
     const issues = record.error?.issues ?? [];
-    parts.push(notice("notice-error", `<strong>Evaluation failed.</strong> ${esc(record.error?.message ?? "")}
+    parts.push(noticeBox("notice-error", `<strong>${esc(t("eval.failed"))}</strong> ${esc(record.error?.message ?? "")}
       ${issues.length ? `<ul>${issues.slice(0, 5).map((i) => `<li>${esc(i)}</li>`).join("")}</ul>` : ""}
-      <p class="hint">No score was recorded for this attempt.</p>`, "alert"));
+      <p class="hint">${esc(t("eval.noScore"))}</p>`, "alert"));
   }
-  if (record?.evaluator?.is_mock) parts.push(notice("notice-warn", "Development mock evaluator: placeholder answers, not a GPT evaluation."));
-  if (detail?.stale) parts.push(notice("notice-warn", "The transcript changed after this evaluation ran. Evaluate again for a current result."));
+  if (record?.evaluator?.is_mock) parts.push(noticeBox("notice-warn", esc(t("eval.mock"))));
+  if (detail?.stale) parts.push(noticeBox("notice-warn", esc(t("eval.stale"))));
   if (selection && !summary && evaluationUi.history[convId] && !evaluationUi.starting[convId]) {
-    parts.push(`<p class="hint" style="padding:0 16px 12px">Not evaluated with this checklist version yet. Evaluate sends the whole conversation and every enabled criterion to GPT.</p>`);
+    parts.push(`<p class="hint" style="padding:0 16px 12px">${esc(t("eval.notYet"))}</p>`);
   }
-  if (!evaluationUi.history[convId] && !parts.length) parts.push(`<p class="hint" style="padding:0 16px 12px">Loading evaluations…</p>`);
+  if (!evaluationUi.history[convId] && !parts.length) parts.push(`<p class="hint" style="padding:0 16px 12px">${esc(t("eval.loadingHistory"))}</p>`);
   return parts.join("");
 }
 
 function answerText(criterion, result, score) {
-  if (result.is_na) return "n/a";
-  if (Number(criterion.weight) === 0) return result.value === true ? "critical error" : "no critical error";
-  if (criterion.answer_type === "binary") return result.value ? "yes" : "no";
+  if (result.is_na) return t("value.na");
+  if (Number(criterion.weight) === 0) return t(result.value === true ? "value.critical" : "value.noCritical");
+  if (criterion.answer_type === "binary") return t(result.value ? "value.yes" : "value.no");
   if (criterion.answer_type === "options") {
     const option = (criterion.options ?? []).find((o) => o.id === result.value);
     return `${option?.label ?? result.value} · ${num(score?.raw_score)}/${num(score?.raw_max)}`;
@@ -574,30 +686,122 @@ function answerText(criterion, result, score) {
   return `${num(result.value)}/${num(score?.raw_max)}`;
 }
 
-function criterionCard(view, sectionNames) {
+/** An answer as words: yes / no, critical error, N/A, the option label or the number. */
+function valueText(criterion, value, isNa) {
+  if (isNa) return t("value.na");
+  if (value === null || value === undefined) return "—";
+  if (!criterion) return String(value);
+  if (criterion.answer_type === "binary") {
+    if (Number(criterion.weight) === 0) return t(value === true ? "value.critical" : "value.noCritical");
+    return t(value ? "value.yes" : "value.no");
+  }
+  if (criterion.answer_type === "options") return (criterion.options ?? []).find((o) => o.id === value)?.label ?? String(value);
+  return num(value);
+}
+
+function evidenceButtons(refs) {
+  return (refs ?? []).map((e) =>
+    `<button class="btn btn-ghost" type="button" data-jump="${esc(e.message_id)}">${esc(t("crit.evidence", { n: e.message_index + 1, speaker: speakerLabel(e.speaker) }))}</button>`).join("");
+}
+
+// ---- Appeals on the conversation page ----------------------------------------------------------------------
+// "Appeal" on a criterion card submits the dispute; the backend stores it and asks GPT for a separate
+// reassessment. A criterion with an undecided appeal shows its status and a link instead of the button.
+
+const appealDrafts = {}; // "<evaluation id>:<criterion id>" → { open, text, busy, error }
+
+function criterionAppeals(record, criterionId, detailAppeals) {
+  const found = new Map();
+  for (const a of detailAppeals ?? []) if (a.criterion_id === criterionId) found.set(a.id, a);
+  for (const a of state.appeals) if (a.evaluation_id === record.id && a.criterion_id === criterionId) found.set(a.id, a);
+  return [...found.values()].sort((a, b) => `${b.created_at}${b.id}`.localeCompare(`${a.created_at}${a.id}`));
+}
+
+function appealControls(record, criterionId, detailAppeals) {
+  const appeals = criterionAppeals(record, criterionId, detailAppeals);
+  const open = appeals.find((a) => a.status === "pending");
+  const shown = open ?? appeals[0];
+  const link = shown ? `${stageBadge(shown)}<a class="btn btn-ghost" href="${esc(appealHref(shown.id))}">${esc(t("appeal.open"))}</a>` : "";
+  if (open) return link;
+  const expanded = appealDrafts[`${record.id}:${criterionId}`]?.open ? "true" : "false";
+  return `${link}<button class="btn" type="button" data-appeal="${esc(criterionId)}" aria-expanded="${expanded}">${esc(t("appeal.button"))}</button>`;
+}
+
+function appealForm(record, criterionId) {
+  const draft = appealDrafts[`${record.id}:${criterionId}`] ?? {};
+  const fieldId = `appeal-${criterionId}`;
+  return `<form class="form-grid appeal-form" data-appeal-form="${esc(criterionId)}" data-evaluation="${esc(record.id)}" ${draft.open ? "" : "hidden"} novalidate>
+                <label class="field-label" for="${esc(fieldId)}">${esc(t("appeal.label"))}</label>
+                <textarea class="input" id="${esc(fieldId)}" name="comment" rows="3" maxlength="2000" required placeholder="${esc(t("appeal.placeholder"))}">${esc(draft.text ?? "")}</textarea>
+                ${draft.error ? `<p class="notice notice-error" role="alert">${esc(draft.error)}</p>` : ""}
+                <div class="ui-btn-row">
+                  <button class="btn btn-primary" type="submit" ${draft.busy ? "disabled" : ""}>${esc(t(draft.busy ? "appeal.submitting" : "appeal.submit"))}</button>
+                </div>
+              </form>`;
+}
+
+async function submitAppeal(form) {
+  const criterionId = form.dataset.appealForm;
+  const evaluationId = form.dataset.evaluation;
+  const key = `${evaluationId}:${criterionId}`;
+  const draft = (appealDrafts[key] ??= { open: true, text: "" });
+  if (draft.busy) return;
+  draft.text = form.comment.value;
+  const comment = draft.text.trim();
+  if (comment.length < 3) {
+    draft.error = t("appeal.tooShort");
+    render();
+    document.getElementById(`appeal-${criterionId}`)?.focus();
+    return;
+  }
+  draft.busy = true;
+  draft.error = "";
+  render();
+  try {
+    const appeal = await createAppeal({
+      evaluation_id: evaluationId,
+      criterion_id: criterionId,
+      comment,
+      explanation_language: uiLanguage(),
+    });
+    delete appealDrafts[key];
+    mergeAppeal(appeal);
+    loadAppeals();
+  } catch (err) {
+    draft.busy = false;
+    draft.error = t("appeal.error", { error: errorText(err) });
+  }
+  render();
+}
+
+function criterionCard(view, sectionNames, record, detailAppeals) {
   const c = view.criterion;
   const r = view.final;
   const s = view.final_score;
   if (!r || !s) return "";
   const indicator = Number(c.weight) === 0;
   const tone = r.is_na ? "badge-info" : indicator ? (r.value === true ? "badge-crit" : "badge-good") : s.normalized === 0 ? "badge-crit" : "badge-good";
-  const meta = indicator ? "critical-error indicator · not scored"
-    : r.is_na ? `weight ${num(c.weight)} → applied 0 (N/A, shared by the other criteria)`
-    : `weight ${num(c.weight)} → applied ${num(s.max_points)} · ${num(s.points)} points`;
+  const meta = indicator ? t("crit.indicator")
+    : r.is_na ? t("crit.naWeight", { weight: num(c.weight) })
+    : t("crit.weight", { weight: num(c.weight), applied: num(s.max_points), points: num(s.points) });
   const section = c.section_id ? sectionNames[c.section_id] ?? c.section_id : "";
-  const evidence = (r.evidence ?? []).map((e) =>
-    `<button class="btn btn-ghost" type="button" data-jump="${esc(e.message_id)}">Turn ${e.message_index + 1} · ${esc(e.speaker)}</button>`).join("");
+  const flagged = r.severe_error && !indicator
+    ? r.severe_error_reason && r.severe_error_reason !== r.explanation ? t("crit.flaggedReason", { reason: r.severe_error_reason }) : t("crit.flagged")
+    : "";
+  const revised = view.overridden && view.original ? t("crit.revised", { value: answerText(c, view.original, view.original_score ?? s) }) : "";
   return `<article class="crit-card ${s.severe_error ? "severe" : ""}" id="crit-${esc(c.id)}">
               <div class="crit-top">
                 <h3>${esc(c.name)}</h3>
                 <span class="badge ${tone}">${esc(answerText(c, r, s))}</span>
               </div>
               <p class="crit-meta">${esc(meta)}${section ? ` · ${esc(section)}` : ""}</p>
+              ${revised ? `<p class="hint">${esc(revised)}</p>` : ""}
               <p>${esc(r.explanation)}</p>
               ${r.is_na && r.na_reason && r.na_reason !== r.explanation ? `<p class="hint">${esc(r.na_reason)}</p>` : ""}
-              ${r.severe_error && !indicator ? `<p class="hint">Critical error flagged${r.severe_error_reason && r.severe_error_reason !== r.explanation ? `: ${esc(r.severe_error_reason)}` : "."}</p>` : ""}
-              ${(r.inspected_spans ?? []).map((span) => `<p class="hint">Checked span: turn ${span.start_index + 1} → ${span.end_index + 1}</p>`).join("")}
-              ${evidence ? `<div class="crit-actions">${evidence}</div>` : ""}
+              ${flagged ? `<p class="hint">${esc(flagged)}</p>` : ""}
+              ${(r.inspected_spans ?? []).map((span) => `<p class="hint">${esc(t("crit.span", { start: span.start_index + 1, end: span.end_index + 1 }))}</p>`).join("")}
+              <div class="crit-actions">${evidenceButtons(r.evidence)}${appealControls(record, c.id, detailAppeals)}</div>
+              ${appealForm(record, c.id)}
             </article>`;
 }
 
@@ -607,13 +811,465 @@ function evaluationPane(convId, shown) {
   const sectionNames = Object.fromEntries((record?.checklist?.sections ?? []).map((s) => [s.id, s.name]));
   const sections = completed ? record.final_score?.sections ?? [] : [];
   return `
-          <div class="pane-head"><h2>Evaluation</h2><span class="hint">${esc(evaluationMeta(shown))}</span></div>
+          <div class="pane-head"><h2>${esc(t("eval.title"))}</h2><span class="hint">${esc(evaluationMeta(shown))}</span></div>
           ${evaluationControls(convId, shown)}
           ${evaluationNotices(convId, shown)}
           ${sections.length ? `<div class="sections">
-            ${sections.map((s) => `<span class="section-chip">${esc(s.name)} ${s.points == null ? "n/a" : `${num(s.points)}/${num(s.max_points)}`}</span>`).join("")}
+            ${sections.map((s) => `<span class="section-chip">${esc(s.name)} ${s.points == null ? esc(t("value.na")) : `${num(s.points)}/${num(s.max_points)}`}</span>`).join("")}
           </div>` : ""}
-          ${completed ? completed.criteria.map((view) => criterionCard(view, sectionNames)).join("") : ""}`;
+          ${completed ? completed.criteria.map((view) => criterionCard(view, sectionNames, record, completed.appeals)).join("") : ""}`;
+}
+
+// ---- Appeals --------------------------------------------------------------------------------------------
+// The backend keeps every appeal with its GPT reassessments and the manager's decision. GPT only recommends: the
+// manager confirms the original, accepts the recommendation or overrides it, and the backend recalculates.
+
+const APPEALS_POLL_MS = 3000;
+const REVIEWER_KEY = "cqa-reviewer";
+const STAGE_TONE = { reassessing: "badge-info", ready_for_review: "badge-warn", reassessment_failed: "badge-crit", decided: "badge-good" };
+let appealsTimer = null;
+let appealsSignature = null;
+
+function stageBadge(appeal) {
+  return `<span class="badge ${STAGE_TONE[appeal.stage] ?? "badge-muted"}">${esc(t(`stage.${appeal.stage}`))}</span>`;
+}
+
+function mergeAppeal(appeal) {
+  const index = state.appeals.findIndex((a) => a.id === appeal.id);
+  if (index >= 0) state.appeals[index] = appeal;
+  else state.appeals.unshift(appeal);
+}
+
+/** Reload every appeal; while one is being reassessed, check again in a few seconds. */
+async function loadAppeals() {
+  clearTimeout(appealsTimer);
+  appealsTimer = null;
+  try {
+    state.appeals = await listAppeals();
+    appealsStatus.error = "";
+  } catch (err) {
+    appealsStatus.error = errorText(err);
+  } finally {
+    appealsStatus.loading = false;
+  }
+  if (state.appeals.some((a) => a.stage === "reassessing")) appealsTimer = setTimeout(loadAppeals, APPEALS_POLL_MS);
+  const signature = `${state.appeals.map((a) => `${a.id}:${a.stage}`).join("|")}#${appealsStatus.error}`;
+  const changed = signature !== appealsSignature;
+  appealsSignature = signature;
+  if (changed && ["list", "appeals", "detail"].includes(route().name)) render();
+}
+
+/** The answers a manager can choose for this criterion (its configuration in the evaluated version). */
+function answerOptions(criterion) {
+  if (!criterion) return [];
+  let values = [];
+  if (criterion.answer_type === "binary") values = [true, false];
+  else if (criterion.answer_type === "numeric") values = criterion.allowed_scores ?? [];
+  else if (criterion.answer_type === "scale") values = scalePoints(criterion.scale) ?? [];
+  else if (criterion.answer_type === "options") values = (criterion.options ?? []).map((o) => o.id);
+  const options = values.map((value) => ({ value, na: false, label: valueText(criterion, value, false) }));
+  if (criterion.na_allowed) options.push({ value: null, na: true, label: t("value.na") });
+  return options;
+}
+
+/** A scored criterion may carry a critical-error flag; an indicator's answer is the flag itself. */
+function flagAllowed(criterion) {
+  return !!criterion?.severe_error_enabled && Number(criterion.weight) !== 0;
+}
+
+function sameValue(a, b) {
+  if (typeof a === "number" && typeof b === "number") return Math.abs(a - b) < 1e-9;
+  return a === b;
+}
+
+function originalCell(appeal) {
+  const r = appeal.disputed_result;
+  const value = valueText(appeal.criterion_config, r?.value, r?.is_na);
+  return appeal.disputed_max_points ? `${value} (${num(appeal.disputed_points)}/${num(appeal.disputed_max_points)})` : value;
+}
+
+function gptCell(appeal) {
+  const gpt = appeal.reassessment;
+  if (gpt?.status !== "completed") return '<span class="hint">—</span>';
+  const tone = gpt.recommendation === "change" ? "badge-warn" : "badge-muted";
+  return `<span class="badge ${tone}">${esc(t(`rec.${gpt.recommendation}`))}</span> ${esc(valueText(appeal.criterion_config, gpt.recommended_value, gpt.recommended_is_na))}`;
+}
+
+function finalCell(appeal) {
+  const d = appeal.decision;
+  if (!d) return '<span class="hint">—</span>';
+  const result = d.new_result ?? d.previous_result;
+  const score = d.percent_after != null ? ` · ${pct(d.percent_after)}` : "";
+  return esc(`${t(`decision.${d.decision}`)}: ${valueText(appeal.criterion_config, result?.value, result?.is_na)}${score}`);
+}
+
+function viewAppeals() {
+  const items = state.appeals;
+  const title = esc(t("appeals.title"));
+  if (!items.length) {
+    if (appealsStatus.loading) return `<section class="empty"><h1>${title}</h1><p>${esc(t("appeals.loading"))}</p></section>`;
+    if (appealsStatus.error) {
+      return `<section class="empty"><h1>${title}</h1><p role="alert">${esc(t("appeals.loadError", { error: appealsStatus.error }))}</p>${Button(esc(t("common.retry")), { attrs: 'data-action="reload-appeals"' })}</section>`;
+    }
+    return `<section class="empty"><h1>${title}</h1><p>${esc(t("appeals.empty"))}</p><a class="btn btn-primary" href="#/">${esc(t("appeals.goHome"))}</a></section>`;
+  }
+  const open = items.filter((a) => a.status === "pending").length;
+  return `
+    <section class="library">
+      <div class="page-head"><div><h1 class="studio-title">${title}</h1><p>${esc(t("appeals.summary", { open, total: items.length }))}</p></div></div>
+      ${appealsStatus.error ? `<div class="notice notice-error" role="alert" style="margin-bottom:16px">${esc(t("appeals.loadError", { error: appealsStatus.error }))}</div>` : ""}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>${esc(t("appeals.th.conversation"))}</th><th>${esc(t("appeals.th.criterion"))}</th><th>${esc(t("appeals.th.original"))}</th><th>${esc(t("appeals.th.gpt"))}</th><th>${esc(t("appeals.th.status"))}</th><th>${esc(t("appeals.th.final"))}</th></tr></thead>
+          <tbody>
+            ${items.map((a) => `<tr>
+                <td><a class="linkish" href="${esc(convHref(a.conversation_id))}">${esc(a.conversation_id)}</a></td>
+                <td><a class="linkish" href="${esc(appealHref(a.id))}">${esc(a.criterion_name)}</a></td>
+                <td class="num">${esc(originalCell(a))}</td>
+                <td>${gptCell(a)}</td>
+                <td>${stageBadge(a)}</td>
+                <td>${finalCell(a)}</td>
+              </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>
+    </section>`;
+}
+
+// ---- Appeal review -----------------------------------------------------------------------------------------
+
+const appealUi = {
+  details: {}, // appeal id → AppealDetail
+  loading: new Set(),
+  polling: new Set(),
+  errors: {}, // appeal id → load error
+  retrying: {},
+  saving: {},
+  forms: {}, // appeal id → the decision form's values, kept across re-renders
+  notices: {}, // appeal id → { tone, text }
+};
+
+function currentAppealId() {
+  const current = route();
+  return current.name === "appeal" ? current.id : null;
+}
+
+async function loadAppeal(id) {
+  if (appealUi.loading.has(id)) return;
+  appealUi.loading.add(id);
+  try {
+    const detail = await getAppeal(id);
+    appealUi.details[id] = detail;
+    delete appealUi.errors[id];
+    mergeAppeal(detail.appeal);
+    if (detail.appeal.stage === "reassessing") pollAppeal(id);
+  } catch (err) {
+    appealUi.errors[id] = errorText(err);
+  } finally {
+    appealUi.loading.delete(id);
+  }
+  if (currentAppealId() === id) render();
+}
+
+/** Follow GPT's reassessment until it is completed or failed. */
+async function pollAppeal(id) {
+  if (appealUi.polling.has(id)) return;
+  appealUi.polling.add(id);
+  try {
+    for (let attempt = 0; attempt < 400; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, POLL_MS));
+      let detail;
+      try {
+        detail = await getAppeal(id);
+      } catch {
+        continue; // Try again on the next tick; the page keeps showing the last known state.
+      }
+      appealUi.details[id] = detail;
+      mergeAppeal(detail.appeal);
+      if (detail.appeal.stage !== "reassessing") break;
+    }
+  } finally {
+    appealUi.polling.delete(id);
+  }
+  if (currentAppealId() === id) render();
+  loadAppeals();
+}
+
+async function retryReassessment(id) {
+  if (appealUi.retrying[id]) return;
+  appealUi.retrying[id] = true;
+  appealUi.notices[id] = null;
+  render();
+  try {
+    const appeal = await reassessAppeal(id);
+    mergeAppeal(appeal);
+    if (appealUi.details[id]) appealUi.details[id] = { ...appealUi.details[id], appeal, impact: null };
+    if (appealUi.forms[id]) appealUi.forms[id].decision = null; // pick the default again once GPT has answered
+    if (appeal.stage === "reassessing") pollAppeal(id);
+    else loadAppeal(id);
+    loadAppeals();
+  } catch (err) {
+    appealUi.notices[id] = { tone: "notice-error", text: t("ad.retryError", { error: errorText(err) }) };
+  } finally {
+    appealUi.retrying[id] = false;
+  }
+  if (currentAppealId() === id) render();
+}
+
+function decisionDefaults(detail) {
+  const gpt = detail.appeal.reassessment;
+  const canAccept = gpt?.status === "completed";
+  const original = detail.appeal.disputed_result ?? detail.original_result;
+  const target = canAccept ? { value: gpt.recommended_value, na: gpt.recommended_is_na } : { value: original?.value, na: !!original?.is_na };
+  const options = answerOptions(detail.criterion);
+  const index = options.findIndex((o) => (target.na ? o.na : !o.na && sameValue(o.value, target.value)));
+  let reviewer = "";
+  try {
+    reviewer = localStorage.getItem(REVIEWER_KEY) ?? "";
+  } catch {
+    reviewer = "";
+  }
+  return {
+    decision: null,
+    value: String(Math.max(0, index)),
+    critical: canAccept ? !!gpt.recommended_critical_error : !!original?.severe_error,
+    explanation: "",
+    reviewer,
+  };
+}
+
+async function saveDecision(id) {
+  const detail = appealUi.details[id];
+  const form = appealUi.forms[id];
+  if (!detail || !form || appealUi.saving[id]) return;
+  const explanation = form.explanation.trim();
+  if (explanation.length < 3) {
+    appealUi.notices[id] = { tone: "notice-error", text: t("ad.explanationShort") };
+    render();
+    document.getElementById("decision-explanation")?.focus();
+    return;
+  }
+  const reviewer = form.reviewer.trim();
+  const body = { decision: form.decision, explanation, reviewer: reviewer || "Reviewer" };
+  if (form.decision === "override") {
+    const option = answerOptions(detail.criterion)[Number(form.value)];
+    if (!option) return;
+    body.override = {
+      value: option.na ? null : option.value,
+      is_na: option.na,
+      severe_error: !option.na && flagAllowed(detail.criterion) && !!form.critical,
+    };
+  }
+  appealUi.saving[id] = true;
+  appealUi.notices[id] = null;
+  render();
+  try {
+    const appeal = await decideAppeal(id, body);
+    mergeAppeal(appeal);
+    try {
+      if (reviewer) localStorage.setItem(REVIEWER_KEY, reviewer);
+    } catch {
+      // Remembering the name is only a convenience.
+    }
+    delete appealUi.forms[id];
+    appealUi.notices[id] = { tone: "notice-ok", text: t("ad.saved") };
+    // The evaluation's final score changed: reload what shows it.
+    delete evaluationUi.details[appeal.evaluation_id];
+    delete evaluationUi.history[appeal.conversation_id];
+    appealUi.saving[id] = false;
+    await loadAppeal(id);
+    loadScores();
+    loadAppeals();
+    return;
+  } catch (err) {
+    appealUi.notices[id] = { tone: "notice-error", text: t("ad.saveError", { error: errorText(err) }) };
+  }
+  appealUi.saving[id] = false;
+  if (currentAppealId() === id) render();
+}
+
+function originalCard(detail) {
+  const { appeal, criterion: c } = detail;
+  const r = appeal.disputed_result ?? detail.original_result;
+  if (!r) return "";
+  const indicator = Number(c.weight) === 0;
+  const tone = r.is_na ? "badge-info" : indicator ? (r.value === true ? "badge-crit" : "badge-good") : "badge-muted";
+  const meta = [];
+  if (!indicator && appeal.disputed_max_points) meta.push(t("ad.points", { points: num(appeal.disputed_points), max: num(appeal.disputed_max_points) }));
+  if (appeal.percent_at_submission != null) meta.push(t("ad.atSubmission", { percent: pct(appeal.percent_at_submission) }));
+  return `<article class="crit-card ${r.severe_error ? "severe" : ""}">
+            <div class="crit-top"><h3>${esc(t("ad.original"))}</h3><span class="badge ${tone}">${esc(valueText(c, r.value, r.is_na))}</span></div>
+            ${meta.length ? `<p class="crit-meta">${esc(meta.join(" · "))}</p>` : ""}
+            ${c.description ? `<p class="hint">${esc(c.description)}</p>` : ""}
+            <p>${esc(r.explanation)}</p>
+            ${r.severe_error && !indicator ? `<p class="hint">${esc(t("crit.flagged"))}</p>` : ""}
+            ${(r.evidence ?? []).length ? `<div class="crit-actions">${evidenceButtons(r.evidence)}</div>` : ""}
+          </article>`;
+}
+
+function appealCard(appeal) {
+  return `<article class="crit-card">
+            <div class="crit-top"><h3>${esc(t("ad.appeal"))}</h3>${stageBadge(appeal)}</div>
+            <p class="crit-meta">${esc(t("ad.submittedBy", { name: appeal.submitted_by, when: when(appeal.created_at) }))}</p>
+            <p>${esc(appeal.comment)}</p>
+          </article>`;
+}
+
+function gptCard(id, detail) {
+  const { appeal, criterion: c, impact } = detail;
+  const gpt = appeal.reassessment;
+  const earlier = appeal.reassessments.slice(0, -1).filter((r) => r.status === "failed").length;
+  const head = (badge) => `<div class="crit-top"><h3>${esc(t("ad.gpt"))}</h3>${badge}</div>`;
+  const earlierHint = earlier ? `<p class="hint">${esc(tn("ad.earlierFailed", earlier))}</p>` : "";
+  if (!gpt || gpt.status === "failed") {
+    const error = gpt?.error;
+    const message = error?.code && hasKey(`gpt.error.${error.code}`) ? t(`gpt.error.${error.code}`) : error?.message ?? "";
+    const issues = error?.issues ?? [];
+    const retrying = !!appealUi.retrying[id];
+    const retry = appeal.status === "pending"
+      ? `<p class="hint">${esc(t("ad.gptFailedNote"))}</p>
+            <div class="crit-actions">${Button(esc(t(retrying ? "ad.retrying" : "ad.retry")), { attrs: `data-action="retry-reassessment" data-appeal-id="${esc(id)}"${retrying ? " disabled" : ""}` })}</div>`
+      : "";
+    return `<article class="crit-card">
+            ${head(`<span class="badge badge-crit">${esc(t("stage.reassessment_failed"))}</span>`)}
+            <p>${esc(t("ad.gptFailed"))} ${esc(message)}</p>
+            ${issues.length ? `<ul>${issues.slice(0, 5).map((i) => `<li class="hint">${esc(i)}</li>`).join("")}</ul>` : ""}
+            ${retry}
+            ${earlierHint}
+          </article>`;
+  }
+  if (gpt.status !== "completed") {
+    return `<article class="crit-card">
+            ${head(`<span class="badge badge-info">${esc(t("stage.reassessing"))}</span>`)}
+            <p class="hint" role="status">${esc(t("ad.gptRunning", { version: appeal.checklist_version }))}</p>
+            ${earlierHint}
+          </article>`;
+  }
+  let impactText = "";
+  if (impact && appeal.status === "pending") {
+    impactText = impact.percent_before !== impact.percent_after
+      ? t("ad.impact", { before: pct(impact.percent_before), after: pct(impact.percent_after) })
+      : t("ad.impactSame", { percent: pct(impact.percent_after) });
+  }
+  const model = gpt.model || gpt.requested_model || gpt.reassessor;
+  return `<article class="crit-card">
+            ${head(`<span class="badge ${gpt.recommendation === "change" ? "badge-warn" : "badge-good"}">${esc(t(`rec.${gpt.recommendation}`))}</span>`)}
+            <p class="crit-meta">${esc(t("ad.model", { model, when: when(gpt.completed_at) }))}</p>
+            <p><strong>${esc(t("ad.recommended", { value: valueText(c, gpt.recommended_value, gpt.recommended_is_na) }))}</strong></p>
+            ${gpt.recommended_critical_error ? `<p class="hint">${esc(t("ad.recommendedCritical"))}</p>` : ""}
+            <p>${esc(gpt.rationale)}</p>
+            ${impactText ? `<p class="hint">${esc(impactText)}</p>` : ""}
+            ${(gpt.evidence ?? []).length ? `<div class="crit-actions">${evidenceButtons(gpt.evidence)}</div>` : ""}
+            ${earlierHint}
+          </article>`;
+}
+
+function decisionCard(id, detail) {
+  const { appeal, criterion: c } = detail;
+  const heading = `<div class="crit-top"><h3>${esc(t("ad.decision"))}</h3>`;
+  const d = appeal.decision;
+  if (d) {
+    const result = d.new_result ?? d.previous_result;
+    const score = d.percent_before != null && d.percent_after != null && d.percent_before !== d.percent_after
+      ? t("ad.score", { before: pct(d.percent_before), after: pct(d.percent_after) })
+      : t("ad.scoreSame", { percent: pct(d.percent_after ?? d.percent_before) });
+    const follows = d.follows_gpt === true ? t("ad.followsGpt") : d.follows_gpt === false ? t("ad.differsGpt") : t("ad.noGpt");
+    const critical = result?.severe_error && flagAllowed(c) ? ` · ${esc(t("value.critical"))}` : "";
+    return `<article class="crit-card">
+            ${heading}<span class="badge badge-good">${esc(t(`decision.${d.decision}`))}</span></div>
+            <p class="crit-meta">${esc(t("ad.decidedBy", { reviewer: d.reviewer, when: when(d.decided_at) }))}</p>
+            <p><strong>${esc(t("ad.final", { value: valueText(c, result?.value, result?.is_na) }))}</strong>${critical}</p>
+            <p>${esc(d.explanation)}</p>
+            <p class="hint">${esc(score)} · ${esc(follows)}</p>
+          </article>`;
+  }
+  if (appeal.stage === "reassessing") {
+    return `<article class="crit-card">${heading}</div><p class="hint">${esc(t("ad.waitGpt"))}</p></article>`;
+  }
+  const gpt = appeal.reassessment;
+  const canAccept = gpt?.status === "completed";
+  const form = (appealUi.forms[id] ??= decisionDefaults(detail));
+  if (!form.decision || (form.decision === "accept" && !canAccept)) form.decision = canAccept ? "accept" : "confirm";
+  const original = appeal.disputed_result ?? detail.original_result;
+  const options = answerOptions(c);
+  const choice = (value, label, disabled = false) =>
+    `<option value="${value}" ${form.decision === value ? "selected" : ""} ${disabled ? "disabled" : ""}>${esc(label)}</option>`;
+  const hidden = form.decision === "override" ? "" : "hidden";
+  const saving = !!appealUi.saving[id];
+  return `<form class="crit-card form-grid" data-decision-form="${esc(id)}" novalidate>
+            ${heading}</div>
+            <p class="hint">${esc(t("ad.gptOnlyRecommends"))}</p>
+            <div>
+              <label class="field-label" for="decision-kind">${esc(t("ad.decisionLabel"))}</label>
+              <select class="input" id="decision-kind" name="decision">
+                ${canAccept ? choice("accept", t("ad.opt.accept", { value: valueText(c, gpt.recommended_value, gpt.recommended_is_na) })) : ""}
+                ${choice("confirm", t("ad.opt.confirm", { value: valueText(c, original?.value, original?.is_na) }))}
+                ${choice("override", t("ad.opt.override"), !options.length)}
+              </select>
+            </div>
+            <div data-when="override" ${hidden}>
+              <label class="field-label" for="decision-answer">${esc(t("ad.value"))}</label>
+              <select class="input" id="decision-answer" name="answer">
+                ${options.map((o, i) => `<option value="${i}" ${String(i) === form.value ? "selected" : ""}>${esc(o.label)}</option>`).join("")}
+              </select>
+            </div>
+            ${flagAllowed(c) ? `<div data-when="override" ${hidden}><label class="ui-check"><input type="checkbox" name="critical" ${form.critical ? "checked" : ""} /><span>${esc(t("ad.critical"))}</span></label></div>` : ""}
+            <div>
+              <label class="field-label" for="decision-explanation">${esc(t("ad.explanation"))}</label>
+              <textarea class="input" id="decision-explanation" name="explanation" rows="3" maxlength="4000" required placeholder="${esc(t("ad.explanationPlaceholder"))}">${esc(form.explanation)}</textarea>
+            </div>
+            <div>
+              <label class="field-label" for="decision-reviewer">${esc(t("ad.reviewer"))}</label>
+              <input class="input" id="decision-reviewer" name="reviewer" maxlength="120" autocomplete="name" placeholder="${esc(t("ad.reviewerPlaceholder"))}" value="${esc(form.reviewer)}" />
+            </div>
+            <div class="ui-btn-row">
+              ${Button(esc(t(saving ? "ad.saving" : "ad.save")), { variant: "primary", type: "submit", attrs: saving ? "disabled" : "" })}
+            </div>
+          </form>`;
+}
+
+function viewAppeal(id) {
+  const detail = appealUi.details[id];
+  if (!detail) {
+    if (!appealUi.loading.has(id) && !appealUi.errors[id]) loadAppeal(id);
+    const error = appealUi.errors[id];
+    const body = error
+      ? `<div class="notice notice-error" role="alert">${esc(t("ad.loadError", { error }))} ${Button(esc(t("common.retry")), { attrs: `data-action="reload-appeal" data-appeal-id="${esc(id)}"` })}</div>`
+      : `<p class="hint">${esc(t("ad.loading"))}</p>`;
+    return `<section class="page"><p><a href="#/appeals">${esc(t("nav.appeals"))}</a></p>${body}</section>`;
+  }
+  const { appeal, evaluation } = detail;
+  const messages = (detail.transcript ?? []).map((m) => ({ id: m.id, ts: m.timestamp, speaker: m.speaker, text: m.text }));
+  const notice = appealUi.notices[id];
+  const sub = evaluation.original_percent != null && evaluation.final_percent !== evaluation.original_percent
+    ? t("eval.originalFinal", { original: pct(evaluation.original_percent), final: pct(evaluation.final_percent) })
+    : "";
+  const meta = t("ad.meta", { checklist: evaluation.checklist_name, version: appeal.checklist_version, when: when(evaluation.completed_at) });
+  return `
+    <section class="page-wide">
+      <div class="pane-head">
+        <div>
+          <a href="#/appeals">${esc(t("nav.appeals"))}</a>
+          <h2 style="margin-top:4px">${esc(appeal.criterion_name)} · <a class="linkish" href="${esc(convHref(appeal.conversation_id))}">${esc(appeal.conversation_id)}</a></h2>
+        </div>
+        ${heroHtml(pct(evaluation.final_percent), sub, stageBadge(appeal))}
+      </div>
+      <div class="split">
+        <div class="pane">
+          <div class="pane-head"><h2>${esc(t("detail.transcript"))}</h2><span class="badge badge-muted">${esc(tn("detail.turns", messages.length))}</span></div>
+          ${transcriptHtml(messages)}
+        </div>
+        <div class="pane">
+          <div class="pane-head"><h2>${esc(t("ad.review"))}</h2><span class="hint">${esc(meta)}</span></div>
+          ${notice ? noticeBox(notice.tone, esc(notice.text), notice.tone === "notice-error" ? "alert" : "status") : ""}
+          ${detail.evaluation_stale ? noticeBox("notice-warn", esc(t("ad.stale"))) : ""}
+          ${originalCard(detail)}
+          ${appealCard(appeal)}
+          ${gptCard(id, detail)}
+          ${decisionCard(id, detail)}
+        </div>
+      </div>
+    </section>`;
 }
 
 // ---- Checklist -----------------------------------------------------------------------------------------
@@ -622,15 +1278,15 @@ function evaluationPane(convId, shown) {
 
 function checklistSubtitle() {
   const source = state.checklist.source;
-  const parts = [source ? `${source.name} · version ${source.version}` : String(state.checklist.note ?? "").replace(/\.$/, "")];
-  if (state.checklistDraft) parts.push("unsaved changes");
+  const parts = [source ? t("cl.version", { name: source.name, version: source.version }) : String(state.checklist.note ?? "").replace(/\.$/, "")];
+  if (state.checklistDraft) parts.push(t("cl.unsaved"));
   return parts.join(" · ");
 }
 
 function checklistNotice() {
   if (!checklistStatus.error) return "";
   const reload = checklistStatus.conflictVersion
-    ? Button(`Discard my changes and load version ${esc(checklistStatus.conflictVersion)}`, { attrs: 'data-action="reload-checklist"' })
+    ? Button(esc(t("cl.reload", { version: checklistStatus.conflictVersion })), { attrs: 'data-action="reload-checklist"' })
     : "";
   return `<div class="notice notice-error" role="alert" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px">
       <span>${esc(checklistStatus.error)}</span>${reload}
@@ -643,23 +1299,24 @@ function viewChecklist() {
     <section class="library library-wide">
       <div class="page-head">
         <div>
-          <h1 class="studio-title">Checklist</h1>
+          <h1 class="studio-title">${esc(t("cl.title"))}</h1>
           <p>${esc(checklistSubtitle())}</p>
         </div>
         <div class="ui-btn-row">
-          ${Button("Add criterion", { attrs: 'data-action="add-criterion"' })}
-          ${Button(checklistStatus.saving ? "Saving…" : "Save checklist", { variant: "primary", attrs: `data-action="apply-checklist"${checklistStatus.saving ? " disabled" : ""}` })}
+          ${Button(esc(t("cl.add")), { attrs: 'data-action="add-criterion"' })}
+          ${Button(esc(t(checklistStatus.saving ? "cl.saving" : "cl.save")), { variant: "primary", attrs: `data-action="apply-checklist"${checklistStatus.saving ? " disabled" : ""}` })}
         </div>
       </div>
       ${checklistNotice()}
       <div class="card-grid">
         ${config.criteria.map((c) => {
           const section = sectionName(config, c.section_id);
+          const tags = [t("cl.weight", { weight: fmt(c.weight) }), c.na_allowed ? t("cl.na") : "", c.severe_error_enabled ? t("cl.severe") : ""].filter(Boolean);
           return `
           <button type="button" class="lib-card ${c.enabled !== false ? "" : "is-off"}" data-open-edit="${esc(c.id)}">
             <h3>${esc(c.name)}</h3>
             <p>${esc(c.description)}</p>
-            <span class="hint">${section ? `${esc(section)} · ` : ""}weight ${esc(fmt(c.weight))}${c.na_allowed ? " · N/A" : ""}${c.severe_error_enabled ? " · severe" : ""}</span>
+            <span class="hint">${section ? `${esc(section)} · ` : ""}${esc(tags.join(" · "))}</span>
           </button>`;
         }).join("")}
       </div>
@@ -679,8 +1336,8 @@ function openEditor(id) {
   const linked = state.checklistDraft ? !!state.checklistDraft.baseId : !!state.checklist.source;
   const baseVersion = state.checklistDraft ? state.checklistDraft.baseVersion : state.checklist.source?.version;
   const saveHint = linked
-    ? `Changes stay on the checklist page until you choose Save checklist, which saves “${state.checklist.title}” as version ${(baseVersion ?? 0) + 1}.`
-    : "Changes stay on the checklist page until you choose Save checklist, which saves this checklist in ATLAS as version 1.";
+    ? t("cl.saveHintLinked", { title: state.checklist.title, version: (baseVersion ?? 0) + 1 })
+    : t("cl.saveHintNew");
   const changed = () => {
     if (!checklistStatus.conflictVersion) checklistStatus.error = "";
     persist();
@@ -736,7 +1393,7 @@ async function saveChecklist() {
     render();
   } catch (err) {
     checklistStatus.saving = false;
-    checklistStatus.error = `The checklist was not saved. ${errorText(err)}`;
+    checklistStatus.error = t("cl.saveError", { error: errorText(err) });
     if (err.code === "stale_checklist") checklistStatus.conflictVersion = err.details?.latest_version ?? null;
     render();
   }
@@ -753,7 +1410,7 @@ async function reloadChecklist() {
     forgetChecklists(id);
     persist();
   } catch (err) {
-    checklistStatus.error = `Could not load the checklist. ${errorText(err)}`;
+    checklistStatus.error = t("cl.loadError", { error: errorText(err) });
   }
   render();
 }
@@ -795,35 +1452,6 @@ function forgetChecklists(savedId) {
   evaluationUi.checklists = null;
   evaluationUi.versions = {};
   if (savedId && evaluationUi.selection?.checklistId === savedId) evaluationUi.selection.version = null;
-}
-
-function viewReview() {
-  const items = state.appeals;
-  if (!items.length) {
-    return `<section class="empty"><h1>Appeals</h1><p>No appeals yet. Open a conversation and dispute a criterion.</p><a class="btn btn-primary" href="#/">Go to Home</a></section>`;
-  }
-  return `
-    <section class="library">
-      <div class="page-head"><div><h1 class="studio-title">Appeals</h1><p>${items.filter((a) => a.status === "open").length} open · ${items.length} total</p></div></div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Case</th><th>Criterion</th><th>Original</th><th>Comment</th><th>Decision</th><th>Final</th></tr></thead>
-          <tbody>
-            ${items.map((a) => {
-              const c = criterion(a.criterionId);
-              return `<tr>
-                <td><a class="linkish" href="#/c/${esc(a.conversationId)}">${esc(a.conversationId)}</a></td>
-                <td>${esc(c?.title ?? a.criterionId)}</td>
-                <td class="num">${esc(a.originalAnswer)} (${esc(a.originalScore)})</td>
-                <td>${esc(a.comment)}</td>
-                <td>${a.status === "reviewed" ? esc(a.reviewerReason) : `<span class="badge badge-warn">open</span>`}</td>
-                <td class="num">${a.finalTotal != null ? esc(a.finalTotal) : "—"}</td>
-              </tr>`;
-            }).join("")}
-          </tbody>
-        </table>
-      </div>
-    </section>`;
 }
 
 function bind() {
@@ -879,6 +1507,49 @@ function bind() {
       render();
     });
   }
+  document.querySelectorAll("[data-appeal]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const form = btn.closest(".crit-card")?.querySelector("[data-appeal-form]");
+      if (!form) return;
+      const draft = (appealDrafts[`${form.dataset.evaluation}:${form.dataset.appealForm}`] ??= { text: "" });
+      draft.open = form.hidden;
+      form.hidden = !draft.open;
+      btn.setAttribute("aria-expanded", String(draft.open));
+      if (draft.open) form.comment.focus();
+    });
+  });
+  document.querySelectorAll("[data-appeal-form]").forEach((form) => {
+    const key = `${form.dataset.evaluation}:${form.dataset.appealForm}`;
+    form.comment.addEventListener("input", () => {
+      (appealDrafts[key] ??= { open: true }).text = form.comment.value;
+    });
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      submitAppeal(form);
+    });
+  });
+  const decisionForm = document.querySelector("[data-decision-form]");
+  if (decisionForm) {
+    const id = decisionForm.dataset.decisionForm;
+    const field = (name) => decisionForm.elements.namedItem(name);
+    const sync = () => {
+      const form = appealUi.forms[id];
+      if (!form) return;
+      form.decision = field("decision").value;
+      if (field("answer")) form.value = field("answer").value;
+      if (field("critical")) form.critical = field("critical").checked;
+      form.explanation = field("explanation").value;
+      form.reviewer = field("reviewer").value;
+      decisionForm.querySelectorAll("[data-when='override']").forEach((el) => { el.hidden = form.decision !== "override"; });
+    };
+    decisionForm.addEventListener("input", sync);
+    decisionForm.addEventListener("change", sync);
+    decisionForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      sync();
+      saveDecision(id);
+    });
+  }
 }
 
 function applyFilters() {
@@ -898,8 +1569,7 @@ function applyFilters() {
 // the same ingestion code; the list is then reloaded from the backend. The dialog lives outside #view, so
 // re-rendering the page behind it never clears a pasted document.
 
-const SOURCE_HINT = "ATLAS requests this group from the organizers' API on the server.";
-const JSON_PLACEHOLDER = `Paste the organizers' API response here, exactly as the API returned it:
+const jsonPlaceholder = () => `${t("imp.jsonPlaceholder")}
 {
   "error": "",
   "isSuccess": true,
@@ -917,35 +1587,35 @@ let importDialog = null;
 function importDialogHtml() {
   const tab = (key, label, selected) => `<button type="button" class="tab" role="tab" id="import-tab-${key}"
     aria-controls="import-panel-${key}" aria-selected="${selected}" tabindex="${selected ? 0 : -1}"
-    data-import-tab="${key}">${label}</button>`;
+    data-import-tab="${key}">${esc(label)}</button>`;
   const actions = (label) => `<div class="dialog-actions">
-      ${Button("Cancel", { attrs: "data-import-close" })}
-      ${Button(label, { variant: "primary", type: "submit" })}
+      ${Button(esc(t("common.cancel")), { attrs: "data-import-close" })}
+      ${Button(esc(label), { variant: "primary", type: "submit" })}
     </div>`;
   return `
     <div class="dialog-head">
       <div>
-        <h2 id="import-title" class="sheet-title">Import conversations</h2>
-        <p class="hint">ATLAS validates and stores them. Importing the same conversations again does not create duplicates.</p>
+        <h2 id="import-title" class="sheet-title">${esc(t("imp.title"))}</h2>
+        <p class="hint">${esc(t("imp.hint"))}</p>
       </div>
-      <button type="button" class="dialog-close" data-import-close aria-label="Close">
+      <button type="button" class="dialog-close" data-import-close aria-label="${esc(t("common.close"))}">
         <svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
       </button>
     </div>
-    <div class="tabs" role="tablist" aria-label="Import method">
-      ${tab("api", "Import via API", true)}
-      ${tab("json", "Paste JSON", false)}
+    <div class="tabs" role="tablist" aria-label="${esc(t("imp.method"))}">
+      ${tab("api", t("imp.tabApi"), true)}
+      ${tab("json", t("imp.tabJson"), false)}
     </div>
     <form class="dialog-panel" id="import-panel-api" role="tabpanel" aria-labelledby="import-tab-api" data-import-form="api" novalidate>
-      ${Field("Group ID", '<input class="ui-input" name="group_id" type="text" placeholder="e.g. DEV" maxlength="64" autocomplete="off" autocapitalize="off" spellcheck="false" />')}
-      <p class="hint" data-import-source>${esc(SOURCE_HINT)}</p>
+      ${Field(esc(t("imp.groupId")), `<input class="ui-input" name="group_id" type="text" placeholder="${esc(t("imp.groupPlaceholder"))}" maxlength="64" autocomplete="off" autocapitalize="off" spellcheck="false" />`)}
+      <p class="hint" data-import-source>${esc(t("imp.sourceHint"))}</p>
       <div data-import-status role="status" aria-live="polite"></div>
-      ${actions("Import")}
+      ${actions(t("imp.import"))}
     </form>
     <form class="dialog-panel" id="import-panel-json" role="tabpanel" aria-labelledby="import-tab-json" data-import-form="json" novalidate hidden>
-      ${Field("Organizers' API response (JSON)", `<textarea class="ui-textarea import-json" name="json" rows="14" wrap="off" autocomplete="off" spellcheck="false" placeholder="${esc(JSON_PLACEHOLDER)}"></textarea>`)}
+      ${Field(esc(t("imp.jsonLabel")), `<textarea class="ui-textarea import-json" name="json" rows="14" wrap="off" autocomplete="off" spellcheck="false" placeholder="${esc(jsonPlaceholder())}"></textarea>`)}
       <div data-import-status role="status" aria-live="polite"></div>
-      ${actions("Import JSON")}
+      ${actions(t("imp.importJson"))}
     </form>`;
 }
 
@@ -971,26 +1641,26 @@ function setImportStatus(el, tone, html) {
 }
 
 function importSummary(run) {
-  const counts = `${run.created} new · ${run.updated} updated · ${run.unchanged} already imported · ${run.rejected} rejected`;
-  const head = run.status === "failed" ? `Nothing was imported from group ${run.group_id}.` : `Imported group ${run.group_id}.`;
-  const reported = run.reported_total != null && run.reported_total !== run.received ? ` (total_records says ${run.reported_total})` : "";
-  let html = `<strong>${esc(head)}</strong> ${esc(counts)}.<br>${esc(`Received ${run.received} record${run.received === 1 ? "" : "s"}${reported}.`)}`;
+  const counts = t("imp.counts", { created: run.created, updated: run.updated, unchanged: run.unchanged, rejected: run.rejected });
+  const head = t(run.status === "failed" ? "imp.failedHead" : "imp.okHead", { group: run.group_id });
+  const reported = run.reported_total != null && run.reported_total !== run.received ? t("imp.reported", { total: run.reported_total }) : "";
+  let html = `<strong>${esc(head)}</strong> ${esc(counts)}.<br>${esc(tn("imp.received", run.received, { reported }))}`;
   const issues = run.issues ?? [];
   if (issues.length) {
-    const where = (i) => i.conversation_id ?? (i.record_index != null ? `record ${i.record_index + 1}` : "import");
+    const where = (i) => i.conversation_id ?? (i.record_index != null ? t("imp.record", { n: i.record_index + 1 }) : t("imp.whereImport"));
     html += `<ul>${issues.slice(0, 6).map((i) => `<li>${esc(`${where(i)}: ${i.message}`)}</li>`).join("")}</ul>`;
-    if (issues.length > 6) html += `<p class="hint">…and ${issues.length - 6} more.</p>`;
+    if (issues.length > 6) html += `<p class="hint">${esc(t("imp.more", { count: issues.length - 6 }))}</p>`;
   }
   return html;
 }
 
 /** JSON.parse's message, plus line and column when the engine only reports a character position. */
 function jsonError(err, text) {
-  const message = String(err?.message || "Invalid JSON.");
+  const message = String(err?.message || t("imp.invalidJson"));
   const pos = message.match(/position (\d+)/);
   if (!pos || /line \d+/i.test(message)) return message;
   const before = text.slice(0, Number(pos[1]));
-  return `${message} (line ${before.split("\n").length}, column ${before.length - before.lastIndexOf("\n")})`;
+  return t("imp.lineCol", { message, line: before.split("\n").length, column: before.length - before.lastIndexOf("\n") });
 }
 
 async function runImport(form) {
@@ -1000,27 +1670,25 @@ async function runImport(form) {
   let pending;
   if (form.dataset.importForm === "api") {
     const groupId = form.group_id.value.trim();
-    if (!groupId) return setImportStatus(status, "error", "Enter a group_id, for example DEV.");
-    if (!GROUP_ID_RE.test(groupId)) {
-      return setImportStatus(status, "error", esc("A group_id starts with a letter or digit and contains only letters, digits, '.', '_' and '-' (at most 64 characters)."));
-    }
+    if (!groupId) return setImportStatus(status, "error", esc(t("imp.needGroup")));
+    if (!GROUP_ID_RE.test(groupId)) return setImportStatus(status, "error", esc(t("imp.badGroup")));
     call = () => importGroup(groupId);
-    pending = `Requesting group ${groupId} from the organizers' API…`;
+    pending = t("imp.requesting", { group: groupId });
   } else {
     const text = form.json.value;
-    if (!text.trim()) return setImportStatus(status, "error", esc("Paste the organizers' API response first."));
+    if (!text.trim()) return setImportStatus(status, "error", esc(t("imp.needJson")));
     let payload;
     try {
       payload = JSON.parse(text);
     } catch (err) {
-      return setImportStatus(status, "error", esc(`This is not valid JSON. ${jsonError(err, text)}`));
+      return setImportStatus(status, "error", esc(t("imp.notJson", { error: jsonError(err, text) })));
     }
     call = () => importJson(payload);
-    pending = "Validating and importing…";
+    pending = t("imp.validating");
   }
   const label = submit.textContent;
   submit.disabled = true;
-  submit.textContent = "Importing…";
+  submit.textContent = t("imp.importing");
   setImportStatus(status, "info", esc(pending));
   try {
     const run = await call();
@@ -1028,7 +1696,7 @@ async function runImport(form) {
     if (navKey() !== "list") location.hash = "#/";
     await reloadConversations();
   } catch (err) {
-    setImportStatus(status, "error", esc(err.message));
+    setImportStatus(status, "error", esc(errorText(err)));
   } finally {
     submit.disabled = false;
     submit.textContent = label;
@@ -1039,8 +1707,7 @@ async function refreshSourceHint() {
   const hint = importDialog.querySelector("[data-import-source]");
   try {
     const info = await cqaInfo();
-    hint.textContent = info.source_configured ? SOURCE_HINT
-      : "The organizers' API is not configured on this server (ATLAS_CQA_SOURCE_URL), so an API import will fail. Use Paste JSON instead.";
+    hint.textContent = t(info.source_configured ? "imp.sourceHint" : "imp.sourceMissing");
     hint.classList.toggle("hint-warn", !info.source_configured);
   } catch {
     // An unreachable API is reported by the import itself.
@@ -1108,9 +1775,35 @@ document.addEventListener(
       openImport();
       return;
     }
+    if (e.target.closest("[data-action='switch-lang']")) {
+      e.preventDefault();
+      switchLanguage();
+      return;
+    }
     if (e.target.closest("[data-action='reload-conversations']")) {
       e.preventDefault();
       reloadConversations();
+      return;
+    }
+    if (e.target.closest("[data-action='reload-appeals']")) {
+      e.preventDefault();
+      appealsStatus.loading = true;
+      appealsSignature = null;
+      render();
+      loadAppeals();
+      return;
+    }
+    const reloadAppeal = e.target.closest("[data-action='reload-appeal']");
+    if (reloadAppeal) {
+      e.preventDefault();
+      delete appealUi.errors[reloadAppeal.dataset.appealId];
+      render();
+      return;
+    }
+    const retry = e.target.closest("[data-action='retry-reassessment']");
+    if (retry) {
+      e.preventDefault();
+      retryReassessment(retry.dataset.appealId);
       return;
     }
     const neu = e.target.closest("[data-action='new-chat']");
@@ -1152,6 +1845,9 @@ window.addEventListener("hashchange", () => {
       return;
     }
   }
+  // An appeal page shows the stored state each time it is opened.
+  const appealId = currentAppealId();
+  if (appealId && appealUi.details[appealId] && !appealUi.polling.has(appealId)) loadAppeal(appealId);
   render();
 });
 window.addEventListener("beforeunload", (e) => {
@@ -1162,4 +1858,5 @@ window.addEventListener("beforeunload", (e) => {
 render();
 reloadConversations();
 loadScores();
+loadAppeals();
 syncChecklist();

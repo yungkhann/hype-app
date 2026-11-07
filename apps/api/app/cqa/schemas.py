@@ -21,6 +21,7 @@ from pydantic import (
     StrictFloat,
     StrictInt,
     StrictStr,
+    computed_field,
     field_validator,
     model_validator,
 )
@@ -782,6 +783,11 @@ class EvaluateResponse(BaseModel):
 # ---------------------------------------------------------------------------------------------------
 
 AppealStatus = Literal["pending", "confirmed", "overridden"]
+# What the appeal is waiting for: GPT's reassessment, the manager's decision, a retry, or nothing (decided).
+AppealStage = Literal["reassessing", "ready_for_review", "reassessment_failed", "decided"]
+ReassessmentStatus = Literal["pending", "running", "completed", "failed"]
+Recommendation = Literal["uphold", "change"]
+DecisionKind = Literal["confirm", "accept", "override"]
 
 
 class AppealCreate(BaseModel):
@@ -789,6 +795,39 @@ class AppealCreate(BaseModel):
     criterion_id: str = Field(pattern=CRITERION_ID_PATTERN)
     comment: str = Field(min_length=3, max_length=2000)
     submitted_by: str = Field(default="Operator", min_length=1, max_length=120)
+    explanation_language: ExplanationLanguage | None = Field(
+        default=None, description="Language of GPT's reassessment rationale (the UI language). Default: the "
+                                  "evaluation's explanation language.")
+
+
+class Reassessment(BaseModel):
+    """One GPT reassessment of the appealed criterion: a separate API call, never the original evaluation.
+
+    GPT only recommends. The manager's decision (``AppealDecision``) is what changes the final result, and the
+    scoring engine computes every number."""
+
+    id: str
+    status: ReassessmentStatus
+    reassessor: str = Field(description="The adapter that ran it (``openai``).")
+    requested_model: str = ""
+    model: str | None = Field(default=None, description="The model the API reports it used.")
+    explanation_language: ExplanationLanguage = "en"
+    created_at: str
+    started_at: str | None = None
+    completed_at: str | None = None
+    recommendation: Recommendation | None = None
+    original_value: AnswerValue = Field(default=None, description="The disputed value, as GPT restated it.")
+    recommended_value: AnswerValue = None
+    recommended_is_na: bool = False
+    recommended_critical_error: bool = False
+    rationale: str = ""
+    evidence_turns: list[int] = Field(default=[], description="1-based turns of the original transcript.")
+    evidence: list[EvidenceRef] = []
+    attempts: int = 0
+    request_ids: list[str] = []
+    usage: dict[str, int] = {}
+    error: EvaluationError | None = None
+    raw: dict | None = Field(default=None, description="GPT's answer (or its last rejected answer), for audit.")
 
 
 class OverrideAnswer(BaseModel):
@@ -802,7 +841,9 @@ class OverrideAnswer(BaseModel):
 
 
 class AppealDecisionIn(BaseModel):
-    decision: Literal["confirm", "override"]
+    decision: DecisionKind = Field(description=(
+        "confirm: keep the disputed result. accept: apply GPT's recommendation (taken from the stored "
+        "reassessment, never from the request). override: the manager's own answer in ``override``."))
     explanation: str = Field(min_length=3, max_length=4000, description="Mandatory reason for the decision.")
     reviewer: str = Field(default="Reviewer", min_length=1, max_length=120)
     override: OverrideAnswer | None = None
@@ -811,13 +852,13 @@ class AppealDecisionIn(BaseModel):
     def _needs_override(self) -> AppealDecisionIn:
         if self.decision == "override" and self.override is None:
             raise ValueError("An override decision needs the new answer.")
-        if self.decision == "confirm":
+        if self.decision != "override":
             self.override = None
         return self
 
 
 class AppealDecision(BaseModel):
-    decision: Literal["confirm", "override"]
+    decision: DecisionKind
     explanation: str
     reviewer: str
     decided_at: str
@@ -825,6 +866,14 @@ class AppealDecision(BaseModel):
     new_result: CriterionResult | None
     total_before: float | None
     total_after: float | None
+    percent_before: float | None = None
+    percent_after: float | None = None
+    reassessment_id: str | None = Field(default=None, description="The GPT reassessment the manager reviewed.")
+    gpt_recommendation: Recommendation | None = None
+    gpt_recommended_value: AnswerValue = None
+    gpt_recommended_is_na: bool = False
+    follows_gpt: bool | None = Field(default=None, description=(
+        "Whether the final answer is the one GPT recommended. None when there was no GPT recommendation."))
 
 
 class Appeal(BaseModel):
@@ -844,7 +893,28 @@ class Appeal(BaseModel):
     disputed_points: float | None
     disputed_max_points: float | None
     total_at_submission: float | None
+    percent_at_submission: float | None = None
+    criterion_config: Criterion | None = Field(default=None, description=(
+        "The criterion exactly as configured in the evaluation's checklist version (not the latest edit)."))
+    explanation_language: ExplanationLanguage = "en"
+    reassessments: list[Reassessment] = Field(default=[], description="Every GPT reassessment attempt, oldest first.")
     decision: AppealDecision | None = None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def reassessment(self) -> Reassessment | None:
+        """The latest GPT reassessment attempt."""
+        return self.reassessments[-1] if self.reassessments else None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def stage(self) -> AppealStage:
+        if self.status != "pending":
+            return "decided"
+        latest = self.reassessment
+        if latest is None or latest.status == "failed":
+            return "reassessment_failed"
+        return "ready_for_review" if latest.status == "completed" else "reassessing"
 
 
 class AuditEvent(BaseModel):
@@ -869,14 +939,29 @@ class EvaluationDetail(BaseModel):
     audit: list[AuditEvent]
 
 
+class RecommendationImpact(BaseModel):
+    """What accepting GPT's recommendation would do to the final score (computed by the scoring engine)."""
+
+    total_before: float | None
+    total_after: float | None
+    percent_before: float | None
+    percent_after: float | None
+    criterion_points_after: float | None
+    criterion_max_points_after: float | None
+
+
 class AppealDetail(BaseModel):
     appeal: Appeal
     criterion: Criterion
     evaluation: EvaluationSummary
+    original_result: CriterionResult | None = Field(default=None, description="The evaluator's original answer.")
     current_result: CriterionResult | None
     current_score: CriterionScore | None
     original_score: CriterionScore | None
     context: list[Message] = Field(description="Transcript lines around the evidence (and the evidence itself).")
+    transcript: list[Message] = Field(default=[], description="The whole transcript, in its original order.")
+    impact: RecommendationImpact | None = Field(default=None, description=(
+        "For an undecided appeal with a GPT recommendation: the final score if the manager accepts it."))
     evaluation_stale: bool
     audit: list[AuditEvent]
 

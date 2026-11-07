@@ -4,6 +4,7 @@
 // (state.checklistDraft) that "Save checklist" stores as the next version.
 
 import { defaultChecklist } from "./data.js?v=tape2";
+import { t } from "./i18n.js?v=tape5";
 
 export const CRITERION_ID_RE = /^[a-z0-9][a-z0-9_-]{0,47}$/;
 const MAX_ALLOWED_SCORES = 101;
@@ -61,23 +62,23 @@ export function sectionName(config, sectionId) {
  */
 export function parseAllowedScores(text) {
   const tokens = String(text ?? "").split(/[\s,;]+/).filter(Boolean);
-  if (!tokens.length) return { error: "Enter the allowed scores, for example 0, 5, 10, 15, 20." };
+  if (!tokens.length) return { error: t("scores.empty") };
   const scores = [];
   for (const token of tokens) {
-    if (/^-\d/.test(token)) return { error: "Scores can't be negative." };
-    if (!/^\d+(\.\d+)?$/.test(token)) return { error: `“${token}” is not a number. Use a dot for decimals, e.g. 2.5.` };
+    if (/^-\d/.test(token)) return { error: t("scores.negative") };
+    if (!/^\d+(\.\d+)?$/.test(token)) return { error: t("scores.notNumber", { token }) };
     scores.push(Number(token));
   }
-  if (scores.length < 2) return { error: "Enter at least two scores, for example 0, 10." };
-  if (scores.length > MAX_ALLOWED_SCORES) return { error: `Enter at most ${MAX_ALLOWED_SCORES} scores.` };
+  if (scores.length < 2) return { error: t("scores.tooFew") };
+  if (scores.length > MAX_ALLOWED_SCORES) return { error: t("scores.tooMany", { max: MAX_ALLOWED_SCORES }) };
   const twice = scores.find((s, i) => scores.indexOf(s) !== i);
-  if (twice !== undefined) return { error: `${fmt(twice)} is listed more than once.` };
-  if (scores.some((s) => s > MAX_SCORE_VALUE)) return { error: `Scores can be at most ${MAX_SCORE_VALUE}.` };
+  if (twice !== undefined) return { error: t("scores.duplicate", { score: fmt(twice) }) };
+  if (scores.some((s) => s > MAX_SCORE_VALUE)) return { error: t("scores.tooHigh", { max: MAX_SCORE_VALUE }) };
   if (scores.some((s, i) => i > 0 && s < scores[i - 1])) {
     const sorted = [...scores].sort((a, b) => a - b).map(fmt).join(", ");
-    return { error: `List the scores from lowest to highest: ${sorted}.` };
+    return { error: t("scores.order", { sorted }) };
   }
-  if (scores.at(-1) === 0) return { error: "The highest score must be above 0: it earns the criterion's full weight." };
+  if (scores.at(-1) === 0) return { error: t("scores.zeroMax") };
   return { scores };
 }
 
