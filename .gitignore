@@ -1,0 +1,40 @@
+# Dependencies and build output
+node_modules/
+.pnpm-store/
+apps/web/.next/
+apps/web/out/
+apps/web/next-env.d.ts
+*.tsbuildinfo
+
+# Python
+apps/api/.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local data: uploaded datasets, findings, experiments. NEVER commit these — they may hold private case data.
+data/workspaces/
+# Case data received on the day goes here, never into git.
+data/private/
+
+# Secrets and local overrides
+.env
+.env.*
+!.env.example
+*.pem
+
+# Test artifacts
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/blob-report/
+apps/web/playwright/.cache/
+apps/web/e2e/.artifacts/
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp

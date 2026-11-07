@@ -1,0 +1,14 @@
+# Runtime dependencies for the ATLAS API. Exact versions are pinned in requirements.lock.
+fastapi>=0.115
+uvicorn[standard]>=0.32
+pydantic>=2.9
+pydantic-settings>=2.6
+python-multipart>=0.0.12
+pandas>=2.2
+numpy>=2.0
+scipy>=1.14
+scikit-learn>=1.5
+pyarrow>=17
+openpyxl>=3.1
+charset-normalizer>=3.4
+joblib>=1.4

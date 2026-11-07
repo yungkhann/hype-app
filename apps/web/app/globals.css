@@ -1,0 +1,201 @@
+@import "tailwindcss";
+
+/*
+ * ATLAS design tokens: dark-first. Cool charcoal surfaces in small steps, 7% white hairlines, three ink levels,
+ * one mid-teal accent for action, selection and focus. Contrast-checked on every surface:
+ * ink-3 ≥ 4.5:1 on every surface, status text ≥ 5.8:1 on its tint, control borders ≥ 3.2:1 (WCAG 1.4.11).
+ * `.theme-paper` re-maps the same names to a light print palette for the report.
+ */
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
+
+  /* surfaces, darkest to lightest */
+  --color-canvas: #0a0b0d;
+  --color-sunken: #0d0e11;
+  --color-panel: #111215;
+  --color-raised: #18191d;
+  --color-hover: #1c1d22;
+  --color-line: #1f2024;
+  --color-line-strong: #2b2d32;
+  --color-control: #61656e;
+
+  /* ink */
+  --color-ink: #eceef1;
+  --color-ink-2: #a3a8b2;
+  --color-ink-3: #80858f;
+
+  /* accent: primary action, selection, focus — nothing decorative */
+  --color-accent: #3fb3a4;
+  --color-accent-hover: #52c1b2;
+  --color-accent-press: #34a093;
+  --color-accent-fg: #04110e;
+  --color-accent-soft: #162827;
+  --color-accent-ink: #6fd1c3;
+
+  /* state: text on its own tint */
+  --color-critical: #f17b72;
+  --color-critical-soft: #2e1f20;
+  --color-warning: #e3a33a;
+  --color-warning-mark: #e3a33a;
+  --color-warning-soft: #2b2419;
+  --color-good: #4fbf86;
+  --color-good-soft: #172822;
+  --color-info: #6ea8f0;
+  --color-info-soft: #1b2431;
+
+  /* chart series (dark steps, validated on the panel; see lib/palette.ts) */
+  --color-series-1: #3987e5;
+  --color-series-2: #d95926;
+  --color-series-3: #199e70;
+  --color-series-4: #c98500;
+  --color-series-5: #d55181;
+  --color-series-6: #008300;
+  --color-series-7: #9085e9;
+  --color-series-8: #e66767;
+
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1rem;
+  --text-dense: 0.8125rem;
+  --text-dense--line-height: 1.25rem;
+  --text-dense--letter-spacing: -0.006em;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  --shadow-overlay: 0 16px 40px -12px rgb(0 0 0 / 0.65), 0 4px 12px -4px rgb(0 0 0 / 0.45);
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart: cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+/* The report is a print preview: the same token names on white paper. */
+.theme-paper {
+  --color-canvas: #f4f5f7;
+  --color-sunken: #eef0f3;
+  --color-panel: #ffffff;
+  --color-raised: #f4f5f7;
+  --color-hover: #eef0f3;
+  --color-line: #e1e4ea;
+  --color-line-strong: #c9ced8;
+  --color-control: #858d9e;
+  --color-ink: #161b26;
+  --color-ink-2: #4a5263;
+  --color-ink-3: #626b7e;
+  --color-accent: #0b7a71;
+  --color-accent-hover: #09655e;
+  --color-accent-press: #075a53;
+  --color-accent-fg: #ffffff;
+  --color-accent-soft: #e2f1ee;
+  --color-accent-ink: #075a53;
+  --color-critical: #b42318;
+  --color-critical-soft: #fef1ef;
+  --color-warning: #8a5300;
+  --color-warning-mark: #e59a00;
+  --color-warning-soft: #fff5e0;
+  --color-good: #0f6e38;
+  --color-good-soft: #eaf6ef;
+  --color-info: #2b5a99;
+  --color-info-soft: #ebf1fa;
+  color-scheme: light;
+  color: var(--color-ink);
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    -webkit-text-size-adjust: 100%;
+    background: var(--color-canvas);
+  }
+  body {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    line-height: 1.45;
+    letter-spacing: -0.006em;
+    caret-color: var(--color-accent);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--color-accent) 32%, transparent);
+    color: var(--color-ink);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  /* Radix tabs match :focus-visible on mouse click in Chromium; the underline already shows selection. */
+  html[data-input="pointer"] [role="tab"]:focus-visible {
+    outline: none;
+  }
+  a {
+    text-underline-offset: 3px;
+  }
+  h1, h2, h3 {
+    text-wrap: balance;
+    letter-spacing: -0.016em;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line-strong) transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: var(--radius-md);
+    background: var(--color-line-strong) padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-control) padding-box;
+  }
+  table, .num, input[type="number"] {
+    font-variant-numeric: tabular-nums;
+  }
+  input::placeholder, textarea::placeholder {
+    color: var(--color-ink-3);
+  }
+  input[type="number"]::-webkit-inner-spin-button {
+    opacity: 0.5;
+  }
+  button:not(:disabled), [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes atlas-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@keyframes atlas-rise {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes atlas-pop {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+@media print {
+  html, body { background: white; }
+  .no-print { display: none !important; }
+}

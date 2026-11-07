@@ -1,0 +1,27 @@
+[
+  {
+    "filename": "customers_churn.csv",
+    "task": "classification",
+    "description": "Synthetic customers with a binary churned target (6,000 rows)."
+  },
+  {
+    "filename": "credit_limits.csv",
+    "task": "regression",
+    "description": "Synthetic credit applications with an approved limit to predict; semicolon-delimited."
+  },
+  {
+    "filename": "transactions.csv",
+    "task": "time series",
+    "description": "Two years of synthetic daily transactions with weekly seasonality and growth."
+  },
+  {
+    "filename": "accounts_messy.xlsx",
+    "task": "data quality",
+    "description": "Synthetic accounts with spelling variants, duplicates, text-encoded numbers and dates, missing values. Two sheets."
+  },
+  {
+    "filename": "branches.parquet",
+    "task": "analytics (no target)",
+    "description": "Synthetic branch operations with no label, for analysis without ML."
+  }
+]

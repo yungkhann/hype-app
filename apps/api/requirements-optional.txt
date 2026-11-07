@@ -1,0 +1,2 @@
+# Optional model backends. The API detects these at runtime and hides models that are missing.
+catboost>=1.2

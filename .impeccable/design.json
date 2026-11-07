@@ -1,0 +1,786 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-06T19:55:21+00:00",
+  "title": "Design System: ATLAS — Data Intelligence Studio",
+  "extensions": {
+    "colorMeta": {
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Canvas",
+        "canonical": "#0a0b0d",
+        "oklch": "oklch(14.9% 0.005 264.5)",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#232426",
+          "#3e4042",
+          "#5c5e60",
+          "#7f8083",
+          "#a3a4a7",
+          "#c9cace",
+          "#edeef2"
+        ]
+      },
+      "sunken": {
+        "role": "neutral",
+        "displayName": "Sunken",
+        "canonical": "#0d0e11",
+        "oklch": "oklch(16.4% 0.007 271.0)",
+        "tonalRamp": [
+          "#0a0b0e",
+          "#232427",
+          "#3e4043",
+          "#5c5d61",
+          "#7f8084",
+          "#a3a4a9",
+          "#c9cacf",
+          "#edeef3"
+        ]
+      },
+      "panel": {
+        "role": "neutral",
+        "displayName": "Panel",
+        "canonical": "#111215",
+        "oklch": "oklch(18.2% 0.006 271.1)",
+        "tonalRamp": [
+          "#0a0b0e",
+          "#232427",
+          "#3e4043",
+          "#5c5d61",
+          "#7f8084",
+          "#a3a4a9",
+          "#c9cacf",
+          "#edeef3"
+        ]
+      },
+      "raised": {
+        "role": "neutral",
+        "displayName": "Raised",
+        "canonical": "#18191d",
+        "oklch": "oklch(21.4% 0.008 274.5)",
+        "tonalRamp": [
+          "#0a0b0f",
+          "#232428",
+          "#3e3f44",
+          "#5c5d62",
+          "#7f8085",
+          "#a3a4aa",
+          "#c9cad0",
+          "#edeef4"
+        ]
+      },
+      "hover": {
+        "role": "neutral",
+        "displayName": "Hover",
+        "canonical": "#1c1d22",
+        "oklch": "oklch(23.2% 0.010 276.6)",
+        "tonalRamp": [
+          "#0a0b0f",
+          "#232429",
+          "#3e3f45",
+          "#5c5d63",
+          "#7e8086",
+          "#a3a4ab",
+          "#c9cad1",
+          "#eceef5"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#1f2024",
+        "oklch": "oklch(24.4% 0.008 274.6)",
+        "tonalRamp": [
+          "#0a0b0e",
+          "#232428",
+          "#3e3f44",
+          "#5c5d62",
+          "#7f8085",
+          "#a3a4aa",
+          "#c9cad0",
+          "#edeef4"
+        ]
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Strong Hairline",
+        "canonical": "#2b2d32",
+        "oklch": "oklch(29.7% 0.009 268.4)",
+        "tonalRamp": [
+          "#090b0f",
+          "#222429",
+          "#3d4045",
+          "#5b5d63",
+          "#7e8086",
+          "#a2a4ab",
+          "#c8cad1",
+          "#eceef5"
+        ]
+      },
+      "control": {
+        "role": "neutral",
+        "displayName": "Control Grey",
+        "canonical": "#61656e",
+        "oklch": "oklch(50.6% 0.015 266.6)",
+        "tonalRamp": [
+          "#080b12",
+          "#21242c",
+          "#3c4048",
+          "#5a5e66",
+          "#7c808a",
+          "#a0a5ae",
+          "#c6cad5",
+          "#eaeef9"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#eceef1",
+        "oklch": "oklch(94.8% 0.005 258.3)",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#232426",
+          "#3e4042",
+          "#5c5e60",
+          "#7e8083",
+          "#a3a5a7",
+          "#c9cbcd",
+          "#edeff2"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Ink 2",
+        "canonical": "#a3a8b2",
+        "oklch": "oklch(73.1% 0.015 264.5)",
+        "tonalRamp": [
+          "#080b12",
+          "#20242c",
+          "#3c4048",
+          "#595e67",
+          "#7c808a",
+          "#a0a5af",
+          "#c5cbd5",
+          "#e9eff9"
+        ]
+      },
+      "ink-3": {
+        "role": "neutral",
+        "displayName": "Ink 3",
+        "canonical": "#80858f",
+        "oklch": "oklch(61.6% 0.016 264.4)",
+        "tonalRamp": [
+          "#080b12",
+          "#20242c",
+          "#3b4049",
+          "#595e67",
+          "#7b808a",
+          "#9fa5af",
+          "#c5cbd5",
+          "#e9effa"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Darkroom Teal",
+        "canonical": "#3fb3a4",
+        "oklch": "oklch(69.8% 0.105 183.1)",
+        "tonalRamp": [
+          "#00160f",
+          "#003229",
+          "#005045",
+          "#007063",
+          "#0a9486",
+          "#47baab",
+          "#72e1d1",
+          "#98fff5"
+        ]
+      },
+      "accent-hover": {
+        "role": "primary",
+        "displayName": "Darkroom Teal, hover",
+        "canonical": "#52c1b2",
+        "oklch": "oklch(74.3% 0.104 183.2)",
+        "tonalRamp": [
+          "#00160f",
+          "#003229",
+          "#005045",
+          "#007063",
+          "#129486",
+          "#4abaab",
+          "#74e1d1",
+          "#99fff5"
+        ]
+      },
+      "accent-press": {
+        "role": "primary",
+        "displayName": "Darkroom Teal, pressed",
+        "canonical": "#34a093",
+        "oklch": "oklch(64.2% 0.098 183.7)",
+        "tonalRamp": [
+          "#001510",
+          "#003129",
+          "#004f45",
+          "#006f63",
+          "#229386",
+          "#51b9ab",
+          "#7ae0d1",
+          "#9ffff5"
+        ]
+      },
+      "accent-fg": {
+        "role": "primary",
+        "displayName": "Developer Black",
+        "canonical": "#04110e",
+        "oklch": "oklch(16.3% 0.021 178.3)",
+        "tonalRamp": [
+          "#020e0b",
+          "#192724",
+          "#344440",
+          "#51625e",
+          "#738580",
+          "#97a9a5",
+          "#bdcfca",
+          "#e0f3ee"
+        ]
+      },
+      "accent-soft": {
+        "role": "primary",
+        "displayName": "Teal Mist",
+        "canonical": "#162827",
+        "oklch": "oklch(26.1% 0.024 191.3)",
+        "tonalRamp": [
+          "#010e0e",
+          "#162827",
+          "#314443",
+          "#4e6261",
+          "#708584",
+          "#94aaa8",
+          "#bad0ce",
+          "#ddf4f2"
+        ]
+      },
+      "accent-ink": {
+        "role": "primary",
+        "displayName": "Teal Ink",
+        "canonical": "#6fd1c3",
+        "oklch": "oklch(79.7% 0.095 183.5)",
+        "tonalRamp": [
+          "#00150f",
+          "#003129",
+          "#004f45",
+          "#006e63",
+          "#299386",
+          "#55b8ab",
+          "#7ddfd1",
+          "#a2fff5"
+        ]
+      },
+      "critical": {
+        "role": "status",
+        "displayName": "Critical",
+        "canonical": "#f17b72",
+        "oklch": "oklch(71.5% 0.147 25.9)",
+        "tonalRamp": [
+          "#330000",
+          "#570000",
+          "#7b050f",
+          "#a0312e",
+          "#c95750",
+          "#f37c73",
+          "#ffa398",
+          "#ffc7bb"
+        ]
+      },
+      "critical-soft": {
+        "role": "status",
+        "displayName": "Critical Soft",
+        "canonical": "#2e1f20",
+        "oklch": "oklch(25.8% 0.023 14.4)",
+        "tonalRamp": [
+          "#140708",
+          "#2e1f20",
+          "#4b3b3c",
+          "#6a5859",
+          "#8e7b7c",
+          "#b39fa0",
+          "#d9c5c6",
+          "#fee9e9"
+        ]
+      },
+      "warning": {
+        "role": "status",
+        "displayName": "Warning",
+        "canonical": "#e3a33a",
+        "oklch": "oklch(75.9% 0.139 75.6)",
+        "tonalRamp": [
+          "#270000",
+          "#470e00",
+          "#672f00",
+          "#894e00",
+          "#af7200",
+          "#d6972a",
+          "#febd58",
+          "#ffe17d"
+        ]
+      },
+      "warning-soft": {
+        "role": "status",
+        "displayName": "Warning Soft",
+        "canonical": "#2b2419",
+        "oklch": "oklch(26.5% 0.022 78.8)",
+        "tonalRamp": [
+          "#100a03",
+          "#2a2318",
+          "#463f33",
+          "#645c50",
+          "#877f72",
+          "#aca396",
+          "#d2c9bb",
+          "#f7edde"
+        ]
+      },
+      "good": {
+        "role": "status",
+        "displayName": "Good",
+        "canonical": "#4fbf86",
+        "oklch": "oklch(72.5% 0.133 158.2)",
+        "tonalRamp": [
+          "#001700",
+          "#003404",
+          "#005322",
+          "#00733f",
+          "#1a9761",
+          "#4dbd84",
+          "#77e5aa",
+          "#9cffcd"
+        ]
+      },
+      "good-soft": {
+        "role": "status",
+        "displayName": "Good Soft",
+        "canonical": "#172822",
+        "oklch": "oklch(26.0% 0.025 170.1)",
+        "tonalRamp": [
+          "#010f09",
+          "#172822",
+          "#32443e",
+          "#50625b",
+          "#72857e",
+          "#96aaa2",
+          "#bbd0c8",
+          "#dff4ec"
+        ]
+      },
+      "info": {
+        "role": "status",
+        "displayName": "Info",
+        "canonical": "#6ea8f0",
+        "oklch": "oklch(72.2% 0.122 254.5)",
+        "tonalRamp": [
+          "#00003c",
+          "#001f5c",
+          "#003e7e",
+          "#265ea0",
+          "#4a82c7",
+          "#6ea7ef",
+          "#93ceff",
+          "#b6f3ff"
+        ]
+      },
+      "info-soft": {
+        "role": "status",
+        "displayName": "Info Soft",
+        "canonical": "#1b2431",
+        "oklch": "oklch(25.8% 0.028 257.5)",
+        "tonalRamp": [
+          "#050b17",
+          "#1b2532",
+          "#37404f",
+          "#545e6e",
+          "#768191",
+          "#9aa6b6",
+          "#bfccdd",
+          "#e3f0ff"
+        ]
+      },
+      "series-1": {
+        "role": "chart",
+        "displayName": "Series 1",
+        "canonical": "#3987e5",
+        "oklch": "oklch(62.2% 0.161 255.1)",
+        "tonalRamp": [
+          "#000046",
+          "#00166e",
+          "#003a91",
+          "#005bb5",
+          "#3280dd",
+          "#58a6ff",
+          "#7ecdff",
+          "#a2f2ff"
+        ]
+      },
+      "series-2": {
+        "role": "chart",
+        "displayName": "Series 2",
+        "canonical": "#d95926",
+        "oklch": "oklch(62.2% 0.173 40.1)",
+        "tonalRamp": [
+          "#320000",
+          "#5d0000",
+          "#820000",
+          "#a82900",
+          "#d1521d",
+          "#fc7848",
+          "#ff9f6f",
+          "#ffc492"
+        ]
+      },
+      "series-3": {
+        "role": "chart",
+        "displayName": "Series 3",
+        "canonical": "#199e70",
+        "oklch": "oklch(62.1% 0.128 163.1)",
+        "tonalRamp": [
+          "#001700",
+          "#00340f",
+          "#00532b",
+          "#007348",
+          "#06976a",
+          "#46bd8d",
+          "#71e5b3",
+          "#97ffd6"
+        ]
+      },
+      "series-4": {
+        "role": "chart",
+        "displayName": "Series 4",
+        "canonical": "#c98500",
+        "oklch": "oklch(67.0% 0.143 73.2)",
+        "tonalRamp": [
+          "#290000",
+          "#490900",
+          "#6a2c00",
+          "#8c4c00",
+          "#b27000",
+          "#da9525",
+          "#ffbb55",
+          "#ffdf7b"
+        ]
+      },
+      "series-5": {
+        "role": "chart",
+        "displayName": "Series 5",
+        "canonical": "#d55181",
+        "oklch": "oklch(62.2% 0.171 0.8)",
+        "tonalRamp": [
+          "#300008",
+          "#59001f",
+          "#7e003b",
+          "#a42058",
+          "#cd4a7a",
+          "#f7709e",
+          "#ff97c4",
+          "#ffbbe8"
+        ]
+      },
+      "series-6": {
+        "role": "chart",
+        "displayName": "Series 6",
+        "canonical": "#008300",
+        "oklch": "oklch(52.9% 0.180 142.5)",
+        "tonalRamp": [
+          "#001500",
+          "#003400",
+          "#005400",
+          "#007400",
+          "#2b9927",
+          "#56c050",
+          "#7ee777",
+          "#a2ff9a"
+        ]
+      },
+      "series-7": {
+        "role": "chart",
+        "displayName": "Series 7",
+        "canonical": "#9085e9",
+        "oklch": "oklch(67.0% 0.145 286.8)",
+        "tonalRamp": [
+          "#120043",
+          "#260364",
+          "#3e2b87",
+          "#5a4caa",
+          "#7c70d1",
+          "#9f95fa",
+          "#c4bbff",
+          "#e8dfff"
+        ]
+      },
+      "series-8": {
+        "role": "chart",
+        "displayName": "Series 8",
+        "canonical": "#e66767",
+        "oklch": "oklch(66.9% 0.159 22.3)",
+        "tonalRamp": [
+          "#330000",
+          "#5a0000",
+          "#7f0013",
+          "#a42a31",
+          "#ce5153",
+          "#f87776",
+          "#ff9e9b",
+          "#ffc2bd"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Report Paper",
+        "canonical": "#ffffff",
+        "oklch": "oklch(100.0% 0.000 89.9)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#242424",
+          "#404040",
+          "#5d5d5d",
+          "#808080",
+          "#a4a4a4",
+          "#cacaca",
+          "#eeeeee"
+        ]
+      },
+      "paper-ink": {
+        "role": "neutral",
+        "displayName": "Report Ink",
+        "canonical": "#161b26",
+        "oklch": "oklch(22.2% 0.023 265.6)",
+        "tonalRamp": [
+          "#070b15",
+          "#1f242f",
+          "#3a404c",
+          "#575e6b",
+          "#7a808e",
+          "#9ea5b3",
+          "#c3cbda",
+          "#e7efff"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Page titles; one per page."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Panel and dialog titles."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Descriptions and running text."
+      },
+      "dense": {
+        "displayName": "Dense",
+        "purpose": "Tables, controls, buttons, navigation: the working size."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field labels, stat labels, sidebar section labels."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Source lines, hints, badges, axis ticks."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Column names, dtypes, ids, file names only."
+      }
+    },
+    "shadows": [
+      {
+        "name": "overlay",
+        "value": "0 16px 40px -12px rgb(0 0 0 / 0.65), 0 4px 12px -4px rgb(0 0 0 / 0.45)",
+        "purpose": "Menus, popovers, dialogs, the command palette, the mobile drawer and toasts. Nothing else casts a shadow."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-quart",
+        "value": "cubic-bezier(0.165, 0.84, 0.44, 1)",
+        "purpose": "Overlays entering (rise or pop, 120–160ms)."
+      },
+      {
+        "name": "ease-out-expo",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Reserved for longer entrances."
+      },
+      {
+        "name": "state-change",
+        "value": "100ms",
+        "purpose": "Colour and border transitions on controls and rows."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "0.01ms",
+        "purpose": "All animation and transition under prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px",
+        "note": "sidebar becomes a drawer below this"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
+    ],
+    "themes": [
+      {
+        "name": "studio",
+        "colorScheme": "dark",
+        "scope": ":root"
+      },
+      {
+        "name": "paper",
+        "colorScheme": "light",
+        "scope": ".theme-paper",
+        "purpose": "The printable report: same token names on white paper, with CHART_LIGHT."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The workflow's next step; at most one per panel. Dark text on teal.",
+      "html": "<button class=\"ds-btn ds-btn-primary\">Train and evaluate</button> <button class=\"ds-btn ds-btn-primary\" disabled>Save as new dataset</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:6px;font:500 13px/20px var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif);letter-spacing:-.006em;transition:background-color .1s,border-color .1s,color .1s;cursor:pointer}.ds-btn:focus-visible{outline:2px solid var(--color-accent, #3fb3a4);outline-offset:2px}.ds-btn-primary{background:var(--color-accent, #3fb3a4);color:var(--color-accent-fg, #04110e);border:0}.ds-btn-primary:hover{background:var(--color-accent-hover, #52c1b2)}.ds-btn-primary:active{background:var(--color-accent-press, #34a093)}.ds-btn-primary:disabled{background:var(--color-line-strong, #2b2d32);color:var(--color-ink-3, #80858f);cursor:default}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Default button: raised fill with a strong hairline.",
+      "html": "<button class=\"ds-btn ds-btn-secondary\">Recompute profile</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:6px;font:500 13px/20px var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif);letter-spacing:-.006em;transition:background-color .1s,border-color .1s,color .1s;cursor:pointer}.ds-btn:focus-visible{outline:2px solid var(--color-accent, #3fb3a4);outline-offset:2px}.ds-btn-secondary{background:var(--color-raised, #18191d);color:var(--color-ink, #eceef1);border:1px solid var(--color-line-strong, #2b2d32)}.ds-btn-secondary:hover{background:var(--color-hover, #1c1d22)}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Toolbar and row actions.",
+      "html": "<button class=\"ds-btn ds-btn-ghost\">Edit finding</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:6px;font:500 13px/20px var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif);letter-spacing:-.006em;transition:background-color .1s,border-color .1s,color .1s;cursor:pointer}.ds-btn:focus-visible{outline:2px solid var(--color-accent, #3fb3a4);outline-offset:2px}.ds-btn-ghost{color:var(--color-ink-2, #a3a8b2);background:transparent;border:0}.ds-btn-ghost:hover{background:var(--color-hover, #1c1d22);color:var(--color-ink, #eceef1)}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "A 32px recessed field with a visible label and a hint.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-label\">Validation share</span><input class=\"ds-input\" value=\"0.2\" inputmode=\"decimal\"><span class=\"ds-hint\">0.05 – 0.5</span></label>",
+      "css": ".ds-field{display:grid;gap:4px;max-width:240px;font-family:var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif)}.ds-label{font:500 12px/16px var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif);color:var(--color-ink-2, #a3a8b2)}.ds-hint{font:400 11px/16px var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif);color:var(--color-ink-3, #80858f)}.ds-input{height:32px;padding:0 10px;border-radius:6px;border:1px solid var(--color-control, #61656e);background:var(--color-sunken, #0d0e11);color:var(--color-ink, #eceef1);font:400 13px/20px var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif);font-variant-numeric:tabular-nums}.ds-input:hover{border-color:var(--color-ink-3, #80858f)}.ds-input:focus-visible{border-color:var(--color-accent, #3fb3a4);outline:2px solid rgb(63 179 164 / .25);outline-offset:0}"
+    },
+    {
+      "name": "Sidebar Navigation",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "Canvas sidebar with 30px rows; the active row is raised with a teal icon.",
+      "html": "<nav class=\"ds-side\"><p class=\"ds-side-h\">Understand</p><a class=\"ds-side-i\" aria-current=\"page\" href=\"#\"><span class=\"ds-dot\"></span>Overview</a><a class=\"ds-side-i\" href=\"#\"><span class=\"ds-dot\"></span>Explorer</a></nav>",
+      "css": ".ds-side{background:var(--color-canvas, #0a0b0d);border-right:1px solid var(--color-line, #1f2024);padding:12px;width:220px;font-family:var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif)}.ds-side-h{margin:8px 8px 4px;font:500 12px/16px var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif);color:var(--color-ink-3, #80858f)}.ds-side-i{display:flex;align-items:center;gap:10px;height:30px;padding:0 8px;border-radius:6px;color:var(--color-ink-2, #a3a8b2);font:400 13px/20px var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif);text-decoration:none}.ds-dot{width:14px;height:14px;border-radius:4px;border:1.5px solid var(--color-ink-3, #80858f)}.ds-side-i:hover{background:var(--color-hover, #1c1d22);color:var(--color-ink, #eceef1)}.ds-side-i[aria-current=page]{background:var(--color-raised, #18191d);color:var(--color-ink, #eceef1);font-weight:500}.ds-side-i[aria-current=page] .ds-dot{border-color:var(--color-accent, #3fb3a4)}.ds-side-i:focus-visible{outline:2px solid var(--color-accent, #3fb3a4);outline-offset:2px}"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "State as icon plus word, never colour alone.",
+      "html": "<span class=\"ds-badge ds-good\"><svg viewBox=\"0 0 24 24\" width=\"12\" height=\"12\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" aria-hidden=\"true\"><path d=\"M20 6 9 17l-5-5\"/></svg>can train</span> <span class=\"ds-badge\">heuristic</span>",
+      "css": ".ds-badge{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;border-radius:4px;font:500 11px/16px var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif);background:var(--color-hover, #1c1d22);color:var(--color-ink-2, #a3a8b2)}.ds-good{background:var(--color-good-soft, #172822);color:var(--color-good, #4fbf86)}"
+    },
+    {
+      "name": "Panel with Source Line",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "The work surface; every number in it ends with its source line.",
+      "html": "<section class=\"ds-panel\"><header class=\"ds-ph\"><h2>Missing values</h2><p>2 of 13 columns have gaps</p></header><div class=\"ds-pb\"><p class=\"ds-stat\"><span>Missing cells</span><b>0.5%</b></p><p class=\"ds-src\"><b>customers_churn (synthetic)</b> · n = 6,000 rows · unfiltered · profile</p></div></section>",
+      "css": ".ds-panel{border:1px solid var(--color-line, #1f2024);border-radius:8px;background:var(--color-panel, #111215);font-family:var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif);max-width:420px}.ds-ph{padding:12px 16px;border-bottom:1px solid var(--color-line, #1f2024)}.ds-ph h2{margin:0;font:600 13px/20px var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif);color:var(--color-ink, #eceef1)}.ds-ph p{margin:2px 0 0;font:400 13px/20px var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif);color:var(--color-ink-3, #80858f)}.ds-pb{padding:16px;display:grid;gap:12px}.ds-stat{margin:0;display:grid;gap:4px}.ds-stat span{font:400 12px/16px var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif);color:var(--color-ink-3, #80858f)}.ds-stat b{font:500 18px/28px var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif);letter-spacing:-.01em;color:var(--color-ink, #eceef1);font-variant-numeric:tabular-nums}.ds-src{margin:0;font:400 11px/16px var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif);color:var(--color-ink-3, #80858f)}.ds-src b{font-weight:500;color:var(--color-ink-2, #a3a8b2)}"
+    },
+    {
+      "name": "Command Palette Row",
+      "kind": "list",
+      "refersTo": "overlay",
+      "description": "The ⌘K overlay: grouped results, the highlighted row on the hover fill.",
+      "html": "<div class=\"ds-cmd\"><p class=\"ds-cmd-g\">Go to</p><div class=\"ds-cmd-r ds-on\">Model Lab<span>Build</span></div><div class=\"ds-cmd-r\">Analysis Lab<span>Build</span></div></div>",
+      "css": ".ds-cmd{width:420px;padding:6px;border-radius:8px;border:1px solid var(--color-line-strong, #2b2d32);background:var(--color-raised, #18191d);box-shadow:0 16px 40px -12px rgb(0 0 0 / .65),0 4px 12px -4px rgb(0 0 0 / .45);font-family:var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif)}.ds-cmd-g{margin:6px 10px 4px;font:500 12px/16px var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif);color:var(--color-ink-3, #80858f)}.ds-cmd-r{display:flex;justify-content:space-between;align-items:center;height:36px;padding:0 10px;border-radius:6px;font:400 13px/20px var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif);color:var(--color-ink-2, #a3a8b2)}.ds-cmd-r span{font-size:12px;color:var(--color-ink-3, #80858f)}.ds-on{background:var(--color-hover, #1c1d22);color:var(--color-ink, #eceef1)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Darkroom",
+    "overview": "A darkroom is lit so that only the print glows. ATLAS works the same way: near-black and charcoal surfaces step up\nin very small increments, hairlines sit at roughly 7% white, and chrome text is held back to two muted greys, so the\nbrightest things on any screen are the data itself: chart marks, table values, metric deltas. The density is that\nof a professional tool used for hours under time pressure: 13px working text, 30px navigation rows, 32px controls,\ntabular numerals wherever a number appears. Craft shows in precision, not ornament: consistent radii, quiet hover\nsteps, crisp focus, and transitions of 100–160ms that clarify state and never perform.\n\nThe system's signature is the **source line**, a small caption that closes every chart, KPI strip, model metric and\nfinding: dataset · n rows (of total) · filters · sampling/aggregation. The second signature is **⌘K**, a jump-to\npalette for every page and dataset, so the whole studio is reachable from the keyboard. One mid-teal accent marks\nonly what you can act on, what is selected, and where focus is.\n\nTwo surfaces deliberately leave the dark studio. Pitch Mode goes darker still (pure black backdrop, slides on the\npanel colour) for projection. The Report is a print preview: white paper with the light chart theme inside the dark\nchrome, because it exists to be printed or saved as PDF. The look was pinned by the user as Linear-level craft in a\ndark-first world; it is a visual reference only. No Linear code, logos, branding or assets are used.\n\nRejected on purpose: KPI-card grids with oversized gradient numbers, decorative charts, eyebrow labels above\nheadings, gradient text, glass or blur as decoration, nested cards, emoji or glyphs as icons, and colored side\nstripes.",
+    "keyCharacteristics": [
+      "220px sidebar in the canvas colour behind a hairline edge, plus a 48px top bar with a breadcrumb and the dataset switcher.",
+      "Flat charcoal panels with hairline borders; only overlays cast a shadow.",
+      "One accent, used for action, selection and focus, never as decoration.",
+      "Geist with tabular numerals; Geist Mono only for column names, types and identifiers.",
+      "A source line under every number that matters, and ⌘K to reach anything.",
+      "Status is always icon + word + colour, never colour alone."
+    ],
+    "rules": [
+      {
+        "name": "The Brightest Thing Rule",
+        "body": "Data marks and values outrank chrome. Chrome text is ink-2 or ink-3; full ink is for headings, values and the active item. If a control is brighter than the chart beside it, the control is wrong.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Accent Rule",
+        "body": "Teal means \"act, selected, or focused\" and nothing else: no teal headings, illustrations, borders for emphasis, or chart series.",
+        "section": "colors"
+      },
+      {
+        "name": "The Status Is Reserved Rule",
+        "body": "Critical, warning, good and info are never chart series and never decoration; they always ship with an icon and a word.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Rule",
+        "body": "Every number that can be compared is tabular (`font-variant-numeric: tabular-nums`) and right-aligned in tables.",
+        "section": "typography"
+      },
+      {
+        "name": "The Mono Means Data Rule",
+        "body": "Geist Mono marks things that are literally identifiers in the data, never a \"technical\" mood.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-By-Default Rule",
+        "body": "A panel never casts a shadow. If something needs to feel above, it is an overlay; otherwise it is a tone step.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep chrome text at ink-2 or ink-3 so data stays the brightest element (The Brightest Thing Rule).",
+      "Do put a source line under every chart, KPI strip and metric table.",
+      "Do use tone steps (canvas, sunken, panel, raised, hover) for depth and reserve the overlay shadow for floating layers.",
+      "Do use teal only for the primary action, selection and focus, with Developer Black text on teal fills.",
+      "Do step chart colours per theme from `lib/palette.ts` and re-run the palette validator when changing them.",
+      "Do show status as icon + word + colour."
+    ],
+    "donts": [
+      "Don't use sunken as a hover or chip fill; on dark surfaces it reads as a hole. Use hover or raised.",
+      "Don't add eyebrow labels above headings, gradient text, decorative glass or blur, or coloured side stripes.",
+      "Don't use emoji or Unicode glyphs as icons; icons come from lucide-react at 16px.",
+      "Don't nest panels or turn KPIs into separate cards; a stat strip is one panel.",
+      "Don't reuse status colours as chart series or the accent as a chart colour.",
+      "Don't ship white text on the teal accent, or light-mode values inside the studio outside the report's paper."
+    ]
+  }
+}
