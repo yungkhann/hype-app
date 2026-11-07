@@ -1,6 +1,6 @@
 import { defaultChecklist } from "./data.js?v=tape2";
 import { fileDropHtml } from "./file-drop.js?v=tape43";
-import { getLang, t } from "./i18n.js?v=tape37";
+import { getLang, t } from "./i18n.js?v=tape52";
 import { Field, Input, Select, Textarea } from "./ui.js?v=tape22";
 import { esc } from "./util.js";
 

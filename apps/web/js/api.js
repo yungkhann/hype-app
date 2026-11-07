@@ -1,7 +1,7 @@
 // ATLAS backend client. Conversations are imported and stored by the backend (/api/v1/cqa); the browser never
 // calls the organizers' API itself, so its signed URL stays on the server.
 
-import { hasKey, t } from "./i18n.js?v=tape37";
+import { hasKey, t } from "./i18n.js?v=tape52";
 
 export const GROUP_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 

@@ -1,6 +1,6 @@
 // JSON drop target, same shape as the mittens upload panel: dashed box, drag
 // highlight, then a filename and a bar while the file is read.
-import { t } from "./i18n.js?v=tape37";
+import { t } from "./i18n.js?v=tape52";
 import { esc } from "./util.js";
 
 const MAX_BYTES = 20 * 1024 * 1024;

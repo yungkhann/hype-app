@@ -44,7 +44,7 @@ import {
   openCriterionEditor,
 } from "./criterion-editor.js?v=tape22";
 import { bindFileDrop, fileDropHtml, jsonFileError, readDropFile, resetFileDrop, setFileDropBusy, setFileDropError, showFileName } from "./file-drop.js?v=tape43";
-import { applyStatic, getLang, hasKey, langCode, langName, locale, nextLang, setLang, t, tn } from "./i18n.js?v=tape37";
+import { applyStatic, getLang, hasKey, langCode, langName, locale, nextLang, setLang, t, tn } from "./i18n.js?v=tape52";
 import {
   addOnboardCriterion,
   applyOfficialChecklist,
@@ -437,14 +437,14 @@ function viewList() {
           </div>
           <div class="hero-end">
           <div class="hero-model">
-            <input type="hidden" name="model" value="${evaluationUi.mode === 2 ? "openai" : "qwen"}" />
+            <input type="hidden" name="model" value="${evaluationUi.mode === 2 ? "openai" : "gemma"}" />
             <button type="button" class="hero-model-btn" data-hero-model-btn aria-haspopup="listbox" aria-expanded="false" aria-label="${esc(t("list.modelLabel"))}">
-              <span data-hero-model-label>${esc(evaluationUi.mode === 2 ? t("list.modelOpenai") : t("list.modelQwen"))}</span>
+              <span data-hero-model-label>${esc(evaluationUi.mode === 2 ? t("list.modelOpenai") : t("list.modelGemma"))}</span>
             </button>
             <div class="hero-model-menu" data-hero-model-menu hidden role="listbox" aria-label="${esc(t("list.modelLabel"))}">
               ${[
                 ["openai", t("list.modelOpenai"), evaluationUi.mode === 2],
-                ["qwen", t("list.modelQwen"), evaluationUi.mode === 1],
+                ["gemma", t("list.modelGemma"), evaluationUi.mode === 1],
               ].map(([value, label, on]) => `
                 <button type="button" class="hero-model-item${on ? " is-on" : ""}" role="option" data-model="${value}" aria-selected="${on}">
                   <span class="hero-model-check" aria-hidden="true">${on ? icon.check : ""}</span>
@@ -1866,8 +1866,8 @@ function bind() {
     };
     const pickModel = (value) => {
       const openai = value === "openai";
-      heroImport.model.value = openai ? "openai" : "qwen";
-      const label = openai ? t("list.modelOpenai") : t("list.modelQwen");
+      heroImport.model.value = openai ? "openai" : "gemma";
+      const label = openai ? t("list.modelOpenai") : t("list.modelGemma");
       heroImport.querySelector("[data-hero-model-label]").textContent = label;
       modelMenu.querySelectorAll("[data-model]").forEach((item) => {
         const on = item.dataset.model === heroImport.model.value;

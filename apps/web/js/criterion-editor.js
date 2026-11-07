@@ -3,7 +3,7 @@
 // caller (onSave / onRemove); the caller keeps it in the checklist draft, and "Save checklist" stores the
 // draft as a new checklist version.
 
-import { t } from "./i18n.js?v=tape37";
+import { t } from "./i18n.js?v=tape52";
 import { Button } from "./ui.js?v=tape22";
 import { esc } from "./util.js";
 import {
