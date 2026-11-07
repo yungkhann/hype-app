@@ -1925,6 +1925,1669 @@
           }
         }
       }
+    },
+    "/api/v1/cqa/info": {
+      "get": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "Info",
+        "operationId": "info_api_v1_cqa_info_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CqaInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cqa/overview": {
+      "get": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "Overview",
+        "operationId": "overview_api_v1_cqa_overview_get",
+        "parameters": [
+          {
+            "name": "checklist_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{32}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Checklist Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Overview"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cqa/contract": {
+      "get": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "Contract",
+        "description": "The evaluator integration contract: JSON schemas plus a worked example request and response.",
+        "operationId": "contract_api_v1_cqa_contract_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Contract Api V1 Cqa Contract Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cqa/audit": {
+      "get": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "Audit",
+        "operationId": "audit_api_v1_cqa_audit_get",
+        "parameters": [
+          {
+            "name": "conversation_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Conversation Id"
+            }
+          },
+          {
+            "name": "evaluation_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{32}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Evaluation Id"
+            }
+          },
+          {
+            "name": "checklist_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{32}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Checklist Id"
+            }
+          },
+          {
+            "name": "appeal_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{32}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Appeal Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditEvent"
+                  },
+                  "title": "Response Audit Api V1 Cqa Audit Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cqa/imports": {
+      "get": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "List Imports",
+        "operationId": "list_imports_api_v1_cqa_imports_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ImportRun"
+                  },
+                  "type": "array",
+                  "title": "Response List Imports Api V1 Cqa Imports Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "Import Group",
+        "description": "Fetch a group from the organizers' API (server-side, so the browser never hits CORS) or load fixtures.",
+        "operationId": "import_group_api_v1_cqa_imports_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportRun"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cqa/conversations": {
+      "get": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "List Conversations",
+        "operationId": "list_conversations_api_v1_cqa_conversations_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Language"
+            }
+          },
+          {
+            "name": "channel",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "chat",
+                      "voice"
+                    ],
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Channel"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "not_evaluated",
+                      "pending",
+                      "running",
+                      "completed",
+                      "failed",
+                      "appealed"
+                    ],
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "group_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 64
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "organizer_api",
+                    "fixture"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            }
+          },
+          {
+            "name": "min_score",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Min Score"
+            }
+          },
+          {
+            "name": "max_score",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Max Score"
+            }
+          },
+          {
+            "name": "checklist_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{32}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Checklist Id"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "id",
+                "imported_at",
+                "score",
+                "messages",
+                "duration",
+                "language",
+                "channel",
+                "evaluated_at"
+              ],
+              "type": "string",
+              "default": "id",
+              "title": "Sort"
+            }
+          },
+          {
+            "name": "desc",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Desc"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 25,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cqa/conversations/{conversation_id}": {
+      "get": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "Get Conversation",
+        "operationId": "get_conversation_api_v1_cqa_conversations__conversation_id__get",
+        "parameters": [
+          {
+            "name": "conversation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+              "title": "Conversation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cqa/conversations/{conversation_id}/audio": {
+      "get": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "Get Audio",
+        "operationId": "get_audio_api_v1_cqa_conversations__conversation_id__audio_get",
+        "parameters": [
+          {
+            "name": "conversation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+              "title": "Conversation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AudioInfo"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cqa/checklists": {
+      "get": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "List Checklists",
+        "operationId": "list_checklists_api_v1_cqa_checklists_get",
+        "parameters": [
+          {
+            "name": "include_archived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Include Archived"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ChecklistSummary"
+                  },
+                  "title": "Response List Checklists Api V1 Cqa Checklists Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "Create Checklist",
+        "operationId": "create_checklist_api_v1_cqa_checklists_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChecklistCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Checklist"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cqa/checklists/dev-sample": {
+      "post": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "Create Dev Sample",
+        "description": "Create the unofficial development sample checklist (placeholder criteria, clearly labeled).",
+        "operationId": "create_dev_sample_api_v1_cqa_checklists_dev_sample_post",
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Checklist"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cqa/checklists/import": {
+      "post": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "Import Checklist",
+        "operationId": "import_checklist_api_v1_cqa_checklists_import_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChecklistImport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Checklist"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cqa/checklists/{checklist_id}": {
+      "get": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "Get Checklist",
+        "operationId": "get_checklist_api_v1_cqa_checklists__checklist_id__get",
+        "parameters": [
+          {
+            "name": "checklist_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$",
+              "title": "Checklist Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Checklist"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "Update Checklist",
+        "operationId": "update_checklist_api_v1_cqa_checklists__checklist_id__put",
+        "parameters": [
+          {
+            "name": "checklist_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$",
+              "title": "Checklist Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChecklistUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Checklist"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "Delete Checklist",
+        "operationId": "delete_checklist_api_v1_cqa_checklists__checklist_id__delete",
+        "parameters": [
+          {
+            "name": "checklist_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$",
+              "title": "Checklist Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Deleted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cqa/checklists/{checklist_id}/duplicate": {
+      "post": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "Duplicate Checklist",
+        "operationId": "duplicate_checklist_api_v1_cqa_checklists__checklist_id__duplicate_post",
+        "parameters": [
+          {
+            "name": "checklist_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$",
+              "title": "Checklist Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChecklistDuplicate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Checklist"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cqa/checklists/{checklist_id}/criteria/{criterion_id}/replace": {
+      "post": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "Replace Criterion",
+        "operationId": "replace_criterion_api_v1_cqa_checklists__checklist_id__criteria__criterion_id__replace_post",
+        "parameters": [
+          {
+            "name": "checklist_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$",
+              "title": "Checklist Id"
+            }
+          },
+          {
+            "name": "criterion_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_-]{0,47}$",
+              "title": "Criterion Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriterionReplace"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Checklist"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cqa/checklists/{checklist_id}/export": {
+      "get": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "Export Checklist",
+        "operationId": "export_checklist_api_v1_cqa_checklists__checklist_id__export_get",
+        "parameters": [
+          {
+            "name": "checklist_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$",
+              "title": "Checklist Id"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cqa/evaluations": {
+      "post": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "Evaluate",
+        "description": "Queue evaluations (pending → running → completed | failed). Poll the batch or the evaluations.",
+        "operationId": "evaluate_api_v1_cqa_evaluations_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvaluateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "List Evaluations",
+        "operationId": "list_evaluations_api_v1_cqa_evaluations_get",
+        "parameters": [
+          {
+            "name": "conversation_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 128
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Conversation Id"
+            }
+          },
+          {
+            "name": "checklist_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{32}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Checklist Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "running",
+                    "completed",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "batch_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{32}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Batch Id"
+            }
+          },
+          {
+            "name": "mock",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Mock"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cqa/evaluations/batches/{batch_id}": {
+      "get": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "Batch Status",
+        "operationId": "batch_status_api_v1_cqa_evaluations_batches__batch_id__get",
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$",
+              "title": "Batch Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cqa/evaluations/{evaluation_id}": {
+      "get": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "Get Evaluation",
+        "operationId": "get_evaluation_api_v1_cqa_evaluations__evaluation_id__get",
+        "parameters": [
+          {
+            "name": "evaluation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$",
+              "title": "Evaluation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cqa/evaluations/{evaluation_id}/request": {
+      "get": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "Evaluation Request",
+        "description": "The exact contract request this evaluation sends to its adapter (for debugging the model integration).",
+        "operationId": "evaluation_request_api_v1_cqa_evaluations__evaluation_id__request_get",
+        "parameters": [
+          {
+            "name": "evaluation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$",
+              "title": "Evaluation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationRequest"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cqa/evaluations/{evaluation_id}/rerun": {
+      "post": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "Rerun Evaluation",
+        "operationId": "rerun_evaluation_api_v1_cqa_evaluations__evaluation_id__rerun_post",
+        "parameters": [
+          {
+            "name": "evaluation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$",
+              "title": "Evaluation Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cqa/appeals": {
+      "post": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "Create Appeal",
+        "operationId": "create_appeal_api_v1_cqa_appeals_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppealCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Appeal"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "List Appeals",
+        "operationId": "list_appeals_api_v1_cqa_appeals_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "confirmed",
+                    "overridden"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "evaluation_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{32}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Evaluation Id"
+            }
+          },
+          {
+            "name": "conversation_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 128
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Conversation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Appeal"
+                  },
+                  "title": "Response List Appeals Api V1 Cqa Appeals Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cqa/appeals/{appeal_id}": {
+      "get": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "Get Appeal",
+        "operationId": "get_appeal_api_v1_cqa_appeals__appeal_id__get",
+        "parameters": [
+          {
+            "name": "appeal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$",
+              "title": "Appeal Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppealDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cqa/appeals/{appeal_id}/decision": {
+      "post": {
+        "tags": [
+          "cqa"
+        ],
+        "summary": "Decide Appeal",
+        "operationId": "decide_appeal_api_v1_cqa_appeals__appeal_id__decision_post",
+        "parameters": [
+          {
+            "name": "appeal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$",
+              "title": "Appeal Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppealDecisionIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Appeal"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2116,6 +3779,598 @@
           "meta"
         ],
         "title": "AnalysisResult"
+      },
+      "AnswerOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,47}$",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "points": {
+            "type": "number",
+            "maximum": 1000.0,
+            "minimum": 0.0,
+            "title": "Points"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "points"
+        ],
+        "title": "AnswerOption"
+      },
+      "Appeal": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$",
+            "title": "Id"
+          },
+          "evaluation_id": {
+            "type": "string",
+            "title": "Evaluation Id"
+          },
+          "conversation_id": {
+            "type": "string",
+            "title": "Conversation Id"
+          },
+          "checklist_id": {
+            "type": "string",
+            "title": "Checklist Id"
+          },
+          "checklist_version": {
+            "type": "integer",
+            "title": "Checklist Version"
+          },
+          "criterion_id": {
+            "type": "string",
+            "title": "Criterion Id"
+          },
+          "criterion_name": {
+            "type": "string",
+            "title": "Criterion Name"
+          },
+          "comment": {
+            "type": "string",
+            "title": "Comment"
+          },
+          "submitted_by": {
+            "type": "string",
+            "title": "Submitted By"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "confirmed",
+              "overridden"
+            ],
+            "title": "Status"
+          },
+          "disputed_result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CriterionResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "disputed_points": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disputed Points"
+          },
+          "disputed_max_points": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disputed Max Points"
+          },
+          "total_at_submission": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total At Submission"
+          },
+          "decision": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AppealDecision"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "evaluation_id",
+          "conversation_id",
+          "checklist_id",
+          "checklist_version",
+          "criterion_id",
+          "criterion_name",
+          "comment",
+          "submitted_by",
+          "created_at",
+          "updated_at",
+          "status",
+          "disputed_result",
+          "disputed_points",
+          "disputed_max_points",
+          "total_at_submission"
+        ],
+        "title": "Appeal"
+      },
+      "AppealCreate": {
+        "properties": {
+          "evaluation_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$",
+            "title": "Evaluation Id"
+          },
+          "criterion_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,47}$",
+            "title": "Criterion Id"
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Comment"
+          },
+          "submitted_by": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Submitted By",
+            "default": "Operator"
+          }
+        },
+        "type": "object",
+        "required": [
+          "evaluation_id",
+          "criterion_id",
+          "comment"
+        ],
+        "title": "AppealCreate"
+      },
+      "AppealDecision": {
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "confirm",
+              "override"
+            ],
+            "title": "Decision"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          },
+          "reviewer": {
+            "type": "string",
+            "title": "Reviewer"
+          },
+          "decided_at": {
+            "type": "string",
+            "title": "Decided At"
+          },
+          "previous_result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CriterionResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "new_result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CriterionResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "total_before": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Before"
+          },
+          "total_after": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total After"
+          }
+        },
+        "type": "object",
+        "required": [
+          "decision",
+          "explanation",
+          "reviewer",
+          "decided_at",
+          "previous_result",
+          "new_result",
+          "total_before",
+          "total_after"
+        ],
+        "title": "AppealDecision"
+      },
+      "AppealDecisionIn": {
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "confirm",
+              "override"
+            ],
+            "title": "Decision"
+          },
+          "explanation": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 3,
+            "title": "Explanation",
+            "description": "Mandatory reason for the decision."
+          },
+          "reviewer": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Reviewer",
+            "default": "Reviewer"
+          },
+          "override": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OverrideAnswer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "decision",
+          "explanation"
+        ],
+        "title": "AppealDecisionIn"
+      },
+      "AppealDetail": {
+        "properties": {
+          "appeal": {
+            "$ref": "#/components/schemas/Appeal"
+          },
+          "criterion": {
+            "$ref": "#/components/schemas/Criterion"
+          },
+          "evaluation": {
+            "$ref": "#/components/schemas/EvaluationSummary"
+          },
+          "current_result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CriterionResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "current_score": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CriterionScore"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "original_score": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CriterionScore"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "context": {
+            "items": {
+              "$ref": "#/components/schemas/Message"
+            },
+            "type": "array",
+            "title": "Context",
+            "description": "Transcript lines around the evidence (and the evidence itself)."
+          },
+          "evaluation_stale": {
+            "type": "boolean",
+            "title": "Evaluation Stale"
+          },
+          "audit": {
+            "items": {
+              "$ref": "#/components/schemas/AuditEvent"
+            },
+            "type": "array",
+            "title": "Audit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "appeal",
+          "criterion",
+          "evaluation",
+          "current_result",
+          "current_score",
+          "original_score",
+          "context",
+          "evaluation_stale",
+          "audit"
+        ],
+        "title": "AppealDetail"
+      },
+      "AudioInfo": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "player_only",
+              "unavailable"
+            ],
+            "title": "Status"
+          },
+          "stream_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stream Url",
+            "description": "Direct audio URL the browser can play (short-lived)."
+          },
+          "player_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Player Url",
+            "description": "The original audio_url (an organizer-hosted player page)."
+          },
+          "content_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Type"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "offset_basis": {
+            "type": "string",
+            "title": "Offset Basis",
+            "default": "Offsets are measured from the first transcript line; the recording may start earlier."
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "AudioInfo"
+      },
+      "AuditEvent": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "at": {
+            "type": "string",
+            "title": "At"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "actor": {
+            "type": "string",
+            "title": "Actor"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "conversation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Id"
+          },
+          "evaluation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evaluation Id"
+          },
+          "checklist_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checklist Id"
+          },
+          "appeal_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Appeal Id"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "at",
+          "type",
+          "actor",
+          "summary"
+        ],
+        "title": "AuditEvent"
+      },
+      "BatchStatus": {
+        "properties": {
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "pending": {
+            "type": "integer",
+            "title": "Pending"
+          },
+          "running": {
+            "type": "integer",
+            "title": "Running"
+          },
+          "completed": {
+            "type": "integer",
+            "title": "Completed"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          },
+          "done": {
+            "type": "boolean",
+            "title": "Done"
+          },
+          "evaluation_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evaluation Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "batch_id",
+          "total",
+          "pending",
+          "running",
+          "completed",
+          "failed",
+          "done",
+          "evaluation_ids"
+        ],
+        "title": "BatchStatus"
       },
       "Body_replace_dataset_api_v1_datasets__dataset_id__replace_post": {
         "properties": {
@@ -2506,6 +4761,424 @@
         ],
         "title": "ChartSpec"
       },
+      "Checklist": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4000,
+            "title": "Description",
+            "default": ""
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "custom",
+              "official",
+              "dev_sample"
+            ],
+            "title": "Origin",
+            "default": "custom"
+          },
+          "archived": {
+            "type": "boolean",
+            "title": "Archived",
+            "default": false
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          },
+          "latest_version": {
+            "type": "integer",
+            "title": "Latest Version"
+          },
+          "duplicated_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duplicated From"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/ChecklistVersion"
+            },
+            "type": "array",
+            "title": "Versions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "created_at",
+          "updated_at",
+          "latest_version",
+          "versions"
+        ],
+        "title": "Checklist"
+      },
+      "ChecklistConfig": {
+        "properties": {
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/Section"
+            },
+            "type": "array",
+            "title": "Sections",
+            "default": []
+          },
+          "criteria": {
+            "items": {
+              "$ref": "#/components/schemas/Criterion"
+            },
+            "type": "array",
+            "maxItems": 60,
+            "minItems": 1,
+            "title": "Criteria"
+          },
+          "scoring": {
+            "$ref": "#/components/schemas/ScoringRules"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "criteria"
+        ],
+        "title": "ChecklistConfig"
+      },
+      "ChecklistCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4000,
+            "title": "Description",
+            "default": ""
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "custom",
+              "official",
+              "dev_sample"
+            ],
+            "title": "Origin",
+            "default": "custom"
+          },
+          "config": {
+            "$ref": "#/components/schemas/ChecklistConfig"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "config"
+        ],
+        "title": "ChecklistCreate"
+      },
+      "ChecklistDuplicate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version",
+            "description": "Version to copy (default: latest)."
+          }
+        },
+        "type": "object",
+        "title": "ChecklistDuplicate"
+      },
+      "ChecklistImport": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4000,
+            "title": "Description",
+            "default": ""
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "custom",
+              "official",
+              "dev_sample"
+            ],
+            "title": "Origin",
+            "default": "custom"
+          },
+          "config": {
+            "$ref": "#/components/schemas/ChecklistConfig"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "config"
+        ],
+        "title": "ChecklistImport",
+        "description": "A checklist as exported by GET /cqa/checklists/{id}/export (or written by hand)."
+      },
+      "ChecklistSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "custom",
+              "official",
+              "dev_sample"
+            ],
+            "title": "Origin"
+          },
+          "archived": {
+            "type": "boolean",
+            "title": "Archived"
+          },
+          "latest_version": {
+            "type": "integer",
+            "title": "Latest Version"
+          },
+          "versions": {
+            "type": "integer",
+            "title": "Versions"
+          },
+          "criteria": {
+            "type": "integer",
+            "title": "Criteria"
+          },
+          "sections": {
+            "type": "integer",
+            "title": "Sections"
+          },
+          "total_weight": {
+            "type": "number",
+            "title": "Total Weight"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          },
+          "evaluations": {
+            "type": "integer",
+            "title": "Evaluations",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "origin",
+          "archived",
+          "latest_version",
+          "versions",
+          "criteria",
+          "sections",
+          "total_weight",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ChecklistSummary"
+      },
+      "ChecklistUpdate": {
+        "properties": {
+          "base_version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Base Version",
+            "description": "The version the edits started from (stale-edit protection)."
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "custom",
+                  "official",
+                  "dev_sample"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin"
+          },
+          "archived": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archived"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChecklistConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "base_version"
+        ],
+        "title": "ChecklistUpdate",
+        "description": "Save edits. A changed configuration always becomes a new version; metadata edits do not."
+      },
+      "ChecklistVersion": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Version"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note",
+            "default": ""
+          },
+          "config": {
+            "$ref": "#/components/schemas/ChecklistConfig"
+          },
+          "config_hash": {
+            "type": "string",
+            "title": "Config Hash"
+          },
+          "replacements": {
+            "items": {
+              "$ref": "#/components/schemas/Replacement"
+            },
+            "type": "array",
+            "title": "Replacements",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "created_at",
+          "config",
+          "config_hash"
+        ],
+        "title": "ChecklistVersion"
+      },
       "ColumnInfo": {
         "properties": {
           "name": {
@@ -2689,6 +5362,317 @@
         ],
         "title": "Confusion"
       },
+      "ConversationDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "group_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Group Ids"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "chat",
+              "voice"
+            ],
+            "title": "Channel"
+          },
+          "channel_raw": {
+            "type": "string",
+            "title": "Channel Raw"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "organizer_api",
+              "fixture"
+            ],
+            "title": "Source"
+          },
+          "has_audio": {
+            "type": "boolean",
+            "title": "Has Audio"
+          },
+          "message_count": {
+            "type": "integer",
+            "title": "Message Count"
+          },
+          "speaker_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Speaker Counts"
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Seconds"
+          },
+          "preview": {
+            "type": "string",
+            "title": "Preview"
+          },
+          "imported_at": {
+            "type": "string",
+            "title": "Imported At"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "latest_evaluation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvaluationBrief"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "open_appeals": {
+            "type": "integer",
+            "title": "Open Appeals",
+            "default": 0
+          },
+          "audio_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Url"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/Message"
+            },
+            "type": "array",
+            "title": "Messages"
+          },
+          "transcript_hash": {
+            "type": "string",
+            "title": "Transcript Hash"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "evaluations": {
+            "items": {
+              "$ref": "#/components/schemas/EvaluationBrief"
+            },
+            "type": "array",
+            "title": "Evaluations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "group_ids",
+          "channel",
+          "channel_raw",
+          "language",
+          "source",
+          "has_audio",
+          "message_count",
+          "speaker_counts",
+          "duration_seconds",
+          "preview",
+          "imported_at",
+          "updated_at",
+          "revision",
+          "audio_url",
+          "messages",
+          "transcript_hash",
+          "warnings",
+          "evaluations"
+        ],
+        "title": "ConversationDetail"
+      },
+      "ConversationPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ConversationSummary"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          },
+          "facets": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/Facet"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Facets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size",
+          "facets"
+        ],
+        "title": "ConversationPage"
+      },
+      "ConversationSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "group_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Group Ids"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "chat",
+              "voice"
+            ],
+            "title": "Channel"
+          },
+          "channel_raw": {
+            "type": "string",
+            "title": "Channel Raw"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "organizer_api",
+              "fixture"
+            ],
+            "title": "Source"
+          },
+          "has_audio": {
+            "type": "boolean",
+            "title": "Has Audio"
+          },
+          "message_count": {
+            "type": "integer",
+            "title": "Message Count"
+          },
+          "speaker_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Speaker Counts"
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Seconds"
+          },
+          "preview": {
+            "type": "string",
+            "title": "Preview"
+          },
+          "imported_at": {
+            "type": "string",
+            "title": "Imported At"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "latest_evaluation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvaluationBrief"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "open_appeals": {
+            "type": "integer",
+            "title": "Open Appeals",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "group_ids",
+          "channel",
+          "channel_raw",
+          "language",
+          "source",
+          "has_audio",
+          "message_count",
+          "speaker_counts",
+          "duration_seconds",
+          "preview",
+          "imported_at",
+          "updated_at",
+          "revision"
+        ],
+        "title": "ConversationSummary"
+      },
       "Correlation": {
         "properties": {
           "method": {
@@ -2741,6 +5725,544 @@
           "sampled"
         ],
         "title": "Correlation"
+      },
+      "CqaInfo": {
+        "properties": {
+          "source_configured": {
+            "type": "boolean",
+            "title": "Source Configured"
+          },
+          "fixtures_enabled": {
+            "type": "boolean",
+            "title": "Fixtures Enabled"
+          },
+          "fixture_groups": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Fixture Groups"
+          },
+          "default_evaluator": {
+            "type": "string",
+            "title": "Default Evaluator"
+          },
+          "evaluators": {
+            "items": {
+              "$ref": "#/components/schemas/EvaluatorInfo"
+            },
+            "type": "array",
+            "title": "Evaluators"
+          },
+          "contract_version": {
+            "type": "string",
+            "title": "Contract Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_configured",
+          "fixtures_enabled",
+          "fixture_groups",
+          "default_evaluator",
+          "evaluators",
+          "contract_version"
+        ],
+        "title": "CqaInfo"
+      },
+      "Criterion": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,47}$",
+            "title": "Id",
+            "description": "Stable key; evaluations and appeals refer to it."
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4000,
+            "title": "Description",
+            "description": "What the evaluator must check.",
+            "default": ""
+          },
+          "section_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Id"
+          },
+          "weight": {
+            "type": "number",
+            "maximum": 1000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Weight"
+          },
+          "answer_type": {
+            "type": "string",
+            "enum": [
+              "binary",
+              "scale",
+              "options"
+            ],
+            "title": "Answer Type",
+            "default": "binary"
+          },
+          "scale": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScaleConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "options": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AnswerOption"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Options"
+          },
+          "na_allowed": {
+            "type": "boolean",
+            "title": "Na Allowed",
+            "default": false
+          },
+          "na_rule": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Na Rule",
+            "description": "When N/A applies.",
+            "default": ""
+          },
+          "severe_error_enabled": {
+            "type": "boolean",
+            "title": "Severe Error Enabled",
+            "default": false
+          },
+          "severe_error_rule": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Severe Error Rule",
+            "description": "What counts as a severe error.",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "weight"
+        ],
+        "title": "Criterion"
+      },
+      "CriterionReplace": {
+        "properties": {
+          "base_version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Base Version"
+          },
+          "criterion": {
+            "$ref": "#/components/schemas/Criterion",
+            "description": "The new criterion. It takes the replaced criterion's position."
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "base_version",
+          "criterion"
+        ],
+        "title": "CriterionReplace"
+      },
+      "CriterionResult": {
+        "properties": {
+          "criterion_id": {
+            "type": "string",
+            "title": "Criterion Id"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "is_na": {
+            "type": "boolean",
+            "title": "Is Na",
+            "default": false
+          },
+          "na_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Na Reason"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation",
+            "default": ""
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRef"
+            },
+            "type": "array",
+            "title": "Evidence",
+            "default": []
+          },
+          "inspected_spans": {
+            "items": {
+              "$ref": "#/components/schemas/InspectedSpan"
+            },
+            "type": "array",
+            "title": "Inspected Spans",
+            "default": []
+          },
+          "severe_error": {
+            "type": "boolean",
+            "title": "Severe Error",
+            "default": false
+          },
+          "severe_error_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severe Error Reason"
+          },
+          "model_raw_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Raw Score",
+            "description": "The evaluator's own score claim. Recorded, never used."
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "evaluator",
+              "reviewer"
+            ],
+            "title": "Source",
+            "default": "evaluator"
+          }
+        },
+        "type": "object",
+        "required": [
+          "criterion_id"
+        ],
+        "title": "CriterionResult"
+      },
+      "CriterionScore": {
+        "properties": {
+          "criterion_id": {
+            "type": "string",
+            "title": "Criterion Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "section_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Id"
+          },
+          "answer_type": {
+            "type": "string",
+            "enum": [
+              "binary",
+              "scale",
+              "options"
+            ],
+            "title": "Answer Type"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "scored",
+              "na",
+              "missing",
+              "invalid"
+            ],
+            "title": "Status"
+          },
+          "raw_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Score",
+            "description": "Points on the criterion's own scale (binary 0/1, scale value, option points)."
+          },
+          "raw_max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Max"
+          },
+          "normalized": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Normalized",
+            "description": "0–1 after normalizing to the criterion's scale."
+          },
+          "weight": {
+            "type": "number",
+            "title": "Weight",
+            "description": "Configured weight."
+          },
+          "effective_weight": {
+            "type": "number",
+            "title": "Effective Weight",
+            "description": "Share of the total after N/A redistribution (0–1)."
+          },
+          "points": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Points",
+            "description": "Contribution to the total (unrounded)."
+          },
+          "max_points": {
+            "type": "number",
+            "title": "Max Points"
+          },
+          "severe_error": {
+            "type": "boolean",
+            "title": "Severe Error"
+          },
+          "issue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issue"
+          }
+        },
+        "type": "object",
+        "required": [
+          "criterion_id",
+          "name",
+          "section_id",
+          "answer_type",
+          "status",
+          "raw_score",
+          "raw_max",
+          "normalized",
+          "weight",
+          "effective_weight",
+          "points",
+          "max_points",
+          "severe_error"
+        ],
+        "title": "CriterionScore"
+      },
+      "CriterionStat": {
+        "properties": {
+          "criterion_id": {
+            "type": "string",
+            "title": "Criterion Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "evaluated": {
+            "type": "integer",
+            "title": "Evaluated"
+          },
+          "scored": {
+            "type": "integer",
+            "title": "Scored"
+          },
+          "na": {
+            "type": "integer",
+            "title": "Na"
+          },
+          "severe": {
+            "type": "integer",
+            "title": "Severe"
+          },
+          "mean_normalized": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Normalized"
+          }
+        },
+        "type": "object",
+        "required": [
+          "criterion_id",
+          "name",
+          "evaluated",
+          "scored",
+          "na",
+          "severe",
+          "mean_normalized"
+        ],
+        "title": "CriterionStat"
+      },
+      "CriterionView": {
+        "properties": {
+          "criterion": {
+            "$ref": "#/components/schemas/Criterion"
+          },
+          "original": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CriterionResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "final": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CriterionResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "original_score": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CriterionScore"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "final_score": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CriterionScore"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "overridden": {
+            "type": "boolean",
+            "title": "Overridden"
+          },
+          "appeals": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Appeals",
+            "description": "Appeal ids for this criterion, newest first.",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "criterion",
+          "original",
+          "final",
+          "original_score",
+          "final_score",
+          "overridden"
+        ],
+        "title": "CriterionView",
+        "description": "Everything the results screen needs for one criterion, original next to final."
       },
       "DatasetDetail": {
         "properties": {
@@ -3232,6 +6754,840 @@
         ],
         "title": "DroppedFeature"
       },
+      "EvaluateRequest": {
+        "properties": {
+          "checklist_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$",
+            "title": "Checklist Id"
+          },
+          "checklist_version": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checklist Version",
+            "description": "Default: the latest version."
+          },
+          "conversation_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Ids",
+            "description": "Explicit conversations. Omit to use the scope below."
+          },
+          "group_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group Id",
+            "description": "Scope: only conversations imported with this group."
+          },
+          "only_missing": {
+            "type": "boolean",
+            "title": "Only Missing",
+            "description": "Skip conversations that already have a completed or queued evaluation with this checklist version.",
+            "default": false
+          },
+          "adapter": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adapter",
+            "description": "Default: ATLAS_CQA_EVALUATOR."
+          }
+        },
+        "type": "object",
+        "required": [
+          "checklist_id"
+        ],
+        "title": "EvaluateRequest"
+      },
+      "EvaluateResponse": {
+        "properties": {
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          },
+          "queued": {
+            "type": "integer",
+            "title": "Queued"
+          },
+          "skipped": {
+            "type": "integer",
+            "title": "Skipped"
+          },
+          "evaluations": {
+            "items": {
+              "$ref": "#/components/schemas/EvaluationBrief"
+            },
+            "type": "array",
+            "title": "Evaluations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "batch_id",
+          "queued",
+          "skipped",
+          "evaluations"
+        ],
+        "title": "EvaluateResponse"
+      },
+      "EvaluationBrief": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "conversation_id": {
+            "type": "string",
+            "title": "Conversation Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "completed",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "checklist_id": {
+            "type": "string",
+            "title": "Checklist Id"
+          },
+          "checklist_name": {
+            "type": "string",
+            "title": "Checklist Name"
+          },
+          "checklist_version": {
+            "type": "integer",
+            "title": "Checklist Version"
+          },
+          "evaluator": {
+            "type": "string",
+            "title": "Evaluator"
+          },
+          "is_mock": {
+            "type": "boolean",
+            "title": "Is Mock"
+          },
+          "original_total": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Total"
+          },
+          "final_total": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Total"
+          },
+          "max_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Score"
+          },
+          "score_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Status"
+          },
+          "severe_errors": {
+            "type": "integer",
+            "title": "Severe Errors",
+            "default": 0
+          },
+          "overridden": {
+            "type": "boolean",
+            "title": "Overridden",
+            "default": false
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale",
+            "description": "The transcript changed after this evaluation ran.",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "conversation_id",
+          "status",
+          "checklist_id",
+          "checklist_name",
+          "checklist_version",
+          "evaluator",
+          "is_mock",
+          "created_at"
+        ],
+        "title": "EvaluationBrief"
+      },
+      "EvaluationDetail": {
+        "properties": {
+          "evaluation": {
+            "$ref": "#/components/schemas/EvaluationRecord"
+          },
+          "criteria": {
+            "items": {
+              "$ref": "#/components/schemas/CriterionView"
+            },
+            "type": "array",
+            "title": "Criteria"
+          },
+          "final_results": {
+            "items": {
+              "$ref": "#/components/schemas/CriterionResult"
+            },
+            "type": "array",
+            "title": "Final Results"
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale"
+          },
+          "appeals": {
+            "items": {
+              "$ref": "#/components/schemas/Appeal"
+            },
+            "type": "array",
+            "title": "Appeals"
+          },
+          "audit": {
+            "items": {
+              "$ref": "#/components/schemas/AuditEvent"
+            },
+            "type": "array",
+            "title": "Audit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "evaluation",
+          "criteria",
+          "final_results",
+          "stale",
+          "appeals",
+          "audit"
+        ],
+        "title": "EvaluationDetail"
+      },
+      "EvaluationError": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "issues": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Issues",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "EvaluationError"
+      },
+      "EvaluationPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EvaluationSummary"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "EvaluationPage"
+      },
+      "EvaluationRecord": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$",
+            "title": "Id"
+          },
+          "conversation_id": {
+            "type": "string",
+            "title": "Conversation Id"
+          },
+          "checklist_id": {
+            "type": "string",
+            "title": "Checklist Id"
+          },
+          "checklist_name": {
+            "type": "string",
+            "title": "Checklist Name"
+          },
+          "checklist_version": {
+            "type": "integer",
+            "title": "Checklist Version"
+          },
+          "checklist": {
+            "$ref": "#/components/schemas/ChecklistConfig",
+            "description": "Snapshot of the configuration used, for reproducibility."
+          },
+          "transcript_hash": {
+            "type": "string",
+            "title": "Transcript Hash"
+          },
+          "evaluator": {
+            "$ref": "#/components/schemas/EvaluatorInfo"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "completed",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "batch_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch Id"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvaluationError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "original_results": {
+            "items": {
+              "$ref": "#/components/schemas/CriterionResult"
+            },
+            "type": "array",
+            "title": "Original Results",
+            "default": []
+          },
+          "original_score": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScoreBreakdown"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "overrides": {
+            "items": {
+              "$ref": "#/components/schemas/Override"
+            },
+            "type": "array",
+            "title": "Overrides",
+            "default": []
+          },
+          "final_score": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScoreBreakdown"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings",
+            "default": []
+          },
+          "model_info": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Model Info",
+            "default": {}
+          },
+          "raw_output": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Output",
+            "description": "The evaluator's response, kept for audit."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "conversation_id",
+          "checklist_id",
+          "checklist_name",
+          "checklist_version",
+          "checklist",
+          "transcript_hash",
+          "evaluator",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "EvaluationRecord"
+      },
+      "EvaluationRequest": {
+        "properties": {
+          "contract_version": {
+            "type": "string",
+            "const": "cqa-eval/1",
+            "title": "Contract Version",
+            "default": "cqa-eval/1"
+          },
+          "evaluation_id": {
+            "type": "string",
+            "title": "Evaluation Id"
+          },
+          "conversation": {
+            "$ref": "#/components/schemas/RequestConversation"
+          },
+          "checklist": {
+            "$ref": "#/components/schemas/RequestChecklist"
+          },
+          "rules": {
+            "$ref": "#/components/schemas/EvaluationRules"
+          }
+        },
+        "type": "object",
+        "required": [
+          "evaluation_id",
+          "conversation",
+          "checklist"
+        ],
+        "title": "EvaluationRequest"
+      },
+      "EvaluationRules": {
+        "properties": {
+          "evaluated_speaker": {
+            "type": "string",
+            "const": "operator",
+            "title": "Evaluated Speaker",
+            "default": "operator"
+          },
+          "context_speakers": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "client",
+                "operator",
+                "bot",
+                "system",
+                "unknown"
+              ]
+            },
+            "type": "array",
+            "title": "Context Speakers",
+            "default": [
+              "client",
+              "bot",
+              "system"
+            ]
+          },
+          "answer_formats": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Answer Formats",
+            "default": {
+              "binary": "true (criterion met) or false",
+              "scale": "a number on the criterion's scale: min ≤ value ≤ max, on the step grid",
+              "options": "the id of one of the criterion's options"
+            }
+          },
+          "evidence": {
+            "type": "string",
+            "title": "Evidence",
+            "default": "Every non-N/A result needs at least one evidence reference (message_id, optional verbatim quote) or, when an expected action is missing, an inspected span (start/end message ids) showing which part of the conversation was checked."
+          },
+          "not_applicable": {
+            "type": "string",
+            "title": "Not Applicable",
+            "default": "Set is_na=true with na_reason only when the criterion allows N/A (na_allowed) and its na_rule applies; value must then be null."
+          },
+          "severe_error": {
+            "type": "string",
+            "title": "Severe Error",
+            "default": "Set severe_error=true with severe_error_reason only for criteria with severe_error_enabled."
+          }
+        },
+        "type": "object",
+        "title": "EvaluationRules"
+      },
+      "EvaluationSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "conversation_id": {
+            "type": "string",
+            "title": "Conversation Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "completed",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "checklist_id": {
+            "type": "string",
+            "title": "Checklist Id"
+          },
+          "checklist_name": {
+            "type": "string",
+            "title": "Checklist Name"
+          },
+          "checklist_version": {
+            "type": "integer",
+            "title": "Checklist Version"
+          },
+          "evaluator": {
+            "type": "string",
+            "title": "Evaluator"
+          },
+          "is_mock": {
+            "type": "boolean",
+            "title": "Is Mock"
+          },
+          "original_total": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Total"
+          },
+          "final_total": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Total"
+          },
+          "max_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Score"
+          },
+          "score_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Status"
+          },
+          "severe_errors": {
+            "type": "integer",
+            "title": "Severe Errors",
+            "default": 0
+          },
+          "overridden": {
+            "type": "boolean",
+            "title": "Overridden",
+            "default": false
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale",
+            "description": "The transcript changed after this evaluation ran.",
+            "default": false
+          },
+          "conversation_language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Language"
+          },
+          "conversation_channel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Channel"
+          },
+          "batch_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch Id"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvaluationError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "conversation_id",
+          "status",
+          "checklist_id",
+          "checklist_name",
+          "checklist_version",
+          "evaluator",
+          "is_mock",
+          "created_at"
+        ],
+        "title": "EvaluationSummary"
+      },
+      "EvaluatorInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "default": ""
+          },
+          "is_mock": {
+            "type": "boolean",
+            "title": "Is Mock"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          },
+          "available": {
+            "type": "boolean",
+            "title": "Available",
+            "default": true
+          },
+          "contract_version": {
+            "type": "string",
+            "title": "Contract Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "label",
+          "is_mock",
+          "contract_version"
+        ],
+        "title": "EvaluatorInfo"
+      },
       "EvidenceItem": {
         "properties": {
           "label": {
@@ -3251,6 +7607,87 @@
           "value"
         ],
         "title": "EvidenceItem"
+      },
+      "EvidenceRef": {
+        "properties": {
+          "message_id": {
+            "type": "string",
+            "title": "Message Id"
+          },
+          "message_index": {
+            "type": "integer",
+            "title": "Message Index"
+          },
+          "speaker": {
+            "type": "string",
+            "enum": [
+              "client",
+              "operator",
+              "bot",
+              "system",
+              "unknown"
+            ],
+            "title": "Speaker"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          },
+          "offset_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offset Seconds"
+          },
+          "excerpt": {
+            "type": "string",
+            "title": "Excerpt"
+          },
+          "char_start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Char Start"
+          },
+          "char_end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Char End"
+          },
+          "quote_matched": {
+            "type": "boolean",
+            "title": "Quote Matched",
+            "description": "True when the evaluator's quote was found in the message."
+          }
+        },
+        "type": "object",
+        "required": [
+          "message_id",
+          "message_index",
+          "speaker",
+          "timestamp",
+          "offset_seconds",
+          "excerpt",
+          "quote_matched"
+        ],
+        "title": "EvidenceRef",
+        "description": "A pointer to a real transcript line, with the excerpt taken from the transcript (never from the model)."
       },
       "ExperimentDetail": {
         "properties": {
@@ -3765,6 +8202,24 @@
         ],
         "title": "ExperimentSummary"
       },
+      "Facet": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value",
+          "count"
+        ],
+        "title": "Facet"
+      },
       "FeatureImportance": {
         "properties": {
           "feature": {
@@ -4263,6 +8718,192 @@
         ],
         "title": "Histogram"
       },
+      "ImportIssue": {
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": [
+              "error",
+              "warning"
+            ],
+            "title": "Severity"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "record_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Record Index"
+          },
+          "conversation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "severity",
+          "code",
+          "message"
+        ],
+        "title": "ImportIssue"
+      },
+      "ImportRequest": {
+        "properties": {
+          "group_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+            "title": "Group Id",
+            "examples": [
+              "DEV"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "organizer_api",
+              "fixture"
+            ],
+            "title": "Source",
+            "default": "organizer_api"
+          }
+        },
+        "type": "object",
+        "required": [
+          "group_id"
+        ],
+        "title": "ImportRequest"
+      },
+      "ImportRun": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "group_id": {
+            "type": "string",
+            "title": "Group Id"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "organizer_api",
+              "fixture"
+            ],
+            "title": "Source"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "partial",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "started_at": {
+            "type": "string",
+            "title": "Started At"
+          },
+          "finished_at": {
+            "type": "string",
+            "title": "Finished At"
+          },
+          "reported_total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reported Total",
+            "description": "total_records as reported by the source."
+          },
+          "received": {
+            "type": "integer",
+            "title": "Received",
+            "default": 0
+          },
+          "created": {
+            "type": "integer",
+            "title": "Created",
+            "default": 0
+          },
+          "updated": {
+            "type": "integer",
+            "title": "Updated",
+            "default": 0
+          },
+          "unchanged": {
+            "type": "integer",
+            "title": "Unchanged",
+            "default": 0
+          },
+          "rejected": {
+            "type": "integer",
+            "title": "Rejected",
+            "default": 0
+          },
+          "conversation_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Conversation Ids",
+            "default": []
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/ImportIssue"
+            },
+            "type": "array",
+            "title": "Issues",
+            "default": []
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "group_id",
+          "source",
+          "status",
+          "started_at",
+          "finished_at"
+        ],
+        "title": "ImportRun"
+      },
       "IngestOptions": {
         "properties": {
           "sheet": {
@@ -4320,6 +8961,44 @@
         "type": "object",
         "title": "IngestOptions",
         "description": "Parsing options. ``None`` means \"use what detection found\"."
+      },
+      "InspectedSpan": {
+        "properties": {
+          "start_message_id": {
+            "type": "string",
+            "title": "Start Message Id"
+          },
+          "end_message_id": {
+            "type": "string",
+            "title": "End Message Id"
+          },
+          "start_index": {
+            "type": "integer",
+            "title": "Start Index"
+          },
+          "end_index": {
+            "type": "integer",
+            "title": "End Index"
+          },
+          "message_count": {
+            "type": "integer",
+            "title": "Message Count"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "start_message_id",
+          "end_message_id",
+          "start_index",
+          "end_index",
+          "message_count"
+        ],
+        "title": "InspectedSpan"
       },
       "LabelValue": {
         "properties": {
@@ -4435,6 +9114,80 @@
           "log"
         ],
         "title": "Lineage"
+      },
+      "Message": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^m[1-9][0-9]{0,5}$",
+            "title": "Id"
+          },
+          "index": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Index"
+          },
+          "speaker": {
+            "type": "string",
+            "enum": [
+              "client",
+              "operator",
+              "bot",
+              "system",
+              "unknown"
+            ],
+            "title": "Speaker"
+          },
+          "speaker_raw": {
+            "type": "string",
+            "title": "Speaker Raw",
+            "description": "Speaker exactly as received."
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp",
+            "description": "Timestamp exactly as received (MM:SS for chats, ISO 8601 for calls)."
+          },
+          "offset_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offset Seconds",
+            "description": "Seconds from the start of the conversation. Chats: MM:SS. Calls: time since the first line."
+          },
+          "at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At",
+            "description": "Absolute instant (ISO 8601) when the source gives one."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "index",
+          "speaker",
+          "speaker_raw",
+          "text",
+          "timestamp"
+        ],
+        "title": "Message",
+        "description": "One transcript line. ``id`` is stable: ``m{n}`` is the n-th line (1-based) of the source transcript."
       },
       "Metric": {
         "properties": {
@@ -4949,6 +9702,280 @@
         ],
         "title": "OriginalFile"
       },
+      "Override": {
+        "properties": {
+          "criterion_id": {
+            "type": "string",
+            "title": "Criterion Id"
+          },
+          "appeal_id": {
+            "type": "string",
+            "title": "Appeal Id"
+          },
+          "result": {
+            "$ref": "#/components/schemas/CriterionResult"
+          },
+          "reviewer": {
+            "type": "string",
+            "title": "Reviewer"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          },
+          "decided_at": {
+            "type": "string",
+            "title": "Decided At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "criterion_id",
+          "appeal_id",
+          "result",
+          "reviewer",
+          "explanation",
+          "decided_at"
+        ],
+        "title": "Override"
+      },
+      "OverrideAnswer": {
+        "properties": {
+          "value": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "is_na": {
+            "type": "boolean",
+            "title": "Is Na",
+            "default": false
+          },
+          "na_reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Na Reason"
+          },
+          "severe_error": {
+            "type": "boolean",
+            "title": "Severe Error",
+            "default": false
+          },
+          "severe_error_reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severe Error Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "OverrideAnswer"
+      },
+      "Overview": {
+        "properties": {
+          "conversations": {
+            "type": "integer",
+            "title": "Conversations"
+          },
+          "by_language": {
+            "items": {
+              "$ref": "#/components/schemas/Facet"
+            },
+            "type": "array",
+            "title": "By Language"
+          },
+          "by_channel": {
+            "items": {
+              "$ref": "#/components/schemas/Facet"
+            },
+            "type": "array",
+            "title": "By Channel"
+          },
+          "by_group": {
+            "items": {
+              "$ref": "#/components/schemas/Facet"
+            },
+            "type": "array",
+            "title": "By Group"
+          },
+          "by_source": {
+            "items": {
+              "$ref": "#/components/schemas/Facet"
+            },
+            "type": "array",
+            "title": "By Source"
+          },
+          "evaluated_conversations": {
+            "type": "integer",
+            "title": "Evaluated Conversations"
+          },
+          "evaluations_by_status": {
+            "items": {
+              "$ref": "#/components/schemas/Facet"
+            },
+            "type": "array",
+            "title": "Evaluations By Status"
+          },
+          "mean_final_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Final Score"
+          },
+          "max_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Score"
+          },
+          "score_bins": {
+            "items": {
+              "$ref": "#/components/schemas/ScoreBin"
+            },
+            "type": "array",
+            "title": "Score Bins"
+          },
+          "severe_error_conversations": {
+            "type": "integer",
+            "title": "Severe Error Conversations"
+          },
+          "appeals_pending": {
+            "type": "integer",
+            "title": "Appeals Pending"
+          },
+          "appeals_decided": {
+            "type": "integer",
+            "title": "Appeals Decided"
+          },
+          "overridden_criteria": {
+            "type": "integer",
+            "title": "Overridden Criteria"
+          },
+          "checklist_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checklist Id"
+          },
+          "checklist_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checklist Name"
+          },
+          "checklist_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checklist Version"
+          },
+          "criterion_stats": {
+            "items": {
+              "$ref": "#/components/schemas/CriterionStat"
+            },
+            "type": "array",
+            "title": "Criterion Stats"
+          },
+          "mock_results": {
+            "type": "integer",
+            "title": "Mock Results",
+            "description": "Latest evaluations produced by the development mock."
+          },
+          "recent_imports": {
+            "items": {
+              "$ref": "#/components/schemas/ImportRun"
+            },
+            "type": "array",
+            "title": "Recent Imports"
+          },
+          "recent_activity": {
+            "items": {
+              "$ref": "#/components/schemas/AuditEvent"
+            },
+            "type": "array",
+            "title": "Recent Activity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "conversations",
+          "by_language",
+          "by_channel",
+          "by_group",
+          "by_source",
+          "evaluated_conversations",
+          "evaluations_by_status",
+          "mean_final_score",
+          "max_score",
+          "score_bins",
+          "severe_error_conversations",
+          "appeals_pending",
+          "appeals_decided",
+          "overridden_criteria",
+          "checklist_id",
+          "checklist_name",
+          "checklist_version",
+          "criterion_stats",
+          "mock_results",
+          "recent_imports",
+          "recent_activity"
+        ],
+        "title": "Overview"
+      },
       "PitchDeck": {
         "properties": {
           "title": {
@@ -5336,6 +10363,212 @@
         ],
         "title": "ReorderRequest"
       },
+      "Replacement": {
+        "properties": {
+          "old_id": {
+            "type": "string",
+            "title": "Old Id"
+          },
+          "new_id": {
+            "type": "string",
+            "title": "New Id"
+          },
+          "old_name": {
+            "type": "string",
+            "title": "Old Name"
+          },
+          "new_name": {
+            "type": "string",
+            "title": "New Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "old_id",
+          "new_id",
+          "old_name",
+          "new_name"
+        ],
+        "title": "Replacement"
+      },
+      "RequestChecklist": {
+        "properties": {
+          "checklist_id": {
+            "type": "string",
+            "title": "Checklist Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/Section"
+            },
+            "type": "array",
+            "title": "Sections"
+          },
+          "criteria": {
+            "items": {
+              "$ref": "#/components/schemas/Criterion"
+            },
+            "type": "array",
+            "title": "Criteria"
+          },
+          "scoring": {
+            "$ref": "#/components/schemas/ScoringRules",
+            "description": "For information only: the backend computes all scores."
+          }
+        },
+        "type": "object",
+        "required": [
+          "checklist_id",
+          "version",
+          "name",
+          "sections",
+          "criteria",
+          "scoring"
+        ],
+        "title": "RequestChecklist"
+      },
+      "RequestConversation": {
+        "properties": {
+          "conversation_id": {
+            "type": "string",
+            "title": "Conversation Id"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "description": "RU, KZ or EN."
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "chat",
+              "voice"
+            ],
+            "title": "Channel"
+          },
+          "channel_raw": {
+            "type": "string",
+            "title": "Channel Raw"
+          },
+          "audio_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Url",
+            "description": "Recording player page for calls; null for chats."
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/RequestMessage"
+            },
+            "type": "array",
+            "title": "Messages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "conversation_id",
+          "language",
+          "channel",
+          "channel_raw",
+          "audio_url",
+          "messages"
+        ],
+        "title": "RequestConversation"
+      },
+      "RequestMessage": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Stable message id (m1, m2, …). Evidence must use these ids."
+          },
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "speaker": {
+            "type": "string",
+            "enum": [
+              "client",
+              "operator",
+              "bot",
+              "system",
+              "unknown"
+            ],
+            "title": "Speaker"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp",
+            "description": "Original timestamp: MM:SS for chats, ISO 8601 for calls."
+          },
+          "offset_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offset Seconds"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "index",
+          "speaker",
+          "timestamp",
+          "offset_seconds",
+          "text"
+        ],
+        "title": "RequestMessage"
+      },
+      "RoundingRule": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "half_up",
+              "half_even",
+              "floor",
+              "ceil",
+              "none"
+            ],
+            "title": "Mode",
+            "default": "half_up"
+          },
+          "digits": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
+            "title": "Digits",
+            "default": 1
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "RoundingRule"
+      },
       "RunAnalysisRequest": {
         "properties": {
           "params": {
@@ -5497,6 +10730,333 @@
           "spec"
         ],
         "title": "SavedViewIn"
+      },
+      "ScaleConfig": {
+        "properties": {
+          "min": {
+            "type": "number",
+            "title": "Min",
+            "default": 0
+          },
+          "max": {
+            "type": "number",
+            "title": "Max",
+            "default": 5
+          },
+          "step": {
+            "type": "number",
+            "title": "Step",
+            "default": 1
+          },
+          "labels": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Labels",
+            "description": "Optional labels per scale point, keyed by the value as text."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ScaleConfig"
+      },
+      "ScoreBin": {
+        "properties": {
+          "start": {
+            "type": "number",
+            "title": "Start"
+          },
+          "end": {
+            "type": "number",
+            "title": "End"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "end",
+          "count"
+        ],
+        "title": "ScoreBin"
+      },
+      "ScoreBreakdown": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "scored",
+              "not_applicable",
+              "incomplete"
+            ],
+            "title": "Status"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
+          },
+          "total_unrounded": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Unrounded"
+          },
+          "total_before_severe_policy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Before Severe Policy"
+          },
+          "max_score": {
+            "type": "number",
+            "title": "Max Score"
+          },
+          "rounding": {
+            "$ref": "#/components/schemas/RoundingRule"
+          },
+          "severe_error_policy": {
+            "type": "string",
+            "title": "Severe Error Policy"
+          },
+          "severe_errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Severe Errors"
+          },
+          "severe_error_applied": {
+            "type": "boolean",
+            "title": "Severe Error Applied"
+          },
+          "applicable_weight": {
+            "type": "number",
+            "title": "Applicable Weight"
+          },
+          "total_weight": {
+            "type": "number",
+            "title": "Total Weight"
+          },
+          "criteria": {
+            "items": {
+              "$ref": "#/components/schemas/CriterionScore"
+            },
+            "type": "array",
+            "title": "Criteria"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/SectionScore"
+            },
+            "type": "array",
+            "title": "Sections"
+          },
+          "issues": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Issues"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "total",
+          "total_unrounded",
+          "total_before_severe_policy",
+          "max_score",
+          "rounding",
+          "severe_error_policy",
+          "severe_errors",
+          "severe_error_applied",
+          "applicable_weight",
+          "total_weight",
+          "criteria",
+          "sections",
+          "issues"
+        ],
+        "title": "ScoreBreakdown"
+      },
+      "ScoringRules": {
+        "properties": {
+          "max_score": {
+            "type": "number",
+            "maximum": 10000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Max Score",
+            "default": 100
+          },
+          "rounding": {
+            "$ref": "#/components/schemas/RoundingRule"
+          },
+          "severe_error_policy": {
+            "type": "string",
+            "enum": [
+              "flag_only",
+              "zero_total"
+            ],
+            "title": "Severe Error Policy",
+            "description": "flag_only: severe errors are reported next to the score. zero_total: any severe error sets the total to 0. Set it from the official checklist.",
+            "default": "flag_only"
+          },
+          "na_policy": {
+            "type": "string",
+            "const": "redistribute",
+            "title": "Na Policy",
+            "description": "N/A criteria are removed and their weight is shared proportionally by the applicable ones.",
+            "default": "redistribute"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ScoringRules"
+      },
+      "Section": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,47}$",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Description",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "Section"
+      },
+      "SectionScore": {
+        "properties": {
+          "section_id": {
+            "type": "string",
+            "title": "Section Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "scored",
+              "na",
+              "incomplete"
+            ],
+            "title": "Status"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score",
+            "description": "Section subtotal on the 0–max_score scale (rounded)."
+          },
+          "score_unrounded": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Unrounded"
+          },
+          "points": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Points",
+            "description": "The section's contribution to the total (rounded)."
+          },
+          "max_points": {
+            "type": "number",
+            "title": "Max Points"
+          },
+          "weight": {
+            "type": "number",
+            "title": "Weight"
+          },
+          "effective_weight": {
+            "type": "number",
+            "title": "Effective Weight"
+          },
+          "criteria_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Criteria Ids"
+          },
+          "severe_errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Severe Errors"
+          }
+        },
+        "type": "object",
+        "required": [
+          "section_id",
+          "name",
+          "status",
+          "score",
+          "score_unrounded",
+          "points",
+          "max_points",
+          "weight",
+          "effective_weight",
+          "criteria_ids",
+          "severe_errors"
+        ],
+        "title": "SectionScore"
       },
       "SortKey": {
         "properties": {
