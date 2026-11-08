@@ -254,6 +254,4 @@ scripts/export-results.sh    выгрузка results.json
 cd apps/api && .venv/bin/python -m pytest -q tests -k cqa -p no:cacheprovider
 ```
 
-## Старая студия данных
 
-Ниже по репозиторию ещё лежат заметки прежней Next.js-студии (датасеты, графики, модели). Этого интерфейса в `apps/web` больше нет. Актуальный продукт — Lumvy, разделы выше. Старые заметки: [docs/architecture.md](docs/architecture.md), [docs/api-contract.md](docs/api-contract.md), [PRODUCT.md](PRODUCT.md), [DESIGN.md](DESIGN.md).
