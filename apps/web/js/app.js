@@ -2273,7 +2273,7 @@ function payloadConversationId(payload) {
   return conversationsFromPayload(payload)[0]?.id || "";
 }
 
-/** Show the JSON as a chat at once, then import and score it behind that dialog. */
+/** Show a locally supplied conversation at once, then import it in the background. */
 async function loadIntoDialog(task, hintedId, payload = null) {
   const locals = conversationsFromPayload(payload);
   if (locals.length) stageLocalConversations(locals);
@@ -2309,10 +2309,24 @@ async function loadIntoDialog(task, hintedId, payload = null) {
   }
 }
 
+/** Import a batch and return to the list so every imported conversation is visible in the total. */
+async function loadIntoList(task, status) {
+  try {
+    await task();
+    await reloadConversations();
+    pendingOpen = null;
+    importDialog?.close();
+    uploadDialog?.close();
+    if (location.hash !== "#/") location.hash = "#/";
+    else render();
+  } catch (err) {
+    setImportStatus(status, "error", esc(errorText(err)));
+  }
+}
+
 async function runImport(form) {
   const status = form.querySelector("[data-import-status]");
   let call;
-  let hinted = "";
   let payload = null;
   if (form.dataset.importForm === "api") {
     const groupId = form.group_id.value.trim();
@@ -2327,10 +2341,9 @@ async function runImport(form) {
     } catch (err) {
       return setImportStatus(status, "error", esc(t("imp.notJson", { error: jsonError(err, text) })));
     }
-    hinted = payloadConversationId(payload);
     call = () => importJson(payload);
   }
-  await loadIntoDialog(call, hinted, payload);
+  await loadIntoList(call, status);
 }
 
 async function refreshSourceHint() {

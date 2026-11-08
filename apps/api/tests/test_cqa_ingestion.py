@@ -133,6 +133,7 @@ def test_import_by_group_id_through_the_backend(client, source):
     assert calls and "group_id=DEV" in calls[0]
     page = client.get(f"{API}/conversations").json()
     assert page["total"] == 4
+    assert client.get(f"{API}/evaluations").json()["items"] == []  # Importing only stores conversations.
     assert {f["value"]: f["count"] for f in page["facets"]["language"]} == {"EN": 1, "KZ": 1, "RU": 2}
     assert {f["value"] for f in page["facets"]["channel"]} == {"chat", "voice"}
     detail = client.get(f"{API}/conversations/p-call-1").json()

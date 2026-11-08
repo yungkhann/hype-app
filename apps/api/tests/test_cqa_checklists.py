@@ -256,12 +256,12 @@ def test_criteria_can_be_added_edited_disabled_and_removed(client, settings):
 def test_adding_a_criterion_normalizes_all_enabled_weights(client):
     checklist = create(client)
     config = checklist["versions"][0]["config"]
-    config["criteria"].append(weighted("empathy", 10))
+    config["criteria"].append(weighted("empathy", 5))  # temporary total: 105%
 
     updated = save(client, checklist, config).json()
     weights = [criterion["weight"] for criterion in updated["versions"][-1]["config"]["criteria"]]
 
-    assert weights == [18.181818, 45.454545, 27.272727, 9.09091]
+    assert weights == [19.047619, 47.619048, 28.571429, 4.761904]
     assert sum(weights) == 100
 
 

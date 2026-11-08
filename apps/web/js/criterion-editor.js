@@ -323,6 +323,7 @@ function totalLine(f) {
   if (weight === undefined) return { text: t("ce.total.others", { others: fmt(others) }), tone: "" };
   const total = weightSum([others, weight]);
   if (total === 100) return { text: t("ce.total.ok"), tone: "ok" };
+  if (ed.isNew) return { text: t("ce.total.normalized"), tone: "ok" };
   return { text: t("ce.total.warn", { total: fmt(total) }), tone: "warn" };
 }
 
