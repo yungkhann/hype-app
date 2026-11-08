@@ -1,5 +1,14 @@
 # Lumvy
 
+## results.json
+
+- [results/dev/results.json](results/dev/results.json) — 65 оценок DEV, копия [data/results-2.json](data/results-2.json).
+- [results/prod/results.json](results/prod/results.json) — 10 контрольных чатов, копия [data/results.json](data/results.json).
+
+В обоих файлах `team_name` — Хайп Сквад. Исходники в `data/` не заменяют эти пути и остаются в репозитории.
+
+В prod у `p2-en-001` и `p2-ru-002` критерий `identification` стоит `null`: в обосновании проверка личности не требовалась. Вес 20 выпал, остальные веса перераспределены, максимум 100. `final_score` у `p2-en-001` — 88.13, у `p2-ru-002` — 46.92. `critical_flag` совпадает со значением `critical` и итог не обнуляет.
+
 Команда: Хайп Сквад.
 
 Сайт: https://lumvy.io/#/
@@ -148,14 +157,7 @@ GPT нужен `OPENAI_API_KEY` или `ATLAS_CQA_OPENAI_API_KEY`. Диалог 
 
 ## Сдача results.json
 
-Организаторы смотрят только эти два пути:
-
-- [results/dev/results.json](results/dev/results.json) — 65 оценок DEV, копия [data/results-2.json](data/results-2.json).
-- [results/prod/results.json](results/prod/results.json) — 10 контрольных чатов, копия [data/results.json](data/results.json).
-
-В обоих файлах `team_name` — Хайп Сквад. Исходники в `data/` не заменяют эти пути и остаются в репозитории.
-
-В prod у `p2-en-001` и `p2-ru-002` критерий `identification` стоит `null`: в обосновании проверка личности не требовалась. Вес 20 выпал, остальные веса перераспределены, максимум 100. `final_score` у `p2-en-001` — 88.13, у `p2-ru-002` — 46.92. `critical_flag` совпадает со значением `critical` и итог не обнуляет.
+Файлы сдачи — в начале README: `results/dev/results.json` и `results/prod/results.json`.
 
 Формат JSON 1.0 из приложения к гайду. Один объект на файл. Названия полей, коды критериев и типы значений не меняются. Оценивается работа оператора по действующему чек-листу.
 
