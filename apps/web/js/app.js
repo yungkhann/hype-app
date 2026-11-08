@@ -2549,9 +2549,9 @@ function exportDialogHtml() {
     <form class="dialog-panel" data-export-form novalidate>
       ${Field(esc(t("exp.dataset")), select("group_id"))}
       ${Field(esc(t("exp.set")), `<span class="ui-select-wrap"><select class="ui-select" name="target">
+        <option value="" selected>${esc(t("exp.setOther"))}</option>
         <option value="dev">DEV — results/dev/results.json (65)</option>
         <option value="prod">PROD — results/prod/results.json (10)</option>
-        <option value="">${esc(t("exp.setOther"))}</option>
       </select></span>`)}
       ${Field(esc(t("eval.checklist")), select("checklist_id"))}
       ${Field(esc(t("exp.version")), select("checklist_version"))}
