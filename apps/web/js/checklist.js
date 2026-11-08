@@ -20,6 +20,24 @@ export function weightSum(weights) {
   return weights.reduce((sum, w) => sum + Math.round(Number(w) * 1e6), 0) / 1e6;
 }
 
+/** Rebalance active weighted criteria to exactly 100%, retaining six decimal places. */
+export function normalizeWeights(config) {
+  const weighted = config.criteria.filter((criterion) => criterion.enabled !== false && Number(criterion.weight) > 0);
+  const total = weighted.reduce((sum, criterion) => sum + Math.round(Number(criterion.weight) * 1e6), 0);
+  if (!total) return config;
+
+  const target = 100 * 1e6;
+  let assigned = 0;
+  weighted.forEach((criterion, index) => {
+    const units = index === weighted.length - 1
+      ? target - assigned
+      : Math.round(Math.round(Number(criterion.weight) * 1e6) * target / total);
+    criterion.weight = units / 1e6;
+    assigned += units;
+  });
+  return config;
+}
+
 /** JSON with sorted keys, so two configurations compare equal whatever order their keys were written in. */
 export function canon(value) {
   if (Array.isArray(value)) return `[${value.map(canon).join(",")}]`;
@@ -250,7 +268,10 @@ export function putCriterion(config, originalId, criterion, section) {
   const record = { ...criterion, section_id: sectionId };
   const index = originalId ? config.criteria.findIndex((c) => c.id === originalId) : -1;
   if (index >= 0) config.criteria[index] = record;
-  else config.criteria.push(record);
+  else {
+    config.criteria.push(record);
+    normalizeWeights(config);
+  }
   return config;
 }
 

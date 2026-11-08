@@ -55,6 +55,8 @@ logger = logging.getLogger("atlas.cqa")
 DEV_CHECKLIST_PATH = Path(__file__).resolve().parent / "fixtures" / "dev_checklist.json"
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 EXPECTED_TOTAL = Fraction(100)
+WEIGHT_PRECISION = 1_000_000
+WEIGHT_TARGET = int(EXPECTED_TOTAL * WEIGHT_PRECISION)
 OFFICIAL_TEMPLATE_ID = "freedom-broker-official"
 # The official checklist's id, fixed (uuid5 of "atlas:cqa:checklist:freedom-broker-official") so that two API
 # processes starting at once write the same file instead of two checklists. Never change it.
@@ -74,6 +76,28 @@ def config_hash(config: ChecklistConfig) -> str:
 def weight_total(config: ChecklistConfig) -> Fraction:
     """Exact sum of the enabled criteria's weights (as typed: 33.3 + 33.3 + 33.4 is exactly 100)."""
     return sum((Fraction(str(c.weight)) for c in config.active_criteria), Fraction(0))
+
+
+def normalize_weights(config: ChecklistConfig) -> ChecklistConfig:
+    """Scale enabled weighted criteria to exactly 100%, retaining six decimal places."""
+    criteria = [c for c in config.active_criteria if c.weight > 0]
+    total = sum((Fraction(str(c.weight)) for c in criteria), Fraction(0))
+    if not total:
+        return config
+
+    assigned = 0
+    normalized = []
+    for index, criterion in enumerate(criteria):
+        if index == len(criteria) - 1:
+            units = WEIGHT_TARGET - assigned
+        else:
+            value = Fraction(str(criterion.weight)) * WEIGHT_TARGET / total
+            units = (2 * value.numerator + value.denominator) // (2 * value.denominator)
+        assigned += units
+        normalized.append(criterion.model_copy(update={"weight": units / WEIGHT_PRECISION}))
+
+    by_id = {criterion.id: criterion for criterion in normalized}
+    return config.model_copy(update={"criteria": [by_id.get(c.id, c) for c in config.criteria]})
 
 
 def completeness_issues(config: ChecklistConfig) -> list[ValidationIssue]:
@@ -386,11 +410,15 @@ class ChecklistService:
                         f"This checklist changed since you opened it (now v{checklist.latest_version}, you edited "
                         f"v{payload.base_version}). Reload it and apply your edits again.", code="stale_checklist",
                         details={"latest_version": checklist.latest_version})
-                digest = config_hash(payload.config)
+                previous = checklist.version().config
+                config = payload.config
+                if {criterion.id for criterion in config.criteria} - {criterion.id for criterion in previous.criteria}:
+                    config = normalize_weights(config)
+                digest = config_hash(config)
                 if digest != checklist.version().config_hash:
-                    self._require_complete(payload.config)
+                    self._require_complete(config)
                     new_version = ChecklistVersion(version=checklist.latest_version + 1, created_at=now_iso(),
-                                                   note=payload.note.strip() or "Edited", config=payload.config,
+                                                   note=payload.note.strip() or "Edited", config=config,
                                                    config_hash=digest)
             if not changes and new_version is None:
                 return checklist

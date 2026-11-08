@@ -253,6 +253,18 @@ def test_criteria_can_be_added_edited_disabled_and_removed(client, settings):
     assert detail["active_criteria"] == ["greet", "skill"]
 
 
+def test_adding_a_criterion_normalizes_all_enabled_weights(client):
+    checklist = create(client)
+    config = checklist["versions"][0]["config"]
+    config["criteria"].append(weighted("empathy", 10))
+
+    updated = save(client, checklist, config).json()
+    weights = [criterion["weight"] for criterion in updated["versions"][-1]["config"]["criteria"]]
+
+    assert weights == [18.181818, 45.454545, 27.272727, 9.09091]
+    assert sum(weights) == 100
+
+
 def test_custom_numeric_scales_persist_and_are_validated(client, settings):
     payload = {"name": "Numeric", "config": {"criteria": [
         {"id": "dialogue", "name": "Dialogue", "weight": 60, "answer_type": "numeric",
