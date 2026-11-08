@@ -1,26 +1,35 @@
-# ATLAS — Conversation Quality Analytics
+# Lumvy
 
-ATLAS scores Freedom Broker customer-service operators against an editable checklist. It imports a conversation, asks the selected model for an answer on every enabled criterion, cites the transcript lines behind each answer, and computes the score itself (weights, N/A redistribution, section totals, rounding, and the critical-error flag). A reviewer can appeal one criterion; GPT recommends, the reviewer decides, and the total is recalculated. The original score, the decision and the final score are all kept.
+Lumvy оценивает операторов клиентской поддержки Freedom Broker по редактируемому чек-листу. Приложение импортирует диалог, просит выбранную модель ответить по каждому включённому критерию, сохраняет ссылку на реплики и само считает балл: веса, перераспределение N/A, итоги разделов, округление и флаг грубой ошибки. Рецензент может подать апелляцию по одному критерию. GPT рекомендует, решение принимает человек, итог пересчитывается. Исходный балл, решение и итоговый балл хранятся рядом.
 
-The interface is vanilla HTML, CSS and JavaScript in `apps/web`. The API is FastAPI in `apps/api`. The browser calls `/api/v1/cqa`.
+Интерфейс — обычные HTML, CSS и JavaScript в `apps/web`. API — FastAPI в `apps/api`. Браузер ходит в `/api/v1/cqa`.
 
-## Run it
+Переменные окружения по-прежнему начинаются с `ATLAS_`. Это имя настроек в коде, не название продукта.
 
-Python 3.12 and the API virtualenv (`apps/api/.venv`) are required. Create the venv with `uv venv apps/api/.venv --python 3.12` and install `apps/api/requirements.txt` plus `apps/api/requirements-dev.txt` if it is missing. Copy `.env.example` to `.env` and fill the empty secret values there. Do not commit `.env`.
+## Запуск
+
+Нужны Python 3.12 и виртуальное окружение `apps/api/.venv`. Если его нет:
+
+```bash
+uv venv apps/api/.venv --python 3.12
+uv pip install --python apps/api/.venv/bin/python -r apps/api/requirements.txt -r apps/api/requirements-dev.txt
+```
+
+Скопируйте `.env.example` в `.env` и заполните пустые секреты. `.env` не коммитить.
 
 ### Docker
 
-From the repository root, with an env file that does not contain secrets if you only want to check the compose file:
+Из корня репозитория. Для проверки файла compose берите env-файл без секретов:
 
 ```bash
 docker compose --env-file .env.example up --build -d
 ```
 
-The web UI is published on `127.0.0.1:3000` and the API on `127.0.0.1:8000`. Mode 1 reaches Ollama on the host through the `ollama-forward` sidecar (`ATLAS_CQA_GEMMA_BASE_URL=http://localhost:11434/v1` inside the API container).
+Интерфейс публикуется на `127.0.0.1:3000`, API на `127.0.0.1:8000`. Режим 1 ходит в Ollama на хосте через sidecar `ollama-forward` (`ATLAS_CQA_GEMMA_BASE_URL=http://localhost:11434/v1` внутри контейнера API). Публичный адрес задаётся `PUBLIC_DOMAIN` (сейчас `lumvy.io`) и профилем `public` в `docker-compose.yml`.
 
-### Locally
+### Локально
 
-Two processes. The API does not load `.env` unless you export the variables yourself (`scripts/dev-api.sh` sources `.env`; the command below does not):
+Два процесса. Команда ниже не читает `.env`. `scripts/dev-api.sh` его подхватывает, поэтому для ручного запуска её не используйте:
 
 ```bash
 cd apps/api
@@ -31,38 +40,145 @@ cd apps/api
 python3 -m http.server 3000 --bind 127.0.0.1 --directory apps/web
 ```
 
-Open `http://127.0.0.1:8000/api/v1/health` (the body has `"status": "ok"`) and `http://127.0.0.1:3000`. An empty `<meta name="cqa-api">` calls `/api/v1` on the page's own origin, which the Docker nginx proxy serves. For these two ports, set that tag to `http://127.0.0.1:8000/api/v1`. The API allows browser calls from port 3000 (`ATLAS_CORS_ORIGINS`).
+Откройте `http://127.0.0.1:8000/api/v1/health` (в теле `"status": "ok"`) и `http://127.0.0.1:3000`. Пустой `<meta name="cqa-api">` зовёт `/api/v1` на том же адресе, что и страница: так делает nginx в Docker. Для двух портов пропишите в `apps/web/index.html`:
 
-## Import
+```html
+<meta name="cqa-api" content="http://127.0.0.1:8000/api/v1" />
+```
 
-**By group.** Set `ATLAS_CQA_SOURCE_URL` to the organizers' GET URL without `group_id` (the signed URL stays in `.env`). In the UI, Import → the API tab, enter the group id (`DEV` for the development set) and import. The API calls the organizers' endpoint and stores the records.
+API пускает браузер с порта 3000 (`ATLAS_CORS_ORIGINS`).
 
-**By JSON.** Import → JSON, paste the organizers' response or drop the file. The same parser runs. Nothing is sent to the organizers' host.
+## Импорт
 
-`ATLAS_CQA_FIXTURES_ENABLED=true` (the default) also lists clearly labeled fixture groups. Set it to `false` on a demo or production host so those conversations are not mixed with the real set.
+**По группе.** `ATLAS_CQA_SOURCE_URL` — GET-адрес организаторов без `group_id`. Подписанный URL остаётся в `.env`. В интерфейсе: Импорт → вкладка API, идентификатор группы (`DEV` для разработки) и импорт. API сам вызывает организаторов и сохраняет записи.
 
-## Evaluation modes
+**По JSON.** Импорт → JSON: вставьте ответ организаторов или перетащите файл. Парсер тот же. На хост организаторов ничего не уходит.
 
-The choice is on the conversation page and is stored in the browser. The server default when a request omits `mode_type` is `ATLAS_CQA_DEFAULT_MODE_TYPE` (1).
+`ATLAS_CQA_FIXTURES_ENABLED=true` (значение по умолчанию) показывает подписанные тестовые группы. На демо и в проде поставьте `false`, чтобы они не смешались с настоящими диалогами.
 
-| Mode | Who answers |
+## Режимы оценки
+
+Выбор на странице диалога и запоминается в браузере. Если запрос не передаёт `mode_type`, сервер берёт `ATLAS_CQA_DEFAULT_MODE_TYPE` (1).
+
+| Режим | Кто отвечает |
 | --- | --- |
-| 1 Hybrid | The local model `ATLAS_CQA_GEMMA_MODEL` (default `qwen3:27b`, adapter id `gemma`, Ollama at `ATLAS_CQA_GEMMA_BASE_URL`) answers official criteria whose wording still matches the template. GPT (`ATLAS_CQA_OPENAI_MODEL`, default `gpt-4.1`) answers the rest. |
-| 2 GPT only | GPT answers every criterion. Qwen is not called. |
+| 1, гибрид | Локальная модель `ATLAS_CQA_GEMMA_MODEL` (по умолчанию `qwen3:27b`, id адаптера `gemma`, Ollama на `ATLAS_CQA_GEMMA_BASE_URL`) отвечает на официальные критерии, формулировка которых совпадает с шаблоном. GPT (`ATLAS_CQA_OPENAI_MODEL`, по умолчанию `gpt-4.1`) отвечает на остальные. |
+| 2, только GPT | GPT отвечает на каждый критерий. Qwen не вызывается. |
 
-Appeals are reassessed by GPT in both modes (`ATLAS_CQA_REASSESSOR=openai`). A failed provider fails the evaluation; nothing is filled in. Evaluate again on a failed part re-asks only that provider.
+Апелляции в обоих режимах пересматривает GPT (`ATLAS_CQA_REASSESSOR=openai`). Если провайдер упал, оценка не заполняется чужими ответами. «Оценить снова» по упавшей части спрашивает только её.
 
-GPT needs `OPENAI_API_KEY` or `ATLAS_CQA_OPENAI_API_KEY`. Each conversation is tried up to `ATLAS_CQA_OPENAI_MAX_ATTEMPTS` times (default 2). `ATLAS_CQA_OPENAI_TIMEOUT_S` is the per-request limit (default 120). Qwen uses `ATLAS_CQA_GEMMA_TIMEOUT_S` (default 300) and no key.
+GPT нужен `OPENAI_API_KEY` или `ATLAS_CQA_OPENAI_API_KEY`. Диалог пробуется до `ATLAS_CQA_OPENAI_MAX_ATTEMPTS` раз (по умолчанию 2). `ATLAS_CQA_OPENAI_TIMEOUT_S` — лимит одного запроса (120 секунд). У Qwen лимит `ATLAS_CQA_GEMMA_TIMEOUT_S` (300 секунд), ключ не нужен.
 
-On the checklist page, **Save checklist** stores a new version. **Apply to all conversations** picks a group from the overview, uses the mode selected in this browser, asks for confirmation, and evaluates conversations that have no result yet (`only_missing`) on the saved version.
+На странице чек-листа **Сохранить** записывает новую версию. **Применить ко всем диалогам** выбирает группу из обзора, берёт режим этого браузера, спрашивает подтверждение и оценивает диалоги группы, у которых ещё нет результата (`only_missing`), сохранённой версией.
 
-## Appeals
+## Апелляции
 
-On a criterion, write a comment and submit. The appeal is stored and GPT reassesses that criterion only. The reviewer confirms the original value, accepts GPT's recommendation, or overrides it. The score is recalculated from the checklist version that was evaluated. The card keeps the original score, the decision and the final score.
+На критерии напишите комментарий и отправьте. Апелляция сохраняется, GPT пересматривает только этот критерий. Рецензент подтверждает исходное значение, принимает рекомендацию GPT или ставит свой ответ. Балл считается заново по той версии чек-листа, которой оценивали. На карточке остаются исходный балл, решение и итог.
 
-## Export
+Без ключа OpenAI апелляция не удаляется: она остаётся открытой, а пересмотр падает с текстом ошибки. Его можно повторить.
 
-`results/dev/results.json` is the 65-record development set. `results/prod/results.json` is the 10-record control set. The exporter reads stored evaluations only. It refuses to write until `ATLAS_CQA_TEAM_NAME` is set (or you pass `--team`). `model.name` is the names the providers reported, not a label from the UI.
+## Критерии
+
+Один и тот же чек-лист для чатов на русском, казахском и английском. Он написан для чатов. Для звонков логика та же, а критерии письменной речи нужно переносить на устную. Восемь пунктов ниже — стартовый набор. В интерфейсе их можно менять, отключать и заменять без правки кода, а затем применять к диалогам.
+
+Вес — сколько баллов критерий даёт до перераспределения N/A. Семь взвешенных критериев в сумме дают 100. У грубой ошибки баллов нет.
+
+| id | Критерий | Ответ | Вес |
+| --- | --- | --- | --- |
+| `contact` | Установление контакта | да / нет | 10 |
+| `discovery` | Выявление потребности | да / нет / N/A | 15 |
+| `identification` | Идентификация | да / нет / N/A | 20 |
+| `consultation` | Корректная и полная консультация | 0, 5, 10, 15, 20 / N/A | 20 |
+| `empathy` | Эмпатия и ориентация на клиента | да / нет | 15 |
+| `dialogue` | Ведение диалога, скорость и грамотность | 0, 4, 7, 10 | 15 |
+| `closure` | Завершение | да / нет / N/A | 5 |
+| `critical` | Грубые ошибки | да / нет, без баллов | — |
+
+Формулировки взяты из `CQA_Hackathon_Complete_Brief.pdf` (сводка официального чек-листа). Коды, типы значений и веса в сдаче зафиксированы в `CQA_Student_Guide_Appendix_Results.pdf`.
+
+**Установление контакта.** Да — оператор поздоровался с клиентом на языке клиента и представился в первом ответе.
+
+**Выявление потребности.** Да — оператор использовал уже известные данные и уточнил недостающее до ответа. N/A — сведения, нужные для ответа, были полными с самого начала. Если клиент сразу сообщил всё нужное, это N/A, а не «Да» и не ноль.
+
+**Идентификация.** Да — проверка личности подтверждена до раскрытия данных или выполнения защищённого действия. N/A — запрос не требовал идентификации, например общий вопрос о тарифе. Если проверка требовалась и в чате не подтверждена — «Нет».
+
+**Корректная и полная консультация.**
+
+- 20 — все существенные вопросы закрыты, либо дан верный следующий шаг.
+- 15 — основной вопрос решён, упущена второстепенная деталь.
+- 10 — часть запроса закрыта, существенный вопрос остаётся открытым.
+- 5 — есть общая подсказка, но клиент всё ещё не знает, что делать.
+- 0 — нет содержательного ответа, либо ключевая рекомендация неверна.
+- N/A — чат закончился до того, как клиент сформулировал запрос.
+
+**Эмпатия и ориентация на клиента.** Да — оператор вежлив и, если клиент выразил недовольство или описал неудобство, отреагировал именно на эту проблему.
+
+**Ведение диалога, скорость и грамотность.**
+
+- 10 — ответы ясные и связные. Если было очевидное ожидание, оператор предупредил клиента.
+- 7 — один заметный сбой, но клиент понимает ответ и может продолжать.
+- 4 — клиенту приходится переспрашивать из-за формулировки или порядка ответа.
+- 0 — бессвязные или противоречивые реплики, диалог трудно вести.
+
+Для звонка смотрят логику разговора, ясность объяснений, отсутствие неуместных формулировок, устную речь и паузы. Если есть запись, можно дополнительно смотреть темп, дикцию и разборчивость. Порог первой реакции в 3 минуты — это SLA. Этот порог, теги и вложения в оценку не входят. Нормы удержания звонка, которую надо ставить в балл, нет.
+
+**Завершение.** Да — оператор подвёл итог или предложил дальнейшую помощь и попрощался. Одного прощания без итога и без предложения помощи недостаточно. N/A — чат оборвался до того, как его можно было завершить.
+
+**Грубые ошибки.** Да — есть хотя бы одно из трёх: оскорбление клиента; платная услуга в обход компании; раскрытие конфиденциальной информации. Обход компании — это, например, просьба прислать деньги лично оператору для инвестирования или дать личный номер для платной частной консультации. Достаточно самого предложения: согласие клиента и перевод не нужны. «Нет» — ни одного из трёх нет. Флаг передаётся отдельно и сам по себе итог не обнуляет.
+
+### Как ссылаться на диалог
+
+Ссылка — на конкретную реплику или системное сообщение, с короткой фразой, что она подтверждает. Пропущенное действие показывают местом, где его ждали. Для N/A объясняют, какое условие неприменимости выполнено.
+
+Консультация отвечает, решён ли запрос правильно и полно. Ведение диалога отвечает, насколько ясно и последовательно оператор говорил. Ясный ответ на один из двух важных вопросов может быть высоким по ведению и только частичным по консультации.
+
+Пример обоснования: «Завершение — нет. После ответа оператор закрыл чат, не попрощавшись. Доказательство — последняя реплика оператора и системное сообщение о закрытии чата.»
+
+### Как считается балл
+
+Сначала решают, применим ли критерий. N/A ставят только там, где оно разрешено и условие чек-листа выполнено. N/A — не ноль и не ошибка обработки.
+
+«Да» даёт полный вес, «Нет» — ноль. На шкале берут одну из перечисленных ступеней. Верхняя ступень даёт полный вес критерия. `dialogue` = 7 означает 7 из 10; при весе 15 это 10,5 балла до перераспределения N/A.
+
+Критерии с N/A выпадают. Их вес пропорционально делится между применимыми, максимум остаётся 100. Итог округляют до двух знаков, половина вверх: 50,625 становится 50,63. Если не осталось ни одного применимого взвешенного критерия, итог не считают. `critical_flag` совпадает со значением критерия `critical`.
+
+## Сдача results.json
+
+Формат JSON 1.0 из приложения к гайду. Один объект на файл. Названия полей, коды критериев и типы значений не меняются. Оценивается работа оператора по действующему чек-листу.
+
+```
+results/dev/results.json    DEV: 60 чатов и 5 звонков
+results/prod/results.json   ровно 10 контрольных чатов, ошибки тоже считаются
+```
+
+До стоп-кода оба файла должны быть в открытом репозитории. Локального сохранения и commit без push недостаточно.
+
+Оболочка: `schema_version` равен `"1.0"`, `team_name`, `model` с полями `mode` и `name`. `mode` — `local`, `external_api` или `hybrid`. В `name` — модели, которые реально отвечали; если их несколько, названия перечисляют в одной строке. Для платной модели в README указаны имя и примерная стоимость одной полной оценки со всеми вызовами (раздел ниже).
+
+У каждого диалога: `conversation_id` как в API, `status` (`ok` или `error`), массив `criteria`, `score` с `final_score` и `critical_flag`.
+
+При `status` = `ok` все 8 критериев, каждый ровно один раз: `criterion_id`, `value`, `rationale`, `evidence_turns`.
+
+| criterion_id | value | Вес |
+| --- | --- | --- |
+| `contact` | `true` / `false` | 10 |
+| `discovery` | `true` / `false` / `null` | 15 |
+| `identification` | `true` / `false` / `null` | 20 |
+| `consultation` | `0`, `5`, `10`, `15`, `20` / `null` | 20 |
+| `empathy` | `true` / `false` | 15 |
+| `dialogue` | `0`, `4`, `7`, `10` | 15 |
+| `closure` | `true` / `false` / `null` | 5 |
+| `critical` | `true` / `false` | — |
+
+`true` — «Да», `false` — «Нет», `null` — N/A. Число — ступень шкалы до учёта веса. `evidence_turns` — номера с 1 по исходному массиву транскрипта, включая клиента, бота и системные события. Только реплики оператора заново не нумеруют. `rationale` коротко объясняет оценку.
+
+`final_score` — от 0 до 100, два знака после запятой, уже после перераспределения N/A. `critical_flag` совпадает с `value` критерия `critical`.
+
+Если диалог оценить не удалось, его ID сохраняют: `status` = `"error"`, `criteria` пустой, `score` = `null`, причина в `error`. Такой диалог не прячут и не заменяют нулём.
+
+Файл — UTF-8, без комментариев и висячих запятых. В prod ровно 10 записей, включая ошибки. Пример в приложении вымышленный: вместо `demo-001` подставляют исходный ID.
+
+Экспорт Lumvy читает только уже сохранённые оценки. Файл не пишется, пока не задан `ATLAS_CQA_TEAM_NAME` (или флаг `--team`). `model.name` берётся у провайдеров, а не из подписи в интерфейсе.
 
 ```bash
 scripts/export-results.sh --set dev --group DEV --dry-run
@@ -70,164 +186,70 @@ scripts/export-results.sh --set dev --group DEV
 scripts/export-results.sh --set prod --group <prod-group>
 ```
 
-The script loads the root `.env`, then runs `python -m app.cqa.results_export`. The same module can be run directly:
+Скрипт читает корневой `.env` и запускает `python -m app.cqa.results_export`. Тот же модуль можно вызвать напрямую:
 
 ```bash
 cd apps/api
 ATLAS_CQA_TEAM_NAME='Your team' .venv/bin/python -m app.cqa.results_export --set dev --group DEV --dry-run
 ```
 
-`--check results/dev/results.json` validates a file that is already written. Paid evaluation is not part of export. Run evaluations from the UI first. Those evaluation commands are paid and are not listed here.
+`--check results/dev/results.json` проверяет уже записанный файл. Платной оценки в экспорте нет. Сначала оцените диалоги в интерфейсе.
 
-## Production settings
+## Настройки продакшена
 
-- `ATLAS_CQA_FIXTURES_ENABLED=false` hides fixture conversations.
-- `ATLAS_CQA_TEAM_NAME` is the name written into `results.json`.
-- `ATLAS_CQA_MODEL_MODE` overrides the derived `model.mode` (`local`, `external_api` or `hybrid`). Leave it empty so the exporter uses the providers that actually answered.
-- `ATLAS_CQA_EVALUATION_WORKERS` is how many evaluations run at once (default 2).
-- `ATLAS_DATA_DIR` is where conversations, checklists and evaluations are stored.
+- `ATLAS_CQA_FIXTURES_ENABLED=false` прячет тестовые диалоги.
+- `ATLAS_CQA_TEAM_NAME` — имя команды в `results.json`.
+- `ATLAS_CQA_MODEL_MODE` переопределяет вычисленный `model.mode` (`local`, `external_api` или `hybrid`). Оставьте пустым: экспорт возьмёт провайдеров, которые реально отвечали.
+- `ATLAS_CQA_EVALUATION_WORKERS` — сколько оценок идёт одновременно (по умолчанию 2).
+- `ATLAS_DATA_DIR` — каталог диалогов, чек-листов и оценок.
 
 ## Dynamics 365
 
-`apps/web` is a static site: `index.html` and `js/*.js`, no bundler. To use it as a Dynamics 365 HTML web resource, upload those files and set the API address on the page:
+`apps/web` — статический сайт: `index.html` и `js/*.js`, без сборщика. Чтобы вложить его в HTML web resource Dynamics 365, загрузите эти файлы и укажите адрес API:
 
 ```html
 <meta name="cqa-api" content="https://your-host/api/v1" />
 ```
 
-An empty `cqa-api` calls `/api/v1` on the page's own origin. For a split-port local run, set it to `http://127.0.0.1:8000/api/v1`.
+Пустой `cqa-api` зовёт `/api/v1` на адресе страницы. Для локального запуска на двух портах поставьте `http://127.0.0.1:8000/api/v1`.
 
-## Cost of one GPT-4.1 evaluation
+## Стоимость одной оценки GPT-4.1
 
-Measured on the 65 DEV records in the local `invoke.json` (not stored in this repository) with `build_messages` and the official checklist. No model was called. Tokens are `tiktoken` `o200k_base` counts of the system and user messages.
+Посчитано по 65 записям DEV из локального `invoke.json` (в репозитории его нет) через `build_messages` и официальный чек-лист. Модель не вызывалась. Токены — `tiktoken`, кодировка `o200k_base`, системное и пользовательское сообщения.
 
-| | Tokens |
+| | Токены |
 | --- | --- |
-| Input, one attempt (65 dialogs: min 2,903, median 3,040, mean 3,367, max 8,712) | 3,040 median |
-| Output, one attempt (the appendix example's eight rationales, tokenized) | 319 |
+| Вход, одна попытка (65 диалогов: мин. 2 903, медиана 3 040, среднее 3 367, макс. 8 712) | медиана 3 040 |
+| Выход, одна попытка (восемь обоснований длины из приложения, в токенах) | 319 |
 
-Prices from OpenAI's model page for `gpt-4.1`, checked 8 Nov 2026: **$2 per million input tokens** and **$8 per million output tokens** ([developers.openai.com/api/docs/models/gpt-4.1](https://developers.openai.com/api/docs/models/gpt-4.1)).
+Цены со страницы модели `gpt-4.1`, проверены 8 ноября 2026: **$2 за миллион входных токенов** и **$8 за миллион выходных** ([developers.openai.com/api/docs/models/gpt-4.1](https://developers.openai.com/api/docs/models/gpt-4.1)).
 
-A first-try mode 2 evaluation at the median prompt is about **$0.009** (3,040 × $2 / 1,000,000 + 319 × $8 / 1,000,000). `ATLAS_CQA_OPENAI_MAX_ATTEMPTS` is 2, so a rejected answer is sent back once. On the median dialog that second prompt is 3,400 tokens (the original prompt, the rejected answer and the short feedback). Two attempts are about **$0.018**.
+Одна оценка режима 2 на медианном промпте с первой попытки — около **$0.009** (3 040 × $2 / 1 000 000 + 319 × $8 / 1 000 000). `ATLAS_CQA_OPENAI_MAX_ATTEMPTS` равен 2, поэтому отклонённый ответ уходит ещё раз. На медианном диалоге второй промпт — 3 400 токенов (исходный промпт, отклонённый ответ и короткая обратная связь). Две попытки — около **$0.018**.
 
-Mode 1 on the untouched official checklist sends every criterion to local Qwen, so the GPT cost of that evaluation is $0. GPT is billed only for criteria whose definition no longer matches the template, and for every appeal. The figures above are the mode 2 (all criteria, GPT) estimate.
+Режим 1 на нетронутом официальном чек-листе отдаёт все критерии локальному Qwen, поэтому GPT в такой оценке стоит $0. GPT оплачивается только за критерии, определение которых разошлось с шаблоном, и за каждую апелляцию. Цифры выше — оценка режима 2, когда GPT отвечает на всё.
 
-| Set | Evaluations | Estimate, mode 2, first try | Estimate if every dialog is retried once |
+| Набор | Оценок | Оценка, режим 2, первая попытка | Если каждый диалог ушёл на повтор |
 | --- | --- | --- | --- |
-| DEV | 65 | about $0.56 | about $1.17 |
-| PROD | 10 | about $0.09 | about $0.18 |
+| DEV | 65 | около $0.56 | около $1.17 |
+| PROD | 10 | около $0.09 | около $0.18 |
 
-These are estimates. Real bills depend on rationale length, retries and how many criteria mode 1 still sends to GPT.
+Это оценка. Счёт зависит от длины обоснований, повторов и от того, сколько критериев режим 1 всё ещё отправляет в GPT.
 
-## Older data studio
+## Где лежит код
 
-The sections below describe the earlier Next.js data studio (datasets, charts, models). That frontend is no longer in `apps/web`. They are kept as notes for that older workbench.
+```
+apps/api/app/cqa/     API оценки: импорт, чек-листы, режимы, апелляции, экспорт
+apps/web/             интерфейс
+docs/cqa-model-contract.md   контракт запроса к модели
+scripts/export-results.sh    выгрузка results.json
+```
 
-A local-first workbench for taking an unfamiliar dataset from upload to a defensible, presentable result:
-**upload → understand → explore → prepare → analyze → validate → explain → present.**
-
-Built for a four-person team at **Data Challenge: Doomsday** (Nazarbayev University, 7–8 Nov 2026, Freedom
-case). The case is unknown in advance, so ATLAS assumes nothing about it. Every page works on any CSV, Excel
-or Parquet file, and the case-specific work plugs into a documented extension area (`/challenge`).
-
-- **Every number carries its provenance.** Charts, KPIs, metrics and findings show a source line:
-  dataset · rows used of total · filters · sampling · aggregation.
-- **No manufactured conclusions.** ATLAS computes and discloses. Interpretations are written by the team.
-- **Local and private.** Both servers bind to `127.0.0.1`. No external AI, no analytics, no telemetry
-  (Next.js telemetry is disabled in every script).
-- **Dark-first, keyboard-friendly UI.** Press ⌘K / Ctrl+K anywhere in the studio to jump to a page or switch
-  the active dataset. The printable report uses a light paper theme.
-
-## Requirements
-
-| Tool | Version | Notes |
-| --- | --- | --- |
-| macOS or Linux | — | Scripts are bash. |
-| Python | 3.11 – 3.14 | `setup.sh` picks the newest of 3.13 / 3.12 / 3.14 / 3.11 it finds; override with `PYTHON=python3.12`. |
-| Node.js | ≥ 20.9 | Tested with Node 26. |
-| pnpm | 10 | `corepack enable` provides it. |
-
-## Start (exact commands)
+Проверка бэкенда:
 
 ```bash
-cd atlas
-pnpm run bootstrap   # once: venv + Python deps, web deps, synthetic samples, generated API types
-pnpm dev             # API on http://127.0.0.1:8000 and web on http://127.0.0.1:3000, Ctrl+C stops both
+cd apps/api && .venv/bin/python -m pytest -q tests -k cqa -p no:cacheprovider
 ```
 
-Open **http://127.0.0.1:3000**. On the Datasets page, either drop a file or click **Load** on a synthetic sample.
+## Старая студия данных
 
-- Port taken? The older `pnpm dev` expected ports 3000 and 8000 to be free. The publish ports live in
-  `docker-compose.yml`, not in the API settings.
-- Other settings in `.env`: upload and parse limits (`ATLAS_MAX_UPLOAD_MB`, `ATLAS_MAX_UNCOMPRESSED_MB` for
-  the size an .xlsx may expand to, `ATLAS_MAX_ROWS`) and `ATLAS_ALLOWED_HOSTS`, the Host headers the API
-  accepts (default `["127.0.0.1","localhost"]`). The full list is in
-  [docs/api-contract.md](docs/api-contract.md#limits-and-settings).
-- API docs (OpenAPI): http://127.0.0.1:8000/docs
-- One service only: `pnpm dev:api` or `pnpm dev:web`.
-
-## Pages
-
-| Route | Purpose |
-| --- | --- |
-| `/` Datasets | Upload (drag and drop, progress, cancel), import review (encoding, delimiter, sheet, header row), samples, rename, replace (with undo), delete, download original/CSV/Parquet |
-| `/overview` | Schema, statistics, quality flags split into **Detected** (facts) and **Heuristic** (suspicions), missingness, per-column detail, correlation |
-| `/explorer` | Server-side table (search, sort, paging, column visibility, filters), group & aggregate, chart builder, saved views, filtered CSV export |
-| `/prepare` | Reproducible transform recipes with an optional train/validation split; fitted steps learn from train rows only. Preview first; saving creates a derived dataset |
-| `/analysis` | Registered analyses with generated parameter forms (Pareto concentration, group comparison, association ranking, k-means, anomalies, time trend) |
-| `/models` | Optional: classification/regression baselines vs a dummy baseline on a held-out split, readiness and leakage checks, background training, exports |
-| `/findings` | Evidence you chose to keep, with chart snapshots and source lines. Interpretation is written by you. Markdown/JSON export |
-| `/present` | Full-screen pitch deck: ←/→ Home/End, `E` edit, `N` notes, `F` full screen. Placeholders stay visibly marked until edited |
-| `/report` | Printable report (print / save as PDF) |
-| `/challenge` | The case-specific extension area and the case-reveal checklist |
-
-## Checks
-
-```bash
-pnpm test:api        # pytest: 58 tests (ingestion, security, profiling, queries, charts, transforms, models, findings, extensions)
-pnpm test:web        # vitest: unit tests for formatting, provenance, filters, chart rules, schema forms, recipes
-pnpm typecheck && pnpm lint
-pnpm --filter web e2e:install   # once: Chromium into node_modules (no global install)
-pnpm e2e             # Playwright, 9 tests: workflows W1–W6, the ⌘K command menu, desktop/phone layout checks
-```
-
-E2E tests start their **own** API (127.0.0.1:8100) and web build (127.0.0.1:3100) on a throwaway workspace in
-`apps/web/e2e/.artifacts/`. They never touch your datasets or the dev servers, but the build writes
-`apps/web/.next/`, so restart `pnpm dev` afterwards if pages look stale.
-
-## Where things live
-
-```
-apps/api/            FastAPI backend (Python)
-  app/api/routes/    HTTP layer only (validation, status codes)
-  app/services/      ingestion · profiling · analytics · preprocessing · modeling · reporting
-  app/extensions/    analysis registry + built-in analyses (the extension pattern)
-  app/challenge/     ← case-specific analyses and endpoints go here
-  tests/             pytest
-apps/web/            Next.js 16 App Router frontend (TypeScript)
-  app/(studio)/      the studio pages (one folder per route)
-  app/present, app/report   full-screen pages outside the app shell
-  components/        ui · charts · data · shell · findings · datasets · analysis
-  lib/api/           typed client, TanStack Query hooks, generated schema types
-data/samples/        synthetic practice datasets (safe to commit)
-data/workspaces/     your uploads, findings, experiments (git-ignored; never commit)
-docs/                architecture · API contract · tomorrow playbook · team handoff
-```
-
-After changing backend schemas, run `pnpm gen:api` to regenerate `docs/openapi.json` and the frontend types.
-
-## Documentation
-
-- [docs/tomorrow-playbook.md](docs/tomorrow-playbook.md): what to do in the first hour after the case reveal, plus scenarios A–F.
-- [docs/team-handoff.md](docs/team-handoff.md): four roles, file ownership, git workflow.
-- [docs/architecture.md](docs/architecture.md): layout, request flow, backend layers, security, frontend structure, and how to add an analysis (worked example).
-- [docs/api-contract.md](docs/api-contract.md): endpoints, error envelope and codes, limits and `ATLAS_*` settings, downloads, replace/cancel.
-- [PRODUCT.md](PRODUCT.md) · [DESIGN.md](DESIGN.md): product principles and the design system.
-
-## Data and privacy
-
-- Uploads are stored under `data/workspaces/` (git-ignored). The original file is kept byte for byte and its
-  sha256 is shown. Every transformation creates a new derived dataset with its step log.
-- Nothing leaves the machine. The only network use is installing dependencies (`pnpm run bootstrap`) and the
-  optional one-time Chromium download for E2E tests.
-- The sample datasets are synthetic (see `data/samples/README.md`). No real customer data is included.
+Ниже по репозиторию ещё лежат заметки прежней Next.js-студии (датасеты, графики, модели). Этого интерфейса в `apps/web` больше нет. Актуальный продукт — Lumvy, разделы выше. Старые заметки: [docs/architecture.md](docs/architecture.md), [docs/api-contract.md](docs/api-contract.md), [PRODUCT.md](PRODUCT.md), [DESIGN.md](DESIGN.md).
