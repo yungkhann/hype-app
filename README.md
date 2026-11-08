@@ -1,12 +1,12 @@
 # Lumvy
 
-DEV: https://github.com/yungkhann/hype-app/blob/main/results/dev/results.json
+65 диалогов: https://github.com/yungkhann/hype-app/blob/main/results/dev/results.json
 
-PROD: https://github.com/yungkhann/hype-app/blob/main/results/prod/results.json
+10 диалогов: https://github.com/yungkhann/hype-app/blob/main/results/prod/results.json
 
-`results/dev/results.json` — 65 оценок DEV, копия `data/results-2.json`. `results/prod/results.json` — 10 контрольных чатов, копия `data/results.json`. Нужны оба файла.
+`results/dev/results.json` — 65 оценок DEV. `results/prod/results.json` — 10 контрольных чатов. Нужны оба файла.
 
-В обоих файлах `team_name` — Хайп Сквад. Исходники в `data/` не заменяют эти пути и остаются в репозитории.
+В обоих файлах `team_name` — Хайп Сквад.
 
 В prod у `p2-en-001` и `p2-ru-002` критерий `identification` стоит `null`: в обосновании проверка личности не требовалась. Вес 20 выпал, остальные веса перераспределены, максимум 100. `final_score` у `p2-en-001` — 88.13, у `p2-ru-002` — 46.92. `critical_flag` совпадает со значением `critical` и итог не обнуляет.
 
