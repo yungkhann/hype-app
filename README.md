@@ -1,5 +1,7 @@
 # Lumvy
 
+Команда: Хайп Сквад.
+
 Lumvy оценивает операторов клиентской поддержки Freedom Broker по редактируемому чек-листу. Приложение импортирует диалог, просит выбранную модель ответить по каждому включённому критерию, сохраняет ссылку на реплики и само считает балл: веса, перераспределение N/A, итоги разделов, округление и флаг грубой ошибки. Рецензент может подать апелляцию по одному критерию. GPT рекомендует, решение принимает человек, итог пересчитывается. Исходный балл, решение и итоговый балл хранятся рядом.
 
 Интерфейс — обычные HTML, CSS и JavaScript в `apps/web`. API — FastAPI в `apps/api`. Браузер ходит в `/api/v1/cqa`.
@@ -190,7 +192,7 @@ scripts/export-results.sh --set prod --group <prod-group>
 
 ```bash
 cd apps/api
-ATLAS_CQA_TEAM_NAME='Your team' .venv/bin/python -m app.cqa.results_export --set dev --group DEV --dry-run
+ATLAS_CQA_TEAM_NAME='Хайп Сквад' .venv/bin/python -m app.cqa.results_export --set dev --group DEV --dry-run
 ```
 
 `--check results/dev/results.json` проверяет уже записанный файл. Платной оценки в экспорте нет. Сначала оцените диалоги в интерфейсе.
@@ -198,7 +200,7 @@ ATLAS_CQA_TEAM_NAME='Your team' .venv/bin/python -m app.cqa.results_export --set
 ## Настройки продакшена
 
 - `ATLAS_CQA_FIXTURES_ENABLED=false` прячет тестовые диалоги.
-- `ATLAS_CQA_TEAM_NAME` — имя команды в `results.json`.
+- `ATLAS_CQA_TEAM_NAME` — имя команды в `results.json`. Для этой сдачи: Хайп Сквад.
 - `ATLAS_CQA_MODEL_MODE` переопределяет вычисленный `model.mode` (`local`, `external_api` или `hybrid`). Оставьте пустым: экспорт возьмёт провайдеров, которые реально отвечали.
 - `ATLAS_CQA_EVALUATION_WORKERS` — сколько оценок идёт одновременно (по умолчанию 2).
 - `ATLAS_DATA_DIR` — каталог диалогов, чек-листов и оценок.
