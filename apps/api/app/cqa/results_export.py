@@ -48,7 +48,7 @@ SCHEMA_VERSION = "1.0"
 MODEL_MODES = ("local", "external_api", "hybrid")
 # What kind of model each evaluator adapter runs. An adapter missing here (a teammate's "http" model) needs
 # ATLAS_CQA_MODEL_MODE. Development mocks never reach the file.
-ADAPTER_MODES = {"openai": "external_api", "gemma": "local"}
+ADAPTER_MODES = {"openai": "external_api", "gemma": "local", "qwen": "local"}
 Target = Literal["dev", "prod"]
 # The appendix: DEV is 60 chats and 5 calls; PROD is exactly 10 records (control chats), errors included.
 TARGETS: dict[str, dict[str, Any]] = {"dev": {"total": 65, "channels": {"chat": 60, "voice": 5}},

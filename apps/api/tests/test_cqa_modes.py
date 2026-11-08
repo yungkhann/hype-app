@@ -54,7 +54,8 @@ class Models:
 def client(tmp_path: Path, monkeypatch):
     settings = Settings(data_dir=tmp_path / "workspaces", samples_dir=REPO_ROOT / "data" / "samples",
                         allowed_hosts=["testserver"], cqa_evaluator="openai", cqa_openai_api_key=FAKE_KEY,
-                        cqa_openai_model="gpt-test", cqa_gemma_model="gemma-test")  # default mode: 1
+                        cqa_openai_model="gpt-test", cqa_gemma_model="gemma-test",
+                        cqa_local_evaluator="gemma")  # default mode: 1, Gemma as the local model
     with TestClient(create_app(settings)) as test_client:
         for name in ("openai", "gemma"):
             test_client.app.state.cqa.adapters[name].retry_delay_s = 0

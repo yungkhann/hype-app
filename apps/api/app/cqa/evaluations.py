@@ -108,7 +108,7 @@ class EvaluationService:
         evaluator: the provider itself when one answers everything, else the combination."""
         parts: list[EvaluationPart] = []
         infos: list[EvaluatorInfo] = []
-        for provider, criterion_ids, baseline in routing.plan(config, mode):
+        for provider, criterion_ids, baseline in routing.plan(config, mode, self.settings.cqa_local_evaluator):
             adapter = self.adapter(provider)
             ready, reason = adapter.availability()
             if not ready:

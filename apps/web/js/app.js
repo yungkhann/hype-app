@@ -696,7 +696,7 @@ function chooseMode(mode) {
 
 const modeLabel = (mode) => t(mode === 2 ? "eval.mode2" : "eval.mode1");
 const modeHint = (mode) => t(mode === 2 ? "eval.mode2Hint" : "eval.mode1Hint");
-const PROVIDER_NAMES = { gemma: "Gemma", openai: "GPT" };
+const PROVIDER_NAMES = { qwen: "Qwen", gemma: "Gemma", openai: "GPT" };
 
 function pct(value) {
   return value == null ? "—" : `${Number(value).toFixed(2)}%`;
