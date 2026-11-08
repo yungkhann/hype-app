@@ -1,4 +1,4 @@
-import { t, tn } from "./i18n.js?v=tape52";
+import { t, tn } from "./i18n.js?v=tape54";
 import { uid } from "./util.js";
 
 // Threads are stored in the browser. An untitled thread keeps the legacy title "New chat" (or null), and the

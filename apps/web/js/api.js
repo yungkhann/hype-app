@@ -1,7 +1,7 @@
 // ATLAS backend client. Conversations are imported and stored by the backend (/api/v1/cqa); the browser never
 // calls the organizers' API itself, so its signed URL stays on the server.
 
-import { hasKey, t } from "./i18n.js?v=tape52";
+import { hasKey, t } from "./i18n.js?v=tape54";
 
 export const GROUP_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 
@@ -77,6 +77,7 @@ export const listChecklistVersions = (id) => request(`/cqa/checklists/${encodeUR
 
 /** Queue a backend (GPT) evaluation; the response lists the queued evaluations, poll getEvaluation for the result. */
 export const startEvaluation = (body) => request("/cqa/evaluations", { method: "POST", body });
+export const getBatch = (id) => request(`/cqa/evaluations/batches/${encodeURIComponent(id)}`);
 /** A new evaluation like the given one; after a failure in a mode only the failed provider is asked again. */
 export const rerunEvaluation = (id) => request(`/cqa/evaluations/${encodeURIComponent(id)}/rerun`, { method: "POST" });
 export const getEvaluation = (id) => request(`/cqa/evaluations/${encodeURIComponent(id)}`);

@@ -103,15 +103,15 @@ When a request names no `adapter` and `ATLAS_CQA_EVALUATOR=openai`, the evaluati
 
 | `mode_type` | Who evaluates | Export `model.mode` |
 |---|---|---|
-| `1` Hybrid (default) | The local Gemma model (evaluator `gemma`, Ollama's OpenAI-compatible API, no key) answers the official criteria whose definition still matches the official template; GPT answers custom criteria and any official criterion whose title, wording, answer type, scale, N/A rule or critical-error rule changed. Weight and section changes do not count. | `hybrid` when both answered, `local` when Gemma answered every criterion |
-| `2` GPT only | GPT answers every criterion; Gemma is never called. | `external_api` |
+| `1` Hybrid (default) | The local Qwen model (evaluator id `gemma`, Ollama's OpenAI-compatible API, no key, tag `ATLAS_CQA_GEMMA_MODEL`, default `qwen3:27b`) answers the official criteria whose definition still matches the official template; GPT answers custom criteria and any official criterion whose title, wording, answer type, scale, N/A rule or critical-error rule changed. Weight and section changes do not count. Appeals always go to GPT. | `hybrid` when both answered, `local` when Qwen answered every criterion |
+| `2` GPT only | GPT answers every criterion; Qwen is never called. | `external_api` |
 
 Appeals are reassessed by GPT in both modes (section D). Each provider receives only its own criteria and its answer is validated like a whole evaluation; ATLAS merges the results in checklist order (one per criterion, each with `provider` and `model`) and scores them once. The record stores `mode_type`, the checklist version and one `parts` entry per provider (criteria, model, status). If a provider fails, the evaluation fails with no score; nothing is filled in and no other provider stands in. `POST /cqa/evaluations/{id}/rerun` creates a new record in the same mode that reuses the parts that succeeded and asks only the failed provider again. Re-evaluating never changes an earlier record. The UI's mode choice is remembered per browser.
 
 ```bash
 # ATLAS_CQA_DEFAULT_MODE_TYPE=1                         # used when a request has no mode_type
 # ATLAS_CQA_GEMMA_BASE_URL=http://localhost:11434/v1    # loopback or https; in Docker the ollama-forward sidecar maps it to the host
-# ATLAS_CQA_GEMMA_MODEL=gemma3:12b                      # the Ollama model tag that is pulled on the host
+# ATLAS_CQA_GEMMA_MODEL=qwen3:27b                       # the Ollama model tag that is pulled on the host
 # ATLAS_CQA_GEMMA_TIMEOUT_S=300
 ```
 

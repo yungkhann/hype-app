@@ -274,7 +274,12 @@ class EvaluationService:
             self._fail(record.id, "evaluator_crashed", f"The evaluator raised {type(error).__name__}.")
             return
 
-        score = compute_score(record.checklist, validated.results)
+        try:
+            score = compute_score(record.checklist, validated.results)
+        except Exception as error:  # a scoring bug must fail the evaluation, not leave the batch running forever
+            logger.exception("CQA scoring crashed for %s", record.id)
+            self._fail(record.id, "scoring_failed", f"Scoring raised {type(error).__name__}.")
+            return
         warnings = [*validated.warnings, *score.issues]
         now = now_iso()
         with self.store.lock:

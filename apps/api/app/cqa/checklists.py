@@ -11,7 +11,8 @@ do not count). Versions saved before this rule existed are still read and used a
 Starter templates (``templates/*.json``) are read-only reference documents. One checklist is created at start-up:
 "Freedom Broker — Official CQA Checklist", whose version 1 is the official template. It has a fixed id and is
 created only when no checklist from that template exists, so restarts never duplicate it and never touch the
-manager's later versions. Everything else is created from a template only on request.
+manager's later versions. A latest version that is still the pre-wording template (``OLD_OFFICIAL_CONFIG_HASH``)
+is upgraded once to the current template. Everything else is created from a template only on request.
 """
 
 from __future__ import annotations
@@ -58,6 +59,11 @@ OFFICIAL_TEMPLATE_ID = "freedom-broker-official"
 # The official checklist's id, fixed (uuid5 of "atlas:cqa:checklist:freedom-broker-official") so that two API
 # processes starting at once write the same file instead of two checklists. Never change it.
 OFFICIAL_CHECKLIST_ID = "0dfc4cc62904551aa3d34249dab95993"
+# config_hash of the official template config at
+# git show HEAD:apps/api/app/cqa/templates/freedom_broker_official.json
+# before the checklist PDF wording was added. Only a latest version with this hash is upgraded.
+OLD_OFFICIAL_CONFIG_HASH = "6908881461f8e828178e3cf853acb3e2db6a8d71d70de68ae4e4d11e3b96c421"
+OFFICIAL_WORDING_NOTE = "Wording and sections from CQA_Chat_Quality_Checklist.pdf"
 
 
 def config_hash(config: ChecklistConfig) -> str:
@@ -305,15 +311,19 @@ class ChecklistService:
         """Create "Freedom Broker — Official CQA Checklist" (v1 = the official template) unless one exists.
 
         Runs at every start-up and is idempotent. An official checklist exists when its fixed id is in use (also
-        archived, also as an unreadable file) or any checklist was created from the official template; it is then
-        left exactly as it is, with every later version the manager saved. Only when none is left (for example
-        after the manager deleted it) is it created again. Returns the new checklist, or None.
+        archived, also as an unreadable file) or any checklist was created from the official template. A latest
+        version whose config is still the pre-wording template gets one new version from the current template.
+        Any other latest version, including a manager's edit, is left exactly as it is. Only when none is left
+        (for example after the manager deleted it) is it created again. Returns the new checklist, or None.
         """
         template = self.template(OFFICIAL_TEMPLATE_ID)
         with self.store.lock:
             existing = self.store.checklists.get(OFFICIAL_CHECKLIST_ID) or next(
                 (c for c in self.store.checklists.values() if c.template_id == OFFICIAL_TEMPLATE_ID), None)
             if existing is not None:
+                if existing.id == OFFICIAL_CHECKLIST_ID:
+                    self._upgrade_official_wording(existing, template.config)
+                    existing = self.store.checklists.get(OFFICIAL_CHECKLIST_ID) or existing
                 edited = existing.version().config_hash != config_hash(template.config)
                 logger.info("Official checklist present: '%s' v%d (%s).", existing.name, existing.latest_version,
                             "edited since the official baseline" if edited else "the official baseline")
@@ -322,12 +332,29 @@ class ChecklistService:
                 logger.warning("The official checklist file is unreadable; it is left as it is and not re-created.")
                 return None
             checklist = self._new(template.name, template.description, "official", template.config,
-                                  "Official baseline (CQA guide appendix, JSON 1.0)", template_id=template.id,
+                                  OFFICIAL_WORDING_NOTE, template_id=template.id,
                                   checklist_id=OFFICIAL_CHECKLIST_ID)
         self.store.log("checklist.created", f"Created the official checklist '{checklist.name}' (v1).",
                        checklist_id=checklist.id,
                        details={"template_id": template.id, "criteria": len(template.config.criteria)})
         return checklist
+
+    def _upgrade_official_wording(self, checklist: Checklist, config: ChecklistConfig) -> None:
+        """Append the current official template when the latest version is still the pre-wording baseline."""
+        latest = checklist.version()
+        if latest.config_hash != OLD_OFFICIAL_CONFIG_HASH:
+            return
+        digest = config_hash(config)
+        if digest == latest.config_hash:
+            return
+        version = ChecklistVersion(version=checklist.latest_version + 1, created_at=now_iso(),
+                                   note=OFFICIAL_WORDING_NOTE, config=config, config_hash=digest)
+        updated = checklist.model_copy(update={"versions": [*checklist.versions, version],
+                                               "latest_version": version.version, "updated_at": now_iso()})
+        self.store.save_checklist(updated)
+        self.store.log("checklist.version_saved",
+                       f"Saved '{updated.name}' v{version.version}: {version.note}",
+                       checklist_id=updated.id, details={"version": version.version})
 
     def import_(self, payload: ChecklistImport, actor: str = "User") -> Checklist:
         checklist = self._new(payload.name, payload.description, payload.origin, payload.config, "Imported from JSON")

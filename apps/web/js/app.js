@@ -8,6 +8,7 @@ import {
   errorText,
   getAppeal,
   getAudio,
+  getBatch,
   getChecklist,
   getEvaluation,
   rerunEvaluation,
@@ -23,8 +24,8 @@ import {
   resultsReport,
   startEvaluation,
   updateChecklist,
-} from "./api.js?v=tape51";
-import { activeChat, chatTitle, messageText, openChat, pushTurn, removeChat, startChat } from "./chat.js?v=tape22";
+} from "./api.js?v=tape54";
+import { activeChat, chatTitle, messageText, openChat, pushTurn, removeChat, startChat } from "./chat.js?v=tape23";
 import {
   adoptChecklist,
   appliedConfig,
@@ -36,15 +37,15 @@ import {
   scalePoints,
   sectionName,
   stageChange,
-} from "./checklist.js?v=tape22";
+} from "./checklist.js?v=tape23";
 import {
   closeCriterionEditor,
   isCriterionEditorDirty,
   isCriterionEditorOpen,
   openCriterionEditor,
-} from "./criterion-editor.js?v=tape22";
-import { bindFileDrop, fileDropHtml, jsonFileError, readDropFile, resetFileDrop, setFileDropBusy, setFileDropError, showFileName } from "./file-drop.js?v=tape43";
-import { applyStatic, getLang, hasKey, langCode, langName, locale, nextLang, setLang, t, tn } from "./i18n.js?v=tape52";
+} from "./criterion-editor.js?v=tape23";
+import { bindFileDrop, fileDropHtml, jsonFileError, readDropFile, resetFileDrop, setFileDropBusy, setFileDropError, showFileName } from "./file-drop.js?v=tape44";
+import { applyStatic, getLang, hasKey, langCode, langName, locale, nextLang, setLang, t, tn } from "./i18n.js?v=tape54";
 import {
   addOnboardCriterion,
   applyOfficialChecklist,
@@ -53,10 +54,10 @@ import {
   sampleTranscriptJson,
   viewCoach,
   viewOnboard,
-} from "./onboard.js?v=tape43";
-import { loadState, saveState, setConversations, setScores } from "./store.js?v=tape22";
+} from "./onboard.js?v=tape44";
+import { loadState, saveState, setConversations, setScores } from "./store.js?v=tape23";
 import { mountMessageScroller } from "./message-scroller.js?v=tape1";
-import { Bubble, Button, ChatPrompt, Field, Message, MessageScroller, MessageScrollerItem } from "./ui.js?v=tape22";
+import { Bubble, Button, ChatPrompt, Field, Message, MessageScroller, MessageScrollerItem } from "./ui.js?v=tape23";
 import { byId, esc } from "./util.js";
 
 const icon = {
@@ -80,6 +81,7 @@ let pendingOpen = null;
 const localPreview = new Map();
 // Saving the checklist as a version; conflictVersion is set when someone else saved a newer version first.
 const checklistStatus = { saving: false, error: "", conflictVersion: null };
+const applyUi = { busy: false };
 // Appeals come from the backend (state.appeals); while GPT reassesses one, the list is reloaded every few seconds.
 const appealsStatus = { loading: true, error: "" };
 // The newest evaluation status per conversation (any checklist), for the list's Status column.
@@ -439,12 +441,12 @@ function viewList() {
           <div class="hero-model">
             <input type="hidden" name="model" value="${evaluationUi.mode === 2 ? "openai" : "gemma"}" />
             <button type="button" class="hero-model-btn" data-hero-model-btn aria-haspopup="listbox" aria-expanded="false" aria-label="${esc(t("list.modelLabel"))}">
-              <span data-hero-model-label>${esc(evaluationUi.mode === 2 ? t("list.modelOpenai") : t("list.modelGemma"))}</span>
+              <span data-hero-model-label>${esc(evaluationUi.mode === 2 ? t("list.modelOpenai") : t("list.modelQwen"))}</span>
             </button>
             <div class="hero-model-menu" data-hero-model-menu hidden role="listbox" aria-label="${esc(t("list.modelLabel"))}">
               ${[
                 ["openai", t("list.modelOpenai"), evaluationUi.mode === 2],
-                ["gemma", t("list.modelGemma"), evaluationUi.mode === 1],
+                ["gemma", t("list.modelQwen"), evaluationUi.mode === 1],
               ].map(([value, label, on]) => `
                 <button type="button" class="hero-model-item${on ? " is-on" : ""}" role="option" data-model="${value}" aria-selected="${on}">
                   <span class="hero-model-check" aria-hidden="true">${on ? icon.check : ""}</span>
@@ -523,7 +525,7 @@ function transcriptHtml(messages) {
               const bubbleAlign = align === "center" ? "start" : align;
               return `
               <article class="msg" id="msg-${esc(m.id)}" data-msg="${esc(m.id)}" data-align="${align}">
-                <div class="msg-meta"><span class="tape">#${i + 1}</span><span class="role role-${esc(m.speaker)}">${esc(speakerLabel(m.speaker))}</span><span class="tape" title="${esc(m.ts)}">${esc(clock(m.ts))}</span></div>
+                <div class="msg-meta"><span class="tape">#${i + 1}</span><span class="role role-${esc(m.speaker)}">${esc(speakerLabel(m.speaker))}</span><button type="button" class="tape" data-jump="${esc(m.id)}" data-offset="${m.offsetSeconds ?? ""}" title="${esc(m.ts)}">${esc(clock(m.ts))}</button></div>
                 ${Bubble({ align: bubbleAlign, variant, children: esc(m.text) })}
               </article>`;
             }).join("")}
@@ -551,6 +553,26 @@ function audioHtml(conv) {
   const note = entry.error ?? info?.message ?? "";
   const link = isHttp(player) ? `<a class="linkish" href="${esc(player)}" target="_blank" rel="noopener noreferrer">${esc(t("audio.open"))}</a>` : esc(t("audio.unavailable"));
   return wrap(`${link}${note ? `<p class="hint">${esc(note)}</p>` : ""}`);
+}
+
+/** Scroll to a transcript line. On a call with a ready player, also move the playhead to that line's offset. */
+function jumpToMessage(messageId, fallback) {
+  const node = document.getElementById(`msg-${messageId}`);
+  document.querySelectorAll(".msg.is-hit").forEach((el) => el.classList.remove("is-hit"));
+  if (node) {
+    node.classList.add("is-hit");
+    node.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+  const audio = document.querySelector("audio.audio");
+  if (!audio) return;
+  const conv = state.conversations.find((c) => c.source === "call" && c.messages.some((m) => m.id === messageId));
+  const stored = conv?.messages.find((m) => m.id === messageId)?.offsetSeconds;
+  const parsed = Number(fallback);
+  const offset = typeof stored === "number" ? stored : (Number.isFinite(parsed) ? parsed : null);
+  if (offset == null) return;
+  const wasPlaying = !audio.paused;
+  audio.currentTime = offset;
+  if (wasPlaying && audio.paused) audio.play().catch(() => {});
 }
 
 function waitingForConversation(id) {
@@ -675,7 +697,7 @@ const evaluationUi = {
   mode: storedMode(),
 };
 
-// Evaluation mode (backend: app/cqa/routing.py). 1: Gemma answers the official criteria that still match the
+// Evaluation mode (backend: app/cqa/routing.py). 1: Qwen answers the official criteria that still match the
 // official definition, GPT the custom and modified ones. 2: GPT answers everything. GPT reassesses appeals in both.
 function storedMode() {
   try {
@@ -696,7 +718,7 @@ function chooseMode(mode) {
 
 const modeLabel = (mode) => t(mode === 2 ? "eval.mode2" : "eval.mode1");
 const modeHint = (mode) => t(mode === 2 ? "eval.mode2Hint" : "eval.mode1Hint");
-const PROVIDER_NAMES = { gemma: "Gemma", openai: "GPT" };
+const PROVIDER_NAMES = { gemma: "Qwen", openai: "GPT" };
 
 function pct(value) {
   return value == null ? "—" : `${Number(value).toFixed(2)}%`;
@@ -1034,7 +1056,7 @@ function valueText(criterion, value, isNa) {
 
 function evidenceButtons(refs) {
   return (refs ?? []).map((e) =>
-    `<button class="btn btn-ghost" type="button" data-jump="${esc(e.message_id)}">${esc(t("crit.evidence", { n: e.message_index + 1, speaker: speakerLabel(e.speaker) }))}</button>`).join("");
+    `<button class="btn btn-ghost" type="button" data-jump="${esc(e.message_id)}" data-offset="${e.offset_seconds ?? ""}">${esc(t("crit.evidence", { n: e.message_index + 1, speaker: speakerLabel(e.speaker) }))}</button>`).join("");
 }
 
 // ---- Appeals on the conversation page ----------------------------------------------------------------------
@@ -1574,7 +1596,10 @@ function viewAppeal(id) {
     return `<section class="page"><p><a href="#/appeals">${esc(t("nav.appeals"))}</a></p>${body}</section>`;
   }
   const { appeal, evaluation } = detail;
-  const messages = (detail.transcript ?? []).map((m) => ({ id: m.id, ts: m.timestamp, speaker: m.speaker, text: m.text }));
+  const messages = (detail.transcript ?? []).map((m) => ({
+    id: m.id, ts: m.timestamp, speaker: m.speaker, text: m.text,
+    offsetSeconds: typeof m.offset_seconds === "number" ? m.offset_seconds : null,
+  }));
   const notice = appealUi.notices[id];
   const sub = evaluation.original_percent != null && evaluation.final_percent !== evaluation.original_percent
     ? t("eval.originalFinal", { original: pct(evaluation.original_percent), final: pct(evaluation.final_percent) })
@@ -1640,6 +1665,7 @@ function viewChecklist() {
         <div class="ui-btn-row">
           ${Button(esc(t("cl.add")), { attrs: 'data-action="add-criterion"' })}
           ${Button(esc(t(checklistStatus.saving ? "cl.saving" : "cl.save")), { variant: "primary", attrs: `data-action="apply-checklist"${checklistStatus.saving ? " disabled" : ""}` })}
+          ${Button(esc(t(applyUi.busy ? "cl.applying" : "cl.apply")), { attrs: `data-action="apply-all"${checklistStatus.saving || applyUi.busy ? " disabled" : ""}` })}
         </div>
       </div>
       ${checklistNotice()}
@@ -1694,6 +1720,121 @@ function openEditor(id) {
       focusCard(null);
     },
   });
+}
+
+let applyDialog = null;
+
+function applyDialogHtml() {
+  return `
+    <div class="dialog-head">
+      <div>
+        <h2 id="apply-title" class="sheet-title">${esc(t("cl.applyTitle"))}</h2>
+        <p class="hint" data-apply-hint></p>
+      </div>
+      <button type="button" class="dialog-close" data-apply-close aria-label="${esc(t("common.close"))}">
+        <svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <form class="dialog-panel" data-apply-form novalidate>
+      ${Field(esc(t("cl.applyGroup")), `<span class="ui-select-wrap"><select class="ui-select" name="group_id"></select></span>`)}
+      <div data-apply-status role="status" aria-live="polite"></div>
+      <div class="dialog-actions">
+        ${Button(esc(t("common.close")), { attrs: "data-apply-close" })}
+        ${Button(esc(t("cl.apply")), { variant: "primary", type: "submit" })}
+      </div>
+    </form>`;
+}
+
+function openApplyAll() {
+  const source = state.checklist.source;
+  if (!source?.id) {
+    checklistStatus.error = t("cl.applyNeedSave");
+    render();
+    return;
+  }
+  if (state.checklistDraft) {
+    checklistStatus.error = t("cl.applyNeedSave");
+    render();
+    return;
+  }
+  if (!applyDialog) {
+    applyDialog = document.createElement("dialog");
+    applyDialog.className = "dialog";
+    applyDialog.setAttribute("aria-labelledby", "apply-title");
+    applyDialog.innerHTML = applyDialogHtml();
+    document.body.append(applyDialog);
+    const form = applyDialog.querySelector("[data-apply-form]");
+    applyDialog.addEventListener("click", (e) => {
+      if (e.target.closest("[data-apply-close]")) applyDialog.close();
+    });
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      runApplyAll(form);
+    });
+  }
+  const form = applyDialog.querySelector("[data-apply-form]");
+  applyDialog.querySelector("[data-apply-hint]").textContent = t("cl.applyHint", {
+    version: source.version, mode: modeLabel(evaluationUi.mode),
+  });
+  const status = form.querySelector("[data-apply-status]");
+  status.replaceChildren();
+  if (!applyDialog.open) applyDialog.showModal();
+  loadApplyGroups(form);
+}
+
+async function loadApplyGroups(form) {
+  const status = form.querySelector("[data-apply-status]");
+  try {
+    const overview = await cqaOverview();
+    const groups = overview.by_group ?? [];
+    form.group_id.innerHTML = groups.map((g) => `<option value="${esc(g.value)}">${esc(`${g.value} (${g.count})`)}</option>`).join("");
+    if (!groups.length) setImportStatus(status, "warn", esc(t("cl.applyNone")));
+  } catch (err) {
+    setImportStatus(status, "error", esc(errorText(err)));
+  }
+}
+
+async function runApplyAll(form) {
+  const source = state.checklist.source;
+  if (!source?.id || applyUi.busy) return;
+  const group = form.group_id.value;
+  if (!group) return;
+  const mode = evaluationUi.mode;
+  if (!window.confirm(t("cl.applyConfirm", { version: source.version, mode: modeLabel(mode), group }))) return;
+  applyUi.busy = true;
+  render();
+  if (applyDialog?.open) applyDialog.close();
+  try {
+    const response = await startEvaluation({
+      checklist_id: source.id,
+      checklist_version: source.version,
+      group_id: group,
+      only_missing: true,
+      mode_type: mode,
+      explanation_language: uiLanguage(),
+    });
+    applyUi.busy = false;
+    if (!applyDialog) return;
+    applyDialog.showModal();
+    const live = applyDialog.querySelector("[data-apply-status]");
+    const counts = { queued: response.queued, done: 0, failed: 0 };
+    setImportStatus(live, "info", esc(t("cl.applyProgress", counts)));
+    for (let i = 0; i < 400 && applyDialog.open; i += 1) {
+      const batch = await getBatch(response.batch_id);
+      counts.done = batch.completed;
+      counts.failed = batch.failed;
+      counts.queued = batch.pending + batch.running;
+      setImportStatus(live, batch.done ? (batch.failed ? "warn" : "ok") : "info",
+        esc(t(batch.done ? "cl.applyDone" : "cl.applyProgress", counts)));
+      if (batch.done) break;
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+    render();
+  } catch (err) {
+    applyUi.busy = false;
+    if (applyDialog && !applyDialog.open) applyDialog.showModal();
+    setImportStatus(applyDialog?.querySelector("[data-apply-status]"), "error", esc(t("cl.applyError", { error: errorText(err) })));
+  }
 }
 
 /** Save the draft as the next version (or create the checklist in ATLAS). Evaluations run from a conversation. */
@@ -1867,7 +2008,7 @@ function bind() {
     const pickModel = (value) => {
       const openai = value === "openai";
       heroImport.model.value = openai ? "openai" : "gemma";
-      const label = openai ? t("list.modelOpenai") : t("list.modelGemma");
+      const label = openai ? t("list.modelOpenai") : t("list.modelQwen");
       heroImport.querySelector("[data-hero-model-label]").textContent = label;
       modelMenu.querySelectorAll("[data-model]").forEach((item) => {
         const on = item.dataset.model === heroImport.model.value;
@@ -1898,15 +2039,10 @@ function bind() {
   }
   document.querySelector("[data-action='add-criterion']")?.addEventListener("click", () => openEditor(null));
   document.querySelector("[data-action='apply-checklist']")?.addEventListener("click", () => saveChecklist());
+  document.querySelector("[data-action='apply-all']")?.addEventListener("click", () => openApplyAll());
   document.querySelector("[data-action='reload-checklist']")?.addEventListener("click", () => reloadChecklist());
   document.querySelectorAll("[data-jump]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const node = document.getElementById(`msg-${btn.dataset.jump}`);
-      document.querySelectorAll(".msg.is-hit").forEach((el) => el.classList.remove("is-hit"));
-      if (!node) return;
-      node.classList.add("is-hit");
-      node.scrollIntoView({ behavior: "smooth", block: "center" });
-    });
+    btn.addEventListener("click", () => jumpToMessage(btn.dataset.jump, btn.dataset.offset));
   });
   const evaluateForm = document.querySelector("[data-evaluate-form]");
   if (evaluateForm) {

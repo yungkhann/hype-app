@@ -1,31 +1,105 @@
 {
-  "_notice": "Official Freedom Broker checklist. Criterion ids, names, weights and allowed values are copied from the CQA guide appendix (Формат JSON 1.0, стр. 3). Wording and N/A rules are left empty on purpose: they are in the separate checklist PDF, which is not in the repository. Do not invent them here. At start-up ATLAS creates the checklist 'Freedom Broker — Official CQA Checklist' from this file once (version 1); editing this file later does not change that checklist.",
+  "_notice": "Official Freedom Broker checklist. Ids, weights, answer types and allowed values follow the results appendix (Формат JSON 1.0). Wording, N/A rules, score-level meanings and the four sections follow CQA_Chat_Quality_Checklist as compiled in the team brief: the PDF file itself is not in this repository, so the text is that compilation's wording and not a second-hand paraphrase of organizer Q&A.",
   "id": "freedom-broker-official",
   "name": "Freedom Broker — Official CQA Checklist",
-  "description": "The eight official criteria with their weights, answer types and allowed values from the CQA guide appendix (JSON 1.0). Add each criterion's wording and N/A rule from the official checklist PDF.",
+  "description": "The eight official criteria with wording, N/A rules, score levels and four sections from the checklist, and ids, weights and allowed values from the results appendix (JSON 1.0).",
   "origin": "official",
-  "source": "CQA Hackathon, приложение к студенческому гайду «Как сдать результаты», стр. 3 «Правила заполнения» (Формат JSON 1.0)",
+  "source": "CQA_Chat_Quality_Checklist; CQA Hackathon, приложение к студенческому гайду «Как сдать результаты», стр. 3 «Правила заполнения» (Формат JSON 1.0)",
   "notes": [
     "value: true = «Да», false = «Нет», null = N/A. A number is the score on the criterion's scale before weighting: dialogue = 7 means 7 of 10 at weight 15.",
+    "Order of calculation: decide applicability first (N/A only where it is allowed and its condition is met). Yes is the full weight, No is zero, a scale step is that step. Scale points convert in proportion to weight; the top step yields the full weight. Drop N/A criteria and redistribute their weights proportionally so the maximum stays 100. Round the total to two decimals, half-up. If no applicable weighted criterion remains, do not calculate a total. critical_flag matches criterion critical and does not zero the total.",
     "final_score: 0 to 100, rounded to two decimals. An N/A criterion is excluded and its weight is redistributed proportionally over the applicable criteria. N/A is not zero and not a processing error.",
     "critical_flag equals the value of criterion 'critical'; true means a gross violation was found. It is reported separately and does not zero the total.",
-    "The appendix does not name a rounding mode; the template uses half-up.",
-    "The appendix defines no sections, so the template has none."
+    "The four sections are Начало диалога, Консультация, Коммуникация and Завершение."
   ],
   "config": {
-    "sections": [],
+    "sections": [
+      {"id": "opening", "name": "Начало диалога"},
+      {"id": "advice", "name": "Консультация"},
+      {"id": "communication", "name": "Коммуникация"},
+      {"id": "closing", "name": "Завершение"}
+    ],
     "criteria": [
-      {"id": "contact", "name": "Установление контакта", "weight": 10, "answer_type": "binary", "na_allowed": false},
-      {"id": "discovery", "name": "Выявление потребности", "weight": 15, "answer_type": "binary", "na_allowed": true},
-      {"id": "identification", "name": "Идентификация", "weight": 20, "answer_type": "binary", "na_allowed": true},
-      {"id": "consultation", "name": "Корректность и полнота", "weight": 20, "answer_type": "numeric",
-       "allowed_scores": [0, 5, 10, 15, 20], "na_allowed": true},
-      {"id": "empathy", "name": "Эмпатия", "weight": 15, "answer_type": "binary", "na_allowed": false},
-      {"id": "dialogue", "name": "Ведение, скорость, грамотность", "weight": 15, "answer_type": "numeric",
-       "allowed_scores": [0, 4, 7, 10], "na_allowed": false},
-      {"id": "closure", "name": "Завершение", "weight": 5, "answer_type": "binary", "na_allowed": true},
-      {"id": "critical", "name": "Грубые ошибки", "weight": 0, "answer_type": "binary", "na_allowed": false,
-       "severe_error_enabled": true, "severe_error_rule": "true означает выявленное грубое нарушение."}
+      {
+        "id": "contact",
+        "name": "Установление контакта",
+        "section_id": "opening",
+        "weight": 10,
+        "answer_type": "binary",
+        "na_allowed": false,
+        "description": "Да — оператор поздоровался с клиентом на языке клиента и представился в первом ответе. Ссылайтесь на конкретную реплику или системное сообщение и кратко объясните, что она подтверждает. Для пропущенного действия укажите место, где оно ожидалось."
+      },
+      {
+        "id": "discovery",
+        "name": "Выявление потребности",
+        "section_id": "opening",
+        "weight": 15,
+        "answer_type": "binary",
+        "na_allowed": true,
+        "description": "Да — оператор использовал уже известные данные и уточнил недостающее до ответа. «Нет» — требуемое действие не выполнено. N/A — критерий неприменим: это не ноль и не ошибка обработки. Ссылайтесь на конкретную реплику или системное сообщение и кратко объясните, что она подтверждает. Для пропущенного действия укажите место, где оно ожидалось. Для N/A объясните, какое условие неприменимости выполнено.",
+        "na_rule": "N/A — сведения, нужные для ответа, были полными с самого начала."
+      },
+      {
+        "id": "identification",
+        "name": "Идентификация",
+        "section_id": "opening",
+        "weight": 20,
+        "answer_type": "binary",
+        "na_allowed": true,
+        "description": "Да — проверка личности подтверждена до раскрытия данных или выполнения защищённого действия. Если проверка личности требовалась до защищённого действия и в диалоге она не подтверждена — «Нет». «Нет» — требуемое действие не выполнено. N/A — критерий неприменим: это не ноль и не ошибка обработки. Ссылайтесь на конкретную реплику или системное сообщение и кратко объясните, что она подтверждает. Для пропущенного действия укажите место, где оно ожидалось. Для N/A объясните, какое условие неприменимости выполнено.",
+        "na_rule": "N/A — запрос не требовал идентификации (например, общий вопрос о тарифе)."
+      },
+      {
+        "id": "consultation",
+        "name": "Корректная и полная консультация",
+        "section_id": "advice",
+        "weight": 20,
+        "answer_type": "numeric",
+        "allowed_scores": [0, 5, 10, 15, 20],
+        "na_allowed": true,
+        "description": "20 — закрыты все существенные вопросы, либо дан верный следующий шаг. 15 — основной вопрос решён, упущена второстепенная деталь. 10 — часть запроса закрыта, существенный вопрос остаётся открытым. 5 — есть общая подсказка, но клиент всё ещё не знает, что делать. 0 — нет содержательного ответа, либо ключевая рекомендация неверна. Консультация измеряет, решён ли запрос правильно и полностью. Ведение диалога измеряет, насколько ясно и последовательно оператор общался. Ясный ответ на один из двух важных вопросов может получить высокую оценку за ведение диалога и лишь частичную за консультацию. «Нет» здесь — балл 0, когда ответ требовался. N/A — критерий неприменим: это не ноль и не ошибка обработки. Ссылайтесь на конкретную реплику или системное сообщение и кратко объясните, что она подтверждает. Для пропущенного действия укажите место, где оно ожидалось. Для N/A объясните, какое условие неприменимости выполнено.",
+        "na_rule": "N/A — чат закончился до того, как клиент сформулировал запрос."
+      },
+      {
+        "id": "empathy",
+        "name": "Эмпатия и ориентация на клиента",
+        "section_id": "communication",
+        "weight": 15,
+        "answer_type": "binary",
+        "na_allowed": false,
+        "description": "Да — оператор вежлив и, если клиент выразил недовольство или описал неудобство, отреагировал именно на эту проблему. Ссылайтесь на конкретную реплику или системное сообщение и кратко объясните, что она подтверждает. Для пропущенного действия укажите место, где оно ожидалось."
+      },
+      {
+        "id": "dialogue",
+        "name": "Ведение диалога, скорость и грамотность",
+        "section_id": "communication",
+        "weight": 15,
+        "answer_type": "numeric",
+        "allowed_scores": [0, 4, 7, 10],
+        "na_allowed": false,
+        "description": "10 — ответы ясные и связные. Если было очевидное ожидание, оператор предупредил клиента. 7 — один заметный сбой, но клиент понимает ответ и может продолжать. 4 — клиенту приходится переспрашивать из-за формулировки или порядка ответа. 0 — бессвязные или противоречивые реплики делают разговор трудным для понимания. Консультация измеряет, решён ли запрос правильно и полностью. Ведение диалога измеряет, насколько ясно и последовательно оператор общался. Ясный ответ на один из двух важных вопросов может получить высокую оценку за ведение диалога и лишь частичную за консультацию. Порог первой реакции в 3 минуты, теги и вложения в оценку не входят. Ссылайтесь на конкретную реплику или системное сообщение и кратко объясните, что она подтверждает. Для пропущенного действия укажите место, где оно ожидалось."
+      },
+      {
+        "id": "closure",
+        "name": "Завершение",
+        "section_id": "closing",
+        "weight": 5,
+        "answer_type": "binary",
+        "na_allowed": true,
+        "description": "Да — оператор подвёл итог или предложил дальнейшую помощь и попрощался. Пример: «Завершение — Нет. Ответив на вопрос, оператор закрыл чат, не попрощавшись. Доказательство — последняя реплика оператора и системное сообщение о закрытии чата». «Нет» — требуемое действие не выполнено. N/A — критерий неприменим: это не ноль и не ошибка обработки. Ссылайтесь на конкретную реплику или системное сообщение и кратко объясните, что она подтверждает. Для пропущенного действия укажите место, где оно ожидалось. Для N/A объясните, какое условие неприменимости выполнено.",
+        "na_rule": "N/A — чат оборвался до того, как его можно было завершить."
+      },
+      {
+        "id": "critical",
+        "name": "Грубые ошибки",
+        "section_id": "closing",
+        "weight": 0,
+        "answer_type": "binary",
+        "na_allowed": false,
+        "severe_error_enabled": true,
+        "description": "Да — найдено хотя бы одно грубое нарушение из правила критической ошибки. Нет — ни одного из трёх нарушений нет. Флаг сообщается отдельно и не обнуляет итог. Ссылайтесь на конкретную реплику или системное сообщение и кратко объясните, что она подтверждает.",
+        "severe_error_rule": "Да — найдено хотя бы одно из трёх: оскорбление клиента; предложение платной услуги в обход компании (например, просьба перевести деньги лично оператору для инвестирования или просьба личного номера, чтобы дать платную частную консультацию — достаточно самого предложения; согласие клиента или фактический перевод не требуются); разглашение конфиденциальной информации. Нет — ни одного из трёх нарушений нет. Флаг сообщается отдельно и не обнуляет итог."
+      }
     ],
     "scoring": {
       "max_score": 100,

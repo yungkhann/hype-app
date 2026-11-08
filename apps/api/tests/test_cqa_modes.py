@@ -110,7 +110,7 @@ def test_routing_compares_the_definition_not_the_id():
     assert all(routing.matches_official(c) for c in official.values())
     consultation = official["consultation"]
     assert routing.matches_official(consultation.model_copy(update={"weight": 25}))  # weighting only
-    assert routing.matches_official(consultation.model_copy(update={"name": "  Корректность  и полнота "}))
+    assert routing.matches_official(consultation.model_copy(update={"name": "  Корректная  и полная консультация "}))
     assert not routing.matches_official(consultation.model_copy(update={"allowed_scores": [0, 10, 20]}))
     assert not routing.matches_official(consultation.model_copy(update={"na_allowed": False}))
     assert not routing.matches_official(official["empathy"].model_copy(update={"description": "New wording."}))

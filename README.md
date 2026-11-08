@@ -1,4 +1,127 @@
-# ATLAS — Data Intelligence Studio
+# ATLAS — Conversation Quality Analytics
+
+ATLAS scores Freedom Broker customer-service operators against an editable checklist. It imports a conversation, asks the selected model for an answer on every enabled criterion, cites the transcript lines behind each answer, and computes the score itself (weights, N/A redistribution, section totals, rounding, and the critical-error flag). A reviewer can appeal one criterion; GPT recommends, the reviewer decides, and the total is recalculated. The original score, the decision and the final score are all kept.
+
+The interface is vanilla HTML, CSS and JavaScript in `apps/web`. The API is FastAPI in `apps/api`. The browser calls `/api/v1/cqa`.
+
+## Run it
+
+Python 3.12 and the API virtualenv (`apps/api/.venv`) are required. Create the venv with `uv venv apps/api/.venv --python 3.12` and install `apps/api/requirements.txt` plus `apps/api/requirements-dev.txt` if it is missing. Copy `.env.example` to `.env` and fill the empty secret values there. Do not commit `.env`.
+
+### Docker
+
+From the repository root, with an env file that does not contain secrets if you only want to check the compose file:
+
+```bash
+docker compose --env-file .env.example up --build -d
+```
+
+The web UI is published on `127.0.0.1:3000` and the API on `127.0.0.1:8000`. Mode 1 reaches Ollama on the host through the `ollama-forward` sidecar (`ATLAS_CQA_GEMMA_BASE_URL=http://localhost:11434/v1` inside the API container).
+
+### Locally
+
+Two processes. The API does not load `.env` unless you export the variables yourself (`scripts/dev-api.sh` sources `.env`; the command below does not):
+
+```bash
+cd apps/api
+.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+```bash
+python3 -m http.server 3000 --bind 127.0.0.1 --directory apps/web
+```
+
+Open `http://127.0.0.1:8000/api/v1/health` (the body has `"status": "ok"`) and `http://127.0.0.1:3000`. An empty `<meta name="cqa-api">` calls `/api/v1` on the page's own origin, which the Docker nginx proxy serves. For these two ports, set that tag to `http://127.0.0.1:8000/api/v1`. The API allows browser calls from port 3000 (`ATLAS_CORS_ORIGINS`).
+
+## Import
+
+**By group.** Set `ATLAS_CQA_SOURCE_URL` to the organizers' GET URL without `group_id` (the signed URL stays in `.env`). In the UI, Import → the API tab, enter the group id (`DEV` for the development set) and import. The API calls the organizers' endpoint and stores the records.
+
+**By JSON.** Import → JSON, paste the organizers' response or drop the file. The same parser runs. Nothing is sent to the organizers' host.
+
+`ATLAS_CQA_FIXTURES_ENABLED=true` (the default) also lists clearly labeled fixture groups. Set it to `false` on a demo or production host so those conversations are not mixed with the real set.
+
+## Evaluation modes
+
+The choice is on the conversation page and is stored in the browser. The server default when a request omits `mode_type` is `ATLAS_CQA_DEFAULT_MODE_TYPE` (1).
+
+| Mode | Who answers |
+| --- | --- |
+| 1 Hybrid | The local model `ATLAS_CQA_GEMMA_MODEL` (default `qwen3:27b`, adapter id `gemma`, Ollama at `ATLAS_CQA_GEMMA_BASE_URL`) answers official criteria whose wording still matches the template. GPT (`ATLAS_CQA_OPENAI_MODEL`, default `gpt-4.1`) answers the rest. |
+| 2 GPT only | GPT answers every criterion. Qwen is not called. |
+
+Appeals are reassessed by GPT in both modes (`ATLAS_CQA_REASSESSOR=openai`). A failed provider fails the evaluation; nothing is filled in. Evaluate again on a failed part re-asks only that provider.
+
+GPT needs `OPENAI_API_KEY` or `ATLAS_CQA_OPENAI_API_KEY`. Each conversation is tried up to `ATLAS_CQA_OPENAI_MAX_ATTEMPTS` times (default 2). `ATLAS_CQA_OPENAI_TIMEOUT_S` is the per-request limit (default 120). Qwen uses `ATLAS_CQA_GEMMA_TIMEOUT_S` (default 300) and no key.
+
+On the checklist page, **Save checklist** stores a new version. **Apply to all conversations** picks a group from the overview, uses the mode selected in this browser, asks for confirmation, and evaluates conversations that have no result yet (`only_missing`) on the saved version.
+
+## Appeals
+
+On a criterion, write a comment and submit. The appeal is stored and GPT reassesses that criterion only. The reviewer confirms the original value, accepts GPT's recommendation, or overrides it. The score is recalculated from the checklist version that was evaluated. The card keeps the original score, the decision and the final score.
+
+## Export
+
+`results/dev/results.json` is the 65-record development set. `results/prod/results.json` is the 10-record control set. The exporter reads stored evaluations only. It refuses to write until `ATLAS_CQA_TEAM_NAME` is set (or you pass `--team`). `model.name` is the names the providers reported, not a label from the UI.
+
+```bash
+scripts/export-results.sh --set dev --group DEV --dry-run
+scripts/export-results.sh --set dev --group DEV
+scripts/export-results.sh --set prod --group <prod-group>
+```
+
+The script loads the root `.env`, then runs `python -m app.cqa.results_export`. The same module can be run directly:
+
+```bash
+cd apps/api
+ATLAS_CQA_TEAM_NAME='Your team' .venv/bin/python -m app.cqa.results_export --set dev --group DEV --dry-run
+```
+
+`--check results/dev/results.json` validates a file that is already written. Paid evaluation is not part of export. Run evaluations from the UI first. Those evaluation commands are paid and are not listed here.
+
+## Production settings
+
+- `ATLAS_CQA_FIXTURES_ENABLED=false` hides fixture conversations.
+- `ATLAS_CQA_TEAM_NAME` is the name written into `results.json`.
+- `ATLAS_CQA_MODEL_MODE` overrides the derived `model.mode` (`local`, `external_api` or `hybrid`). Leave it empty so the exporter uses the providers that actually answered.
+- `ATLAS_CQA_EVALUATION_WORKERS` is how many evaluations run at once (default 2).
+- `ATLAS_DATA_DIR` is where conversations, checklists and evaluations are stored.
+
+## Dynamics 365
+
+`apps/web` is a static site: `index.html` and `js/*.js`, no bundler. To use it as a Dynamics 365 HTML web resource, upload those files and set the API address on the page:
+
+```html
+<meta name="cqa-api" content="https://your-host/api/v1" />
+```
+
+An empty `cqa-api` calls `/api/v1` on the page's own origin. For a split-port local run, set it to `http://127.0.0.1:8000/api/v1`.
+
+## Cost of one GPT-4.1 evaluation
+
+Measured on the 65 DEV records in the local `invoke.json` (not stored in this repository) with `build_messages` and the official checklist. No model was called. Tokens are `tiktoken` `o200k_base` counts of the system and user messages.
+
+| | Tokens |
+| --- | --- |
+| Input, one attempt (65 dialogs: min 2,903, median 3,040, mean 3,367, max 8,712) | 3,040 median |
+| Output, one attempt (the appendix example's eight rationales, tokenized) | 319 |
+
+Prices from OpenAI's model page for `gpt-4.1`, checked 8 Nov 2026: **$2 per million input tokens** and **$8 per million output tokens** ([developers.openai.com/api/docs/models/gpt-4.1](https://developers.openai.com/api/docs/models/gpt-4.1)).
+
+A first-try mode 2 evaluation at the median prompt is about **$0.009** (3,040 × $2 / 1,000,000 + 319 × $8 / 1,000,000). `ATLAS_CQA_OPENAI_MAX_ATTEMPTS` is 2, so a rejected answer is sent back once. On the median dialog that second prompt is 3,400 tokens (the original prompt, the rejected answer and the short feedback). Two attempts are about **$0.018**.
+
+Mode 1 on the untouched official checklist sends every criterion to local Qwen, so the GPT cost of that evaluation is $0. GPT is billed only for criteria whose definition no longer matches the template, and for every appeal. The figures above are the mode 2 (all criteria, GPT) estimate.
+
+| Set | Evaluations | Estimate, mode 2, first try | Estimate if every dialog is retried once |
+| --- | --- | --- | --- |
+| DEV | 65 | about $0.56 | about $1.17 |
+| PROD | 10 | about $0.09 | about $0.18 |
+
+These are estimates. Real bills depend on rationale length, retries and how many criteria mode 1 still sends to GPT.
+
+## Older data studio
+
+The sections below describe the earlier Next.js data studio (datasets, charts, models). That frontend is no longer in `apps/web`. They are kept as notes for that older workbench.
 
 A local-first workbench for taking an unfamiliar dataset from upload to a defensible, presentable result:
 **upload → understand → explore → prepare → analyze → validate → explain → present.**
@@ -34,8 +157,8 @@ pnpm dev             # API on http://127.0.0.1:8000 and web on http://127.0.0.1:
 
 Open **http://127.0.0.1:3000**. On the Datasets page, either drop a file or click **Load** on a synthetic sample.
 
-- Port taken? Copy `.env.example` to `.env` and set `ATLAS_WEB_PORT` / `ATLAS_API_PORT`. `pnpm dev`
-  checks both ports first and keeps the API URL and CORS allow-list in sync.
+- Port taken? The older `pnpm dev` expected ports 3000 and 8000 to be free. The publish ports live in
+  `docker-compose.yml`, not in the API settings.
 - Other settings in `.env`: upload and parse limits (`ATLAS_MAX_UPLOAD_MB`, `ATLAS_MAX_UNCOMPRESSED_MB` for
   the size an .xlsx may expand to, `ATLAS_MAX_ROWS`) and `ATLAS_ALLOWED_HOSTS`, the Host headers the API
   accepts (default `["127.0.0.1","localhost"]`). The full list is in

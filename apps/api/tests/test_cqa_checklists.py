@@ -6,8 +6,12 @@ import copy
 
 from fastapi.testclient import TestClient
 
-from app.cqa.checklists import OFFICIAL_CHECKLIST_ID
-from app.cqa.schemas import ChecklistConfig
+from app.core.config import Settings
+from app.cqa.checklists import (
+    OFFICIAL_CHECKLIST_ID, OFFICIAL_WORDING_NOTE, OLD_OFFICIAL_CONFIG_HASH, config_hash,
+)
+from app.cqa.routing import matches_official
+from app.cqa.schemas import Checklist, ChecklistConfig, ChecklistVersion, Criterion
 from app.cqa.scoring import compute_score
 from app.main import create_app
 from tests.cqa_helpers import API, dev_checklist, evaluate, import_fixtures
@@ -197,9 +201,9 @@ OFFICIAL_TABLE = {  # the guide appendix, page 3: id -> (name, weight, answer ty
     "contact": ("Установление контакта", 10, "binary", None, False),
     "discovery": ("Выявление потребности", 15, "binary", None, True),
     "identification": ("Идентификация", 20, "binary", None, True),
-    "consultation": ("Корректность и полнота", 20, "numeric", [0, 5, 10, 15, 20], True),
-    "empathy": ("Эмпатия", 15, "binary", None, False),
-    "dialogue": ("Ведение, скорость, грамотность", 15, "numeric", [0, 4, 7, 10], False),
+    "consultation": ("Корректная и полная консультация", 20, "numeric", [0, 5, 10, 15, 20], True),
+    "empathy": ("Эмпатия и ориентация на клиента", 15, "binary", None, False),
+    "dialogue": ("Ведение диалога, скорость и грамотность", 15, "numeric", [0, 4, 7, 10], False),
     "closure": ("Завершение", 5, "binary", None, True),
     "critical": ("Грубые ошибки", 0, "binary", None, False),
 }
@@ -367,7 +371,10 @@ def test_official_template_is_a_reusable_reference(client, settings):
         c = criteria[cid]
         assert (c["name"], c["weight"], c["answer_type"], c["allowed_scores"], c["na_allowed"]) == \
             (name, weight, answer_type, scores, na), cid
-        assert c["description"] == "" and c["na_rule"] == ""  # wording is not invented
+        assert c["description"].strip()
+        assert c["section_id"] in {s["id"] for s in template["config"]["sections"]}
+        if na:
+            assert c["na_rule"].strip()
     assert criteria["critical"]["severe_error_enabled"]
     assert [cid for cid, c in criteria.items() if c["severe_error_enabled"]] == ["critical"]
     assert template["config"]["scoring"] == {"max_score": 100, "rounding": {"mode": "half_up", "digits": 2},
@@ -451,6 +458,121 @@ def test_official_checklist_is_seeded_once_and_stays_editable(client, settings):
     with restarted(settings) as again:
         assert again.get(f"{API}/checklists").json() == []
         assert len(again.get(f"{API}/checklists", params={"include_archived": True}).json()) == 1
+
+
+# The official template before the checklist PDF wording was stored on the config (git HEAD of that file).
+PRE_WORDING = {
+    "sections": [],
+    "criteria": [
+        {"id": "contact", "name": "Установление контакта", "weight": 10, "answer_type": "binary", "na_allowed": False},
+        {"id": "discovery", "name": "Выявление потребности", "weight": 15, "answer_type": "binary", "na_allowed": True},
+        {"id": "identification", "name": "Идентификация", "weight": 20, "answer_type": "binary", "na_allowed": True},
+        {"id": "consultation", "name": "Корректность и полнота", "weight": 20, "answer_type": "numeric",
+         "allowed_scores": [0, 5, 10, 15, 20], "na_allowed": True},
+        {"id": "empathy", "name": "Эмпатия", "weight": 15, "answer_type": "binary", "na_allowed": False},
+        {"id": "dialogue", "name": "Ведение, скорость, грамотность", "weight": 15, "answer_type": "numeric",
+         "allowed_scores": [0, 4, 7, 10], "na_allowed": False},
+        {"id": "closure", "name": "Завершение", "weight": 5, "answer_type": "binary", "na_allowed": True},
+        {"id": "critical", "name": "Грубые ошибки", "weight": 0, "answer_type": "binary", "na_allowed": False,
+         "severe_error_enabled": True, "severe_error_rule": "true означает выявленное грубое нарушение."},
+    ],
+    "scoring": {"max_score": 100, "rounding": {"mode": "half_up", "digits": 2},
+                "severe_error_policy": "flag_only", "na_policy": "redistribute"},
+}
+
+
+def _cqa_settings(tmp_path):
+    return Settings(data_dir=tmp_path / "workspaces", max_upload_mb=5, model_workers=1,
+                    allowed_hosts=["testserver", "127.0.0.1", "localhost"],
+                    cqa_evaluator="mock", cqa_openai_api_key=None)
+
+
+def _plant_official(settings, *versions: ChecklistVersion):
+    now = "2026-11-07T00:00:00+00:00"
+    checklist = Checklist(
+        id=OFFICIAL_CHECKLIST_ID, name="Freedom Broker — Official CQA Checklist", origin="official",
+        created_at=now, updated_at=now, latest_version=versions[-1].version, template_id=OFFICIAL,
+        versions=list(versions))
+    directory = settings.data_dir / "cqa" / "checklists"
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / f"{OFFICIAL_CHECKLIST_ID}.json").write_text(checklist.model_dump_json(), encoding="utf-8")
+
+
+def _version(number: int, config: ChecklistConfig, note: str) -> ChecklistVersion:
+    return ChecklistVersion(version=number, created_at="2026-11-07T00:00:00+00:00", note=note, config=config,
+                            config_hash=config_hash(config))
+
+
+def test_official_template_carries_wording_rules_and_sections():
+    from pathlib import Path
+    text = Path("app/cqa/templates/freedom_broker_official.json").read_text(encoding="utf-8")
+    assert "left empty" not in text and "defines no sections" not in text
+    template = client_template()
+    assert template["total_weight"] == 100
+    config = ChecklistConfig.model_validate(template["config"])
+    assert official_issues(config) == []
+    assert len(config.sections) == 4
+    section_ids = {s.id for s in config.sections}
+    for criterion in config.criteria:
+        assert criterion.description.strip()
+        assert criterion.section_id in section_ids
+        if criterion.na_allowed:
+            assert criterion.na_rule.strip()
+    assert config.criterion("critical").severe_error_rule.strip()
+    assert config_hash(ChecklistConfig.model_validate(PRE_WORDING)) == OLD_OFFICIAL_CONFIG_HASH
+
+
+def client_template():
+    from app.cqa.checklists import _templates
+    return {"total_weight": _templates()[OFFICIAL].total_weight, "config": _templates()[OFFICIAL].config.model_dump(mode="json")}
+
+
+def official_issues(config):
+    from app.cqa.checklists import official_format_issues
+    return official_format_issues(config)
+
+
+def test_old_official_checklist_gains_one_worded_version(tmp_path):
+    settings = _cqa_settings(tmp_path)
+    old = ChecklistConfig.model_validate(PRE_WORDING)
+    _plant_official(settings, _version(1, old, "Official baseline"))
+    url = f"{API}/checklists/{OFFICIAL_CHECKLIST_ID}"
+    with TestClient(create_app(settings)) as client:
+        saved = client.get(url).json()
+        assert saved["latest_version"] == 2
+        assert saved["versions"][0]["config_hash"] == config_hash(old)
+        latest = saved["versions"][1]
+        assert "CQA_Chat_Quality_Checklist.pdf" in latest["note"]
+        assert latest["note"] == OFFICIAL_WORDING_NOTE
+        criteria = [Criterion.model_validate(c) for c in latest["config"]["criteria"]]
+        assert len(criteria) == 8 and all(matches_official(c) for c in criteria)
+    with TestClient(create_app(settings)) as again:  # a restart adds nothing
+        assert again.get(url).json()["latest_version"] == 2
+
+
+def test_an_edited_official_checklist_is_not_upgraded(tmp_path):
+    settings = _cqa_settings(tmp_path)
+    old = ChecklistConfig.model_validate(PRE_WORDING)
+    edited = old.model_copy(deep=True)
+    edited.criteria[0].name = "Приветствие"
+    _plant_official(settings, _version(1, old, "Official baseline"), _version(2, edited, "Manager edits"))
+    url = f"{API}/checklists/{OFFICIAL_CHECKLIST_ID}"
+    with TestClient(create_app(settings)) as client:
+        saved = client.get(url).json()
+        assert saved["latest_version"] == 2
+        assert saved["versions"][1]["config"]["criteria"][0]["name"] == "Приветствие"
+        assert len(saved["versions"]) == 2
+
+
+def test_a_fresh_workspace_seeds_the_worded_official_checklist(client):
+    url = f"{API}/checklists/{OFFICIAL_CHECKLIST_ID}"
+    saved = client.get(url).json()
+    assert saved["latest_version"] == 1
+    assert "CQA_Chat_Quality_Checklist.pdf" in saved["versions"][0]["note"]
+    config = ChecklistConfig.model_validate(saved["versions"][0]["config"])
+    assert official_issues(config) == []
+    assert len(config.sections) == 4
+    assert all(matches_official(c) for c in config.criteria)
 
 
 def test_disabled_criteria_are_not_sent_to_the_evaluator(client):

@@ -1,11 +1,14 @@
-"""Gemma evaluator: the local Gemma model through Ollama's OpenAI-compatible API (``/v1/chat/completions``).
+"""Qwen evaluator: the local Qwen model through Ollama's OpenAI-compatible API (``/v1/chat/completions``).
+
+The adapter id stays ``gemma`` so stored evaluations and export modes keep their provider name. The model tag is
+``ATLAS_CQA_GEMMA_MODEL`` (default ``qwen3:27b``).
 
 It is the GPT adapter pointed at another endpoint, so the prompt, the strict JSON schema built from the checklist
 version, the validation of every value and evidence turn, and the single retry with feedback are exactly the same.
 Nothing leaves the machine: the base URL must be loopback (Docker: the ollama-forward sidecar maps the host's
 Ollama to localhost:11434) or https. No API key is sent.
 
-In evaluation mode 1 (app/cqa/routing.py) Gemma answers only the official criteria whose definition still matches
+In evaluation mode 1 (app/cqa/routing.py) Qwen answers only the official criteria whose definition still matches
 the official baseline. It never reassesses appeals: every appeal goes to GPT.
 """
 
@@ -21,11 +24,11 @@ from app.cqa.adapters.openai_gpt import OpenAIEvaluator
 
 @register_adapter("gemma")
 class GemmaEvaluator(OpenAIEvaluator):
-    label = "Gemma (local)"
-    description = "Evaluates with the local Gemma model through Ollama (ATLAS_CQA_GEMMA_MODEL)."
+    label = "Qwen (local)"
+    description = "Evaluates with the local Qwen model through Ollama (ATLAS_CQA_GEMMA_MODEL)."
     provider = "gemma"
-    service = "local Gemma model (Ollama)"
-    family = "Gemma"
+    service = "local Qwen model (Ollama)"
+    family = "Qwen"
     supports_reassessment = False  # appeals are always reassessed by GPT
 
     @property
@@ -56,4 +59,4 @@ class GemmaEvaluator(OpenAIEvaluator):
         return True, ""
 
     def reassess(self, request: Any) -> dict[str, Any]:
-        raise EvaluatorError("Gemma does not reassess appeals; GPT does.", code="reassessor_unavailable")
+        raise EvaluatorError("Qwen does not reassess appeals; GPT does.", code="reassessor_unavailable")

@@ -71,14 +71,15 @@ class Settings(BaseSettings):
     # Adapter that reassesses an appealed criterion (a separate GPT call per appeal; it only recommends, the
     # manager decides). Only adapters that implement `reassess` qualify; the development mock does not.
     cqa_reassessor: str = "openai"
-    # Evaluation modes (app/cqa/routing.py), used when a request names no adapter: 1 = hybrid (the local Gemma model
+    # Evaluation modes (app/cqa/routing.py), used when a request names no adapter: 1 = hybrid (the local Qwen model
     # answers the official criteria that still match the official definition, GPT answers every other criterion),
     # 2 = GPT only. Appeals are reassessed by GPT in both modes. Applies when ATLAS_CQA_EVALUATOR=openai.
     cqa_default_mode_type: int = Field(default=1, ge=1, le=2)
-    # Gemma through Ollama's OpenAI-compatible API on this machine. In Docker the ollama-forward sidecar makes the
-    # host's Ollama reachable at localhost:11434 inside the api container. No key is needed or sent.
+    # Qwen through Ollama's OpenAI-compatible API on this machine. The setting name keeps GEMMA: the adapter id is
+    # still "gemma". In Docker the ollama-forward sidecar makes the host's Ollama reachable at localhost:11434
+    # inside the api container. No key is needed or sent. Default tag from the model decision "qwen 3.8 27b".
     cqa_gemma_base_url: str = "http://localhost:11434/v1"
-    cqa_gemma_model: str = "gemma3:12b"
+    cqa_gemma_model: str = "qwen3:27b"
     cqa_gemma_timeout_s: float = 300.0
     # The http adapter POSTs the evaluation request here. Non-loopback hosts require the explicit opt-in
     # below, so transcripts are never sent off this machine by accident.

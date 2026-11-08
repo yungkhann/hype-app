@@ -207,14 +207,17 @@ def compute_score(config: ChecklistConfig, results: Iterable[CriterionResult]) -
         weight = sum((row["weight"] for row in members), Fraction(0))
         if any(row["status"] in ("missing", "invalid") for row in members):
             section_status, score, score_raw, points = "incomplete", None, None, None
-        elif not scored:
-            section_status, score, score_raw, points = "na", None, None, None
         else:
-            section_status = "scored"
             scored_weight = sum((row["weight"] for row in scored), Fraction(0))
-            value = sum((row["normalized"] * row["weight"] for row in scored), Fraction(0)) / scored_weight * max_score
-            score_raw, score = float(value), round_value(value, rules.rounding)
-            points = round_value(sum((row["points"] for row in scored), Fraction(0)), rules.rounding)
+            # The unweighted critical-error indicator is "scored" but adds no points. A section that contains
+            # only that indicator (its weighted criteria are N/A) has no subtotal.
+            if scored_weight == 0:
+                section_status, score, score_raw, points = "na", None, None, None
+            else:
+                section_status = "scored"
+                value = sum((row["normalized"] * row["weight"] for row in scored), Fraction(0)) / scored_weight * max_score
+                score_raw, score = float(value), round_value(value, rules.rounding)
+                points = round_value(sum((row["points"] for row in scored), Fraction(0)), rules.rounding)
         effective = sum((row["effective"] for row in members), Fraction(0))
         sections.append(SectionScore(
             section_id=section.id, name=section.name, status=section_status, score=score, score_unrounded=score_raw,

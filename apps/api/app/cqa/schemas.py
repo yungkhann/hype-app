@@ -696,7 +696,7 @@ class EvaluationPart(BaseModel):
     model: str | None = Field(default=None, description="The model the provider reported.")
     criteria_ids: list[str]
     official_baseline: bool = Field(default=False, description=(
-        "These criteria still match the official definition (the only ones Gemma answers in mode 1)."))
+        "These criteria still match the official definition (the only ones Qwen answers in mode 1)."))
     status: Literal["pending", "completed", "failed"] = "pending"
     results: list[CriterionResult] = []
     warnings: list[str] = []
@@ -717,7 +717,7 @@ class EvaluationRecord(BaseModel):
     transcript_hash: str
     evaluator: EvaluatorInfo
     mode_type: ModeType | None = Field(default=None, description=(
-        "1 = hybrid (Gemma + GPT), 2 = GPT only. None: one adapter answered everything (adapter chosen explicitly)."))
+        "1 = hybrid (Qwen + GPT), 2 = GPT only. None: one adapter answered everything (adapter chosen explicitly)."))
     parts: list[EvaluationPart] = Field(default=[], description="Per provider, when mode_type is set.")
     explanation_language: ExplanationLanguage = "en"
     status: EvaluationStatus
@@ -776,7 +776,7 @@ class EvaluateRequest(BaseModel):
     adapter: str | None = Field(default=None, max_length=64, description=(
         "One adapter for every criterion (e.g. mock, http). Omit it to evaluate in a mode."))
     mode_type: Literal[1, 2] | None = Field(default=None, description=(
-        "1 = hybrid: Gemma answers the official criteria that match the official definition, GPT the custom and "
+        "1 = hybrid: Qwen answers the official criteria that match the official definition, GPT the custom and "
         "modified ones. 2 = GPT answers every criterion. Default: ATLAS_CQA_DEFAULT_MODE_TYPE (when "
         "ATLAS_CQA_EVALUATOR=openai). Appeals are reassessed by GPT in both modes."))
     explanation_language: ExplanationLanguage = Field(

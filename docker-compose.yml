@@ -31,10 +31,10 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       ATLAS_CQA_OPENAI_MODEL: ${ATLAS_CQA_OPENAI_MODEL:-gpt-4.1}
       ATLAS_CQA_TEAM_NAME: ${ATLAS_CQA_TEAM_NAME:-}
-      # Evaluation mode 1 (hybrid): Gemma on the host's Ollama, reached through the ollama-forward sidecar below.
+      # Evaluation mode 1 (hybrid): Qwen on the host's Ollama, reached through the ollama-forward sidecar below.
       ATLAS_CQA_DEFAULT_MODE_TYPE: ${ATLAS_CQA_DEFAULT_MODE_TYPE:-1}
       ATLAS_CQA_GEMMA_BASE_URL: ${ATLAS_CQA_GEMMA_BASE_URL:-http://localhost:11434/v1}
-      ATLAS_CQA_GEMMA_MODEL: ${ATLAS_CQA_GEMMA_MODEL:-gemma3:12b}
+      ATLAS_CQA_GEMMA_MODEL: ${ATLAS_CQA_GEMMA_MODEL:-qwen3:27b}
       # Ollama runs on the host PC (not in Docker). Both URLs reach it from inside this container.
       OLLAMA_BASE_URL: http://localhost:11434
     extra_hosts:

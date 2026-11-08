@@ -135,6 +135,18 @@ def test_sections_get_subtotals_and_their_points_add_up_to_the_total():
     assert opening.points + solving.points == score.total == 70.0
 
 
+def test_section_whose_only_scored_criterion_is_the_unweighted_indicator_has_no_subtotal():
+    """Closing holds closure (N/A) and the weight-0 critical indicator. The indicator is answered, so the
+    section is not empty, but its weight is 0 and must not divide the subtotal by zero."""
+    cfg = config(criterion("closure", 10, section_id="closing", na_allowed=True),
+                 criterion("critical", 0, section_id="closing", answer_type="binary", severe_error_enabled=True),
+                 sections=[Section(id="closing", name="Closing")])
+    score = compute_score(cfg, [na("closure"), answer("critical", True)])
+    assert score.status == "not_applicable"
+    assert score.sections[0].status == "na" and score.sections[0].score is None
+    assert score.severe_errors == ["critical"]
+
+
 def test_section_with_only_na_criteria_is_na_and_others_absorb_its_weight():
     cfg = config(criterion("a", 50, section_id="x", na_allowed=True), criterion("b", 50, section_id="y"),
                  sections=[Section(id="x", name="X"), Section(id="y", name="Y")])

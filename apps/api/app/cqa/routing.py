@@ -1,10 +1,10 @@
 """Evaluation modes: the one place that decides which model answers which criterion.
 
 ``mode_type`` 1, hybrid: an official criterion whose definition still matches the official baseline is answered
-by the local Gemma model; every other criterion (a manager-created one, or an official one whose wording, title,
-answer type, scale, N/A rule or critical-error rule was changed) is answered by GPT.
-``mode_type`` 2, GPT only: GPT answers every criterion; Gemma is never called.
-Appeals are reassessed by GPT in both modes (appeals.py, ``ATLAS_CQA_REASSESSOR``; Gemma cannot reassess).
+by the local Qwen model (adapter id ``gemma``); every other criterion (a manager-created one, or an official one
+whose wording, title, answer type, scale, N/A rule or critical-error rule was changed) is answered by GPT.
+``mode_type`` 2, GPT only: GPT answers every criterion; Qwen is never called.
+Appeals are reassessed by GPT in both modes (appeals.py, ``ATLAS_CQA_REASSESSOR``; Qwen cannot reassess).
 
 The baseline is the official template (``templates/freedom_broker_official.json``), compared on the definition
 each model is actually given (``criterion_payload``, the prompt's view of a criterion) with whitespace normalized.
@@ -27,7 +27,7 @@ from app.cqa.schemas import ChecklistConfig, Criterion
 
 MODE_HYBRID = 1
 MODE_GPT_ONLY = 2
-MODE_LABELS = {MODE_HYBRID: "Hybrid (Gemma + GPT)", MODE_GPT_ONLY: "GPT only"}
+MODE_LABELS = {MODE_HYBRID: "Hybrid (Qwen + GPT)", MODE_GPT_ONLY: "GPT only"}
 GEMMA = "gemma"
 GPT = "openai"
 _NOT_DEFINITION = ("weight", "section")

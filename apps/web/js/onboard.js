@@ -1,7 +1,7 @@
-import { defaultChecklist } from "./data.js?v=tape2";
-import { fileDropHtml } from "./file-drop.js?v=tape43";
-import { getLang, t } from "./i18n.js?v=tape52";
-import { Field, Input, Select, Textarea } from "./ui.js?v=tape22";
+import { defaultChecklist } from "./data.js?v=tape3";
+import { fileDropHtml } from "./file-drop.js?v=tape44";
+import { getLang, t } from "./i18n.js?v=tape54";
+import { Field, Input, Select, Textarea } from "./ui.js?v=tape23";
 import { esc } from "./util.js";
 
 export function emptyCriterion() {

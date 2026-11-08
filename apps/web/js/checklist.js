@@ -3,8 +3,8 @@
 // keeps the applied version (state.checklistConfig) and, while the manager edits, an unsaved draft
 // (state.checklistDraft) that "Save checklist" stores as the next version.
 
-import { defaultChecklist } from "./data.js?v=tape2";
-import { t } from "./i18n.js?v=tape52";
+import { defaultChecklist } from "./data.js?v=tape3";
+import { t } from "./i18n.js?v=tape54";
 
 export const CRITERION_ID_RE = /^[a-z0-9][a-z0-9_-]{0,47}$/;
 const MAX_ALLOWED_SCORES = 101;

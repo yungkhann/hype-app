@@ -32,6 +32,9 @@ export function fromRecord(record) {
     audioUrl: record.audio_url ?? null,
     hash: record.transcript_hash,
     revision: record.revision,
-    messages: (record.messages ?? []).map((m) => ({ id: m.id, ts: m.timestamp, speaker: m.speaker, text: m.text })),
+    messages: (record.messages ?? []).map((m) => ({
+      id: m.id, ts: m.timestamp, speaker: m.speaker, text: m.text,
+      offsetSeconds: typeof m.offset_seconds === "number" ? m.offset_seconds : null,
+    })),
   };
 }
