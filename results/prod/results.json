@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "team_name": "hype",
+  "team_name": "Хайп Сквад",
   "model": {
     "mode": "external_api",
     "name": "gpt-4.1-2025-04-14"
@@ -28,7 +28,7 @@
         },
         {
           "criterion_id": "identification",
-          "value": true,
+          "value": null,
           "rationale": "The request was about website navigation and did not require identification.",
           "evidence_turns": [
             10
@@ -81,7 +81,7 @@
         }
       ],
       "score": {
-        "final_score": 90.5,
+        "final_score": 88.13,
         "critical_flag": false
       }
     },
@@ -584,7 +584,7 @@
         },
         {
           "criterion_id": "identification",
-          "value": true,
+          "value": null,
           "rationale": "The request was about general navigation in the app and did not require identification.",
           "evidence_turns": [
             10
@@ -640,7 +640,7 @@
         }
       ],
       "score": {
-        "final_score": 59.41,
+        "final_score": 46.92,
         "critical_flag": false
       }
     },

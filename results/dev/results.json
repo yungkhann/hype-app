@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "team_name": "hype",
+  "team_name": "Хайп Сквад",
   "model": {
     "mode": "local",
     "name": "qwen3.8:27b"
