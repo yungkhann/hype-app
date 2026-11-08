@@ -1,9 +1,10 @@
 # Lumvy
 
-## results.json
+DEV: https://github.com/yungkhann/hype-app/blob/main/results/dev/results.json
 
-- [results/dev/results.json](results/dev/results.json) — 65 оценок DEV, копия [data/results-2.json](data/results-2.json).
-- [results/prod/results.json](results/prod/results.json) — 10 контрольных чатов, копия [data/results.json](data/results.json).
+PROD: https://github.com/yungkhann/hype-app/blob/main/results/prod/results.json
+
+`results/dev/results.json` — 65 оценок DEV, копия `data/results-2.json`. `results/prod/results.json` — 10 контрольных чатов, копия `data/results.json`. Нужны оба файла.
 
 В обоих файлах `team_name` — Хайп Сквад. Исходники в `data/` не заменяют эти пути и остаются в репозитории.
 
@@ -157,7 +158,7 @@ GPT нужен `OPENAI_API_KEY` или `ATLAS_CQA_OPENAI_API_KEY`. Диалог 
 
 ## Сдача results.json
 
-Файлы сдачи — в начале README: `results/dev/results.json` и `results/prod/results.json`.
+Оба файла сдачи стоят в начале README: `results/dev/results.json` и `results/prod/results.json`.
 
 Формат JSON 1.0 из приложения к гайду. Один объект на файл. Названия полей, коды критериев и типы значений не меняются. Оценивается работа оператора по действующему чек-листу.
 
