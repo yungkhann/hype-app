@@ -1,10 +1,12 @@
 """Evaluation modes: the one place that decides which model answers which criterion.
 
 ``mode_type`` 1, hybrid: an official criterion whose definition still matches the official baseline is answered
-by the local Qwen model (adapter id ``gemma``); every other criterion (a manager-created one, or an official one
-whose wording, title, answer type, scale, N/A rule or critical-error rule was changed) is answered by GPT.
-``mode_type`` 2, GPT only: GPT answers every criterion; Qwen is never called.
-Appeals are reassessed by GPT in both modes (appeals.py, ``ATLAS_CQA_REASSESSOR``; Qwen cannot reassess).
+by the local model (ATLAS_CQA_LOCAL_EVALUATOR: "qwen", the team's checklist evaluator with quoted checks, or
+"gemma", the generic prompt on Ollama's OpenAI-compatible API); every other criterion (a manager-created one,
+or an official one whose wording, title, answer type, scale, N/A rule or critical-error rule was changed) is
+answered by GPT.
+``mode_type`` 2, GPT only: GPT answers every criterion; the local model is never called.
+Appeals are reassessed by GPT in both modes (appeals.py, ``ATLAS_CQA_REASSESSOR``; the local model cannot reassess).
 
 The baseline is the official template (``templates/freedom_broker_official.json``), compared on the definition
 each model is actually given (``criterion_payload``, the prompt's view of a criterion) with whitespace normalized.
@@ -62,8 +64,9 @@ def matches_official(criterion: Criterion) -> bool:
     return expected is not None and definition(criterion) == expected
 
 
-def plan(config: ChecklistConfig, mode_type: int) -> list[tuple[str, list[str], bool]]:
-    """[(provider, criterion ids, official baseline)] covering every enabled criterion exactly once, in order."""
+def plan(config: ChecklistConfig, mode_type: int, local: str = GEMMA) -> list[tuple[str, list[str], bool]]:
+    """[(provider, criterion ids, official baseline)] covering every enabled criterion exactly once, in order.
+    ``local`` is the adapter for the unchanged official criteria in hybrid mode (ATLAS_CQA_LOCAL_EVALUATOR)."""
     ids = [c.id for c in config.active_criteria]
     if mode_type == MODE_GPT_ONLY:
         return [(GPT, ids, False)]
@@ -72,7 +75,7 @@ def plan(config: ChecklistConfig, mode_type: int) -> list[tuple[str, list[str], 
     official = [c.id for c in config.active_criteria if matches_official(c)]
     other = [cid for cid in ids if cid not in official]
     return [(provider, group, baseline) for provider, group, baseline in
-            ((GEMMA, official, True), (GPT, other, False)) if group]
+            ((local, official, True), (GPT, other, False)) if group]
 
 
 def subset(config: ChecklistConfig, criterion_ids: list[str]) -> ChecklistConfig:
